@@ -149,17 +149,19 @@ export class ScreenerService {
     const results: ScanResult[] = [];
 
     for (const [symbol, quote] of quotes) {
-      if (quote.open > 0) {
-        const change = quote.price - quote.open;
-        const changePercent = (change / quote.open) * 100;
-        results.push({
-          symbol,
-          price: quote.price,
-          volume: quote.volume,
-          change,
-          changePercent,
-        });
-      }
+      // Use previous close as the base for daily movers.
+      // `open` is frequently stale/out-of-session (e.g., pre-market at 06:00 UTC),
+      // which makes "gainers/losers" look incorrect.
+      const prevClose = quote.close > 0 ? quote.close : quote.price;
+      if (prevClose <= 0) continue;
+
+      const change = quote.price - prevClose;
+      const changePercent = (change / prevClose) * 100;
+
+      if (direction === "gainers" && changePercent <= 0) continue;
+      if (direction === "losers" && changePercent >= 0) continue;
+
+      results.push({ symbol, price: quote.price, volume: quote.volume, change, changePercent });
     }
 
     // Sort by change percent
