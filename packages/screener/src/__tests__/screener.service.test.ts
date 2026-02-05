@@ -79,10 +79,10 @@ const mockSnapshots = new Map([
     {
       symbol: "AAPL",
       price: 175.5,
-      open: 174.0,
+      open: 160.0,
       high: 176.2,
       low: 173.8,
-      close: 175.5,
+      close: 174.0,
       volume: 50000000,
       change: 1.5,
       changePercent: 0.86,
@@ -97,7 +97,7 @@ const mockSnapshots = new Map([
       open: 378.0,
       high: 382.0,
       low: 377.5,
-      close: 380.25,
+      close: 378.0,
       volume: 25000000,
       change: 2.25,
       changePercent: 0.6,
@@ -112,7 +112,7 @@ const mockSnapshots = new Map([
       open: 141.5,
       high: 143.5,
       low: 141.0,
-      close: 142.8,
+      close: 141.5,
       volume: 18000000,
       change: 1.3,
       changePercent: 0.92,
@@ -127,7 +127,7 @@ const mockSnapshots = new Map([
       open: 540.0,
       high: 555.0,
       low: 538.0,
-      close: 550.0,
+      close: 540.0,
       volume: 35000000,
       change: 10.0,
       changePercent: 1.85,
@@ -142,7 +142,7 @@ const mockSnapshots = new Map([
       open: 46.0,
       high: 46.5,
       low: 45.0,
-      close: 45.5,
+      close: 46.0,
       volume: 28000000,
       change: -0.5,
       changePercent: -1.09,
@@ -297,6 +297,7 @@ describe("ScreenerService", () => {
       const movers = await screener.getMovers("gainers", 5);
 
       expect(movers.length).toBeLessThanOrEqual(5);
+      expect(movers.every((m) => m.changePercent > 0)).toBe(true);
       // Should be sorted descending by changePercent
       for (let i = 1; i < movers.length; i++) {
         expect(movers[i - 1]!.changePercent).toBeGreaterThanOrEqual(movers[i]!.changePercent);
@@ -307,6 +308,7 @@ describe("ScreenerService", () => {
       const movers = await screener.getMovers("losers", 5);
 
       expect(movers.length).toBeLessThanOrEqual(5);
+      expect(movers.every((m) => m.changePercent < 0)).toBe(true);
       // Should be sorted ascending by changePercent (most negative first)
       for (let i = 1; i < movers.length; i++) {
         expect(movers[i - 1]!.changePercent).toBeLessThanOrEqual(movers[i]!.changePercent);
@@ -317,6 +319,16 @@ describe("ScreenerService", () => {
       const movers = await screener.getMovers("gainers", 2);
 
       expect(movers.length).toBeLessThanOrEqual(2);
+    });
+
+    it("should compute change percent vs previous close (not open)", async () => {
+      const movers = await screener.getMovers("gainers", 10);
+      const aapl = movers.find((m) => m.symbol === "AAPL");
+      expect(aapl).toBeDefined();
+
+      // If computed vs open: (175.5 - 160.0)/160.0 = 9.6875% (incorrect).
+      // We want: (175.5 - 174.0)/174.0 = 0.862...% (previous close base).
+      expect(aapl!.changePercent).toBeCloseTo(((175.5 - 174.0) / 174.0) * 100, 6);
     });
   });
 

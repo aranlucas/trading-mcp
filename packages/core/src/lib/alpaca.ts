@@ -80,27 +80,37 @@ export async function getPortfolio(): Promise<Portfolio> {
 export async function getQuote(symbol: string): Promise<Quote> {
   const bars = alpaca.getBarsV2(symbol, {
     timeframe: "1Day",
-    limit: 1,
+    limit: 2,
   });
 
-  let lastBar: z.infer<typeof AlpacaBarSchema> | null = null;
+  const parsedBars: z.infer<typeof AlpacaBarSchema>[] = [];
   for await (const bar of bars) {
     const parsed = AlpacaBarSchema.safeParse(bar);
     if (parsed.success) {
-      lastBar = parsed.data;
+      parsedBars.push(parsed.data);
     }
   }
 
+  parsedBars.sort((a, b) => new Date(a.Timestamp).getTime() - new Date(b.Timestamp).getTime());
+  const prevBar = parsedBars.length >= 2 ? parsedBars[parsedBars.length - 2] : null;
+  const lastBar = parsedBars.length >= 1 ? parsedBars[parsedBars.length - 1] : null;
+
+  const price = lastBar?.ClosePrice ?? 0;
+  const prevClose = prevBar?.ClosePrice ?? price;
+  const change = price - prevClose;
+  const changePercent = prevClose !== 0 ? (change / prevClose) * 100 : 0;
+
   return {
     symbol,
-    price: lastBar?.ClosePrice ?? 0,
+    price,
     open: lastBar?.OpenPrice ?? 0,
     high: lastBar?.HighPrice ?? 0,
     low: lastBar?.LowPrice ?? 0,
-    close: lastBar?.ClosePrice ?? 0,
+    // Align with Yahoo snapshots: `close` is previous close.
+    close: prevClose,
     volume: lastBar?.Volume ?? 0,
-    change: 0,
-    changePercent: 0,
+    change,
+    changePercent,
     timestamp: lastBar?.Timestamp ?? new Date().toISOString(),
   };
 }
