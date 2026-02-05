@@ -4,5 +4,8 @@
   "buildCommand": "pnpm --filter @trading/core build && pnpm --filter @trading/screener build",
   "installCommand": "pnpm install --frozen-lockfile",
   "outputDirectory": ".",
-  "framework": null
+  "framework": null,
+  "functions": {
+    "api/[[...path]].ts": {}
+  }
 }
