@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { ScreenerService } from "../services/screener.js";
+import { toPublicError } from "@trading/core";
 
 export const screenerRoutes = new Hono();
 const screener = new ScreenerService();
@@ -48,7 +49,8 @@ screenerRoutes.post("/scan", zValidator("json", scanSchema), async (c) => {
     const results = await screener.scan(criteria);
     return c.json({ results });
   } catch (error) {
-    return c.json({ error: String(error) }, 500);
+    const pub = toPublicError(error);
+    return c.json({ error: pub.message }, pub.status);
   }
 });
 
@@ -65,7 +67,8 @@ screenerRoutes.get(
       const movers = await screener.getMovers(direction, limit);
       return c.json({ movers });
     } catch (error) {
-      return c.json({ error: String(error) }, 500);
+      const pub = toPublicError(error);
+      return c.json({ error: pub.message }, pub.status);
     }
   },
 );
@@ -78,6 +81,7 @@ screenerRoutes.post("/signals", zValidator("json", signalsSchema), async (c) => 
     const signals = await screener.getSignals(symbols);
     return c.json({ signals });
   } catch (error) {
-    return c.json({ error: String(error) }, 500);
+    const pub = toPublicError(error);
+    return c.json({ error: pub.message }, pub.status);
   }
 });

@@ -72,6 +72,8 @@ npm run dev --workspace=@trading/screener
 **Endpoints:**
 
 - `GET /` - Health check
+- `GET /health` - Provider health check
+- `GET /openapi.json` - OpenAPI 3.0 spec
 - `GET /api/quotes/:symbol` - Get single quote
 - `POST /api/quotes/batch` - Get multiple quotes
 - `GET /api/quotes/:symbol/bars` - Get price history

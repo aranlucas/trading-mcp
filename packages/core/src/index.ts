@@ -17,3 +17,6 @@ export * from "./lib/rate-limiter.js";
 export * from "./lib/cache.js";
 export * from "./lib/timeout.js";
 export * from "./lib/env.js";
+export * from "./lib/errors.js";
+export * from "./lib/retry.js";
+export * from "./lib/provider-metrics.js";
