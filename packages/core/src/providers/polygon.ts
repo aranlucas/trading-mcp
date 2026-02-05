@@ -98,9 +98,7 @@ export const polygon = {
   // Get news
   async getNews(symbol?: string, limit = 10): Promise<NewsItem[]> {
     const tickerParam = symbol ? `&ticker=${symbol}` : "";
-    const raw = await polygonFetch(
-      `/v2/reference/news?limit=${limit}${tickerParam}`,
-    );
+    const raw = await polygonFetch(`/v2/reference/news?limit=${limit}${tickerParam}`);
     if (!raw) return [];
 
     const result = PolygonNewsResponseSchema.safeParse(raw);
@@ -114,11 +112,7 @@ export const polygon = {
       source: n.publisher?.name ?? "",
       url: n.article_url ?? "",
       publishedAt: n.published_utc ?? "",
-      sentiment: n.insights?.[0]?.sentiment as
-        | "positive"
-        | "negative"
-        | "neutral"
-        | undefined,
+      sentiment: n.insights?.[0]?.sentiment as "positive" | "negative" | "neutral" | undefined,
     }));
   },
 
@@ -151,9 +145,7 @@ export const polygon = {
 
   // Get snapshot (all tickers)
   async getAllTickersSnapshot(): Promise<PolygonTickerSnapshot[]> {
-    const raw = await polygonFetch(
-      `/v2/snapshot/locale/us/markets/stocks/tickers`,
-    );
+    const raw = await polygonFetch(`/v2/snapshot/locale/us/markets/stocks/tickers`);
     if (!raw) return [];
 
     const result = PolygonSnapshotResponseSchema.safeParse(raw);
@@ -161,12 +153,8 @@ export const polygon = {
   },
 
   // Get gainers/losers
-  async getGainersLosers(
-    direction: "gainers" | "losers",
-  ): Promise<PolygonTickerSnapshot[]> {
-    const raw = await polygonFetch(
-      `/v2/snapshot/locale/us/markets/stocks/${direction}`,
-    );
+  async getGainersLosers(direction: "gainers" | "losers"): Promise<PolygonTickerSnapshot[]> {
+    const raw = await polygonFetch(`/v2/snapshot/locale/us/markets/stocks/${direction}`);
     if (!raw) return [];
 
     const result = PolygonSnapshotResponseSchema.safeParse(raw);
@@ -174,12 +162,8 @@ export const polygon = {
   },
 
   // Get ticker snapshot
-  async getTickerSnapshot(
-    symbol: string,
-  ): Promise<PolygonTickerSnapshot | null> {
-    const raw = await polygonFetch(
-      `/v2/snapshot/locale/us/markets/stocks/tickers/${symbol}`,
-    );
+  async getTickerSnapshot(symbol: string): Promise<PolygonTickerSnapshot | null> {
+    const raw = await polygonFetch(`/v2/snapshot/locale/us/markets/stocks/tickers/${symbol}`);
     if (!raw) return null;
 
     const result = PolygonSnapshotResponseSchema.safeParse(raw);

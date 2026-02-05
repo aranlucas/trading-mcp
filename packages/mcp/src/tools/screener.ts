@@ -28,12 +28,7 @@ export function registerScreenerTools(server: McpServer) {
       title: "Get Top Gainers",
       description: "Get stocks with the biggest gains today",
       inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(50)
-          .default(20)
-          .describe("Number of results"),
+        limit: z.number().min(1).max(50).default(20).describe("Number of results"),
       },
       annotations: { readOnlyHint: true },
     },
@@ -73,9 +68,7 @@ export function registerScreenerTools(server: McpServer) {
         }
 
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(results, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }],
         };
       } catch (error) {
         return {
@@ -93,12 +86,7 @@ export function registerScreenerTools(server: McpServer) {
       title: "Get Top Losers",
       description: "Get stocks with the biggest losses today",
       inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(50)
-          .default(20)
-          .describe("Number of results"),
+        limit: z.number().min(1).max(50).default(20).describe("Number of results"),
       },
       annotations: { readOnlyHint: true },
     },
@@ -138,9 +126,7 @@ export function registerScreenerTools(server: McpServer) {
         }
 
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(results, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }],
         };
       } catch (error) {
         return {
@@ -158,12 +144,7 @@ export function registerScreenerTools(server: McpServer) {
       title: "Get Oversold Stocks",
       description: "Get stocks with RSI below 30 (potentially undervalued)",
       inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(50)
-          .default(20)
-          .describe("Number of results"),
+        limit: z.number().min(1).max(50).default(20).describe("Number of results"),
       },
       annotations: { readOnlyHint: true },
     },
@@ -201,12 +182,7 @@ export function registerScreenerTools(server: McpServer) {
       title: "Get Overbought Stocks",
       description: "Get stocks with RSI above 70 (potentially overvalued)",
       inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(50)
-          .default(20)
-          .describe("Number of results"),
+        limit: z.number().min(1).max(50).default(20).describe("Number of results"),
       },
       annotations: { readOnlyHint: true },
     },
@@ -244,12 +220,7 @@ export function registerScreenerTools(server: McpServer) {
       title: "Get Unusual Volume",
       description: "Get stocks with unusually high trading volume",
       inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(50)
-          .default(20)
-          .describe("Number of results"),
+        limit: z.number().min(1).max(50).default(20).describe("Number of results"),
       },
       annotations: { readOnlyHint: true },
     },
@@ -287,12 +258,7 @@ export function registerScreenerTools(server: McpServer) {
       title: "Get New 52-Week Highs",
       description: "Get stocks hitting new 52-week highs",
       inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(50)
-          .default(20)
-          .describe("Number of results"),
+        limit: z.number().min(1).max(50).default(20).describe("Number of results"),
       },
       annotations: { readOnlyHint: true },
     },
@@ -330,12 +296,7 @@ export function registerScreenerTools(server: McpServer) {
       title: "Get New 52-Week Lows",
       description: "Get stocks hitting new 52-week lows",
       inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(50)
-          .default(20)
-          .describe("Number of results"),
+        limit: z.number().min(1).max(50).default(20).describe("Number of results"),
       },
       annotations: { readOnlyHint: true },
     },
@@ -373,12 +334,7 @@ export function registerScreenerTools(server: McpServer) {
       title: "Get Most Volatile",
       description: "Get stocks with highest volatility",
       inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(50)
-          .default(20)
-          .describe("Number of results"),
+        limit: z.number().min(1).max(50).default(20).describe("Number of results"),
       },
       annotations: { readOnlyHint: true },
     },
@@ -416,12 +372,7 @@ export function registerScreenerTools(server: McpServer) {
       title: "Get Trending Tickers",
       description: "Get currently trending stock tickers",
       inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(50)
-          .default(20)
-          .describe("Number of results"),
+        limit: z.number().min(1).max(50).default(20).describe("Number of results"),
       },
       annotations: { readOnlyHint: true },
     },
@@ -467,9 +418,7 @@ export function registerScreenerTools(server: McpServer) {
       try {
         const results = await yahoo.search(query);
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(results, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }],
         };
       } catch (error) {
         return {

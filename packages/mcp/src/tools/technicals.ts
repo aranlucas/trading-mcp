@@ -73,8 +73,7 @@ function bollingerBands(
 ): { upper: number; middle: number; lower: number } {
   const middle = sma(data, period);
   const slice = data.slice(-period);
-  const variance =
-    slice.reduce((sum, val) => sum + Math.pow(val - middle, 2), 0) / period;
+  const variance = slice.reduce((sum, val) => sum + Math.pow(val - middle, 2), 0) / period;
   const stdDev = Math.sqrt(variance);
   return {
     upper: middle + 2 * stdDev,
@@ -205,8 +204,7 @@ export function registerTechnicalTools(server: McpServer) {
             direction: "bullish",
             strength: 0.7,
             timestamp: new Date().toISOString(),
-            description:
-              "Price above SMA20, SMA20 above SMA50 (bullish alignment)",
+            description: "Price above SMA20, SMA20 above SMA50 (bullish alignment)",
           });
         } else if (currentPrice < sma20Val && sma20Val < sma50Val) {
           signals.push({
@@ -215,8 +213,7 @@ export function registerTechnicalTools(server: McpServer) {
             direction: "bearish",
             strength: 0.7,
             timestamp: new Date().toISOString(),
-            description:
-              "Price below SMA20, SMA20 below SMA50 (bearish alignment)",
+            description: "Price below SMA20, SMA20 below SMA50 (bearish alignment)",
           });
         }
 
@@ -238,15 +235,12 @@ export function registerTechnicalTools(server: McpServer) {
             direction: "bearish",
             strength: 0.6,
             timestamp: new Date().toISOString(),
-            description:
-              "Price above upper Bollinger Band (potential pullback)",
+            description: "Price above upper Bollinger Band (potential pullback)",
           });
         }
 
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(signals, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(signals, null, 2) }],
         };
       } catch (error) {
         return {

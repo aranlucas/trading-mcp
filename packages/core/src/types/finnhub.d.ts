@@ -16,12 +16,7 @@ declare module "finnhub" {
 
     quote<T = unknown>(symbol: string, callback: Callback<T>): void;
     companyProfile2<T = unknown>(opts: { symbol?: string }, callback: Callback<T>): void;
-    companyNews<T = unknown>(
-      symbol: string,
-      from: string,
-      to: string,
-      callback: Callback<T>,
-    ): void;
+    companyNews<T = unknown>(symbol: string, from: string, to: string, callback: Callback<T>): void;
     marketNews<T = unknown>(category: string, opts: object, callback: Callback<T>): void;
     newsSentiment<T = unknown>(symbol: string, callback: Callback<T>): void;
     recommendationTrends<T = unknown>(symbol: string, callback: Callback<T>): void;
@@ -42,11 +37,7 @@ declare module "finnhub" {
       resolution: string,
       callback: Callback<T>,
     ): void;
-    supportResistance<T = unknown>(
-      symbol: string,
-      resolution: string,
-      callback: Callback<T>,
-    ): void;
+    supportResistance<T = unknown>(symbol: string, resolution: string, callback: Callback<T>): void;
     socialSentiment<T = unknown>(symbol: string, opts: object, callback: Callback<T>): void;
 
     // Allow other methods/properties without strict typing
