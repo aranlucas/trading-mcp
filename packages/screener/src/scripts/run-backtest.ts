@@ -61,17 +61,31 @@ async function fetchRealData(symbol: string, days: number): Promise<Bar[]> {
 
     return result.quotes
       .filter(
-        (q) =>
-          q.open != null && q.high != null && q.low != null && q.close != null && q.volume != null,
+        (q: {
+          open?: number;
+          high?: number;
+          low?: number;
+          close?: number;
+          volume?: number;
+        }) => q.open && q.high && q.low && q.close && q.volume
       )
-      .map((q) => ({
-        t: new Date(q.date).toISOString().slice(0, 10),
-        o: q.open as number,
-        h: q.high as number,
-        l: q.low as number,
-        c: q.close as number,
-        v: q.volume as number,
-      }));
+      .map(
+        (q: {
+          date: Date;
+          open: number;
+          high: number;
+          low: number;
+          close: number;
+          volume: number;
+        }) => ({
+          t: new Date(q.date).toISOString().slice(0, 10),
+          o: q.open,
+          h: q.high,
+          l: q.low,
+          c: q.close,
+          v: q.volume,
+        })
+      );
   } catch (error) {
     console.error(`Failed to fetch data for ${symbol}:`, error);
     return [];
