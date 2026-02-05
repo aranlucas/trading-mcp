@@ -124,14 +124,16 @@ async function buildReport(opts: {
   const header = `Screener update (${nowStampUtc()})`;
 
   if (opts.kind === "signals") {
-    if (opts.watchlist.length === 0) throw new Error("SCREENER_WATCHLIST is required for signals report");
+    if (opts.watchlist.length === 0)
+      throw new Error("SCREENER_WATCHLIST is required for signals report");
     const signals = await getSignals(opts.watchlist);
     return [header, "", formatSignalsBlock(signals)].join("\n");
   }
 
   if (opts.kind === "scan") {
     const criteria = opts.scanCriteria ?? {};
-    if (criteria.symbols === undefined && opts.watchlist.length > 0) criteria.symbols = opts.watchlist;
+    if (criteria.symbols === undefined && opts.watchlist.length > 0)
+      criteria.symbols = opts.watchlist;
     const results = await scan(criteria);
     return [header, "", formatScanBlock(results, opts.limit)].join("\n");
   }

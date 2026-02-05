@@ -18,12 +18,15 @@
     "format:check": "prettier --check \"packages/*/src/**/*.ts\"",
     "syncpack:list": "syncpack list-mismatches",
     "syncpack:fix": "syncpack fix-mismatches",
-    "syncpack:lint": "syncpack lint"
+    "syncpack:lint": "syncpack lint",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
     "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9.18.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "prettier": "^3.4.2",
     "syncpack": "^13.0.4",
     "tsx": "^4.21.0",
@@ -34,5 +37,11 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "lint-staged": {
+    "packages/*/src/**/*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }
