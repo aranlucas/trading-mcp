@@ -6,3 +6,5 @@ dist/
 .turbo
 .vercel/
 packages/*/.vercel/
+.vercel
+.env*.local
