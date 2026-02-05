@@ -4,10 +4,5 @@
   "buildCommand": "pnpm --filter @trading/core build && pnpm --filter @trading/screener build",
   "installCommand": "pnpm install --frozen-lockfile",
   "outputDirectory": ".",
-  "framework": null,
-  "functions": {
-    "api/[[...path]].ts": {
-      "runtime": "@vercel/node@3.0.0"
-    }
-  }
+  "framework": null
 }
