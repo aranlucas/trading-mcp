@@ -22,18 +22,7 @@ export const yahoo = {
     const raw = await yahooFinance.quote(symbol);
     const parsed = YahooQuoteSchema.safeParse(raw);
     if (!parsed.success) {
-      return {
-        symbol: symbol.toUpperCase(),
-        price: 0,
-        open: 0,
-        high: 0,
-        low: 0,
-        close: 0,
-        volume: 0,
-        change: 0,
-        changePercent: 0,
-        timestamp: new Date().toISOString(),
-      };
+      throw new Error("Invalid Yahoo quote response");
     }
 
     const q = parsed.data;

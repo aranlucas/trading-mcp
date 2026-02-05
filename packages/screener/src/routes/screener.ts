@@ -50,7 +50,7 @@ screenerRoutes.post("/scan", zValidator("json", scanSchema), async (c) => {
     return c.json({ results });
   } catch (error) {
     const pub = toPublicError(error);
-    return c.json({ error: pub.message }, pub.status);
+    return c.json({ error: pub.message, code: pub.code }, pub.status);
   }
 });
 
@@ -68,7 +68,7 @@ screenerRoutes.get(
       return c.json({ movers });
     } catch (error) {
       const pub = toPublicError(error);
-      return c.json({ error: pub.message }, pub.status);
+      return c.json({ error: pub.message, code: pub.code }, pub.status);
     }
   },
 );
@@ -82,6 +82,6 @@ screenerRoutes.post("/signals", zValidator("json", signalsSchema), async (c) => 
     return c.json({ signals });
   } catch (error) {
     const pub = toPublicError(error);
-    return c.json({ error: pub.message }, pub.status);
+    return c.json({ error: pub.message, code: pub.code }, pub.status);
   }
 });
