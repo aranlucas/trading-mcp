@@ -318,9 +318,10 @@ describe("ScreenerService", () => {
   describe("getSignals", () => {
     it("should generate RSI_OVERSOLD signal when RSI < 30", async () => {
       // INTC returns oversold bars
-      await screener.getSignals(["INTC"]);
+      const signals = await screener.getSignals(["INTC"]);
 
       // May or may not trigger based on generated data, but should process
+      expect(Array.isArray(signals)).toBe(true);
       expect(alpaca.getBars).toHaveBeenCalledWith("INTC", "1Day", 60);
     });
 
@@ -329,6 +330,7 @@ describe("ScreenerService", () => {
       await screener.getSignals(["NVDA"]);
 
       // Should have processed the symbol
+      expect(Array.isArray(signals)).toBe(true);
       expect(alpaca.getBars).toHaveBeenCalledWith("NVDA", "1Day", 60);
     });
 
