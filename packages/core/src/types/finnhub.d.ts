@@ -9,47 +9,47 @@ declare module "finnhub" {
     };
   };
 
-  type Callback<T = any> = (err: any | null, data?: T, response?: any) => void;
+  type Callback<T> = (err: Error | null, data?: T, response?: unknown) => void;
 
   export class DefaultApi {
     constructor(apiKey?: string);
 
-    quote(symbol: string, callback: Callback): void;
-    companyProfile2(opts: { symbol?: string }, callback: Callback): void;
-    companyNews(
+    quote<T = unknown>(symbol: string, callback: Callback<T>): void;
+    companyProfile2<T = unknown>(opts: { symbol?: string }, callback: Callback<T>): void;
+    companyNews<T = unknown>(
       symbol: string,
       from: string,
       to: string,
-      callback: Callback,
+      callback: Callback<T>,
     ): void;
-    marketNews(category: string, opts: object, callback: Callback): void;
-    newsSentiment(symbol: string, callback: Callback): void;
-    recommendationTrends(symbol: string, callback: Callback): void;
-    priceTarget(symbol: string, callback: Callback): void;
-    earningsCalendar(
+    marketNews<T = unknown>(category: string, opts: object, callback: Callback<T>): void;
+    newsSentiment<T = unknown>(symbol: string, callback: Callback<T>): void;
+    recommendationTrends<T = unknown>(symbol: string, callback: Callback<T>): void;
+    priceTarget<T = unknown>(symbol: string, callback: Callback<T>): void;
+    earningsCalendar<T = unknown>(
       opts: { from?: string; to?: string },
-      callback: Callback,
+      callback: Callback<T>,
     ): void;
-    insiderTransactions(symbol: string, opts: object, callback: Callback): void;
-    companyPeers(symbol: string, callback: Callback): void;
-    companyBasicFinancials(
+    insiderTransactions<T = unknown>(symbol: string, opts: object, callback: Callback<T>): void;
+    companyPeers<T = unknown>(symbol: string, callback: Callback<T>): void;
+    companyBasicFinancials<T = unknown>(
       symbol: string,
       metric: string,
-      callback: Callback,
+      callback: Callback<T>,
     ): void;
-    patternRecognition(
+    patternRecognition<T = unknown>(
       symbol: string,
       resolution: string,
-      callback: Callback,
+      callback: Callback<T>,
     ): void;
-    supportResistance(
+    supportResistance<T = unknown>(
       symbol: string,
       resolution: string,
-      callback: Callback,
+      callback: Callback<T>,
     ): void;
-    socialSentiment(symbol: string, opts: object, callback: Callback): void;
+    socialSentiment<T = unknown>(symbol: string, opts: object, callback: Callback<T>): void;
 
     // Allow other methods/properties without strict typing
-    [key: string]: any;
+    [key: string]: unknown;
   }
 }
