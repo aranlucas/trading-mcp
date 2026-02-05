@@ -1,18 +1,14 @@
 // Alpaca API client using official SDK
 
-import { createRequire } from "module";
 import { z } from "zod";
 import { config } from "../config.js";
 import type { Quote, Position, Portfolio, Order, MarketStatus } from "../types/index.js";
 import { AlpacaPositionSchema, AlpacaOrderSchema, AlpacaBarSchema } from "../schemas/index.js";
 import { ValidationError } from "./errors.js";
-
-// CJS import for Alpaca SDK (it doesn't have proper ESM exports)
-const require = createRequire(import.meta.url);
-const Alpaca = require("@alpacahq/alpaca-trade-api");
+import Alpaca from "@alpacahq/alpaca-trade-api";
 
 // Initialize official Alpaca client
-const alpaca = new Alpaca({
+const alpaca = new Alpaca.default({
   keyId: config.alpaca.apiKey,
   secretKey: config.alpaca.apiSecret,
   paper: config.alpaca.paper,
@@ -240,7 +236,15 @@ export async function cancelOrder(orderId: string): Promise<void> {
 }
 
 export async function getOrders(status = "open"): Promise<Order[]> {
-  const raw = await alpaca.getOrders({ status });
+  const raw = await alpaca.getOrders({
+    status,
+    until: undefined,
+    after: undefined,
+    limit: undefined,
+    direction: undefined,
+    nested: undefined,
+    symbols: undefined,
+  });
   const orders = z.array(AlpacaOrderSchema).parse(raw);
   return orders.map((order) => ({
     id: order.id,
