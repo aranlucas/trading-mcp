@@ -11,6 +11,7 @@ import { polygon } from "./polygon.js";
 import { finnhubProvider as finnhub } from "./finnhub.js";
 import { fred } from "./fred.js";
 import { finviz } from "./finviz.js";
+import { withTimeout } from "../lib/timeout.js";
 import type { NewsItem, SentimentData } from "../types/index.js";
 
 // Unified data fetcher that tries multiple sources
@@ -224,4 +225,68 @@ export const unified = {
       finviz: { configured: true, rateLimit: "web scraping" },
     };
   },
+
+  async healthCheck(): Promise<ProviderHealthStatus> {
+    const testSymbol = "AAPL";
+    const healthCheckTimeoutMs = 3000;
+
+    const check = async (fn: () => Promise<unknown>): Promise<ProviderHealth> => {
+      const start = Date.now();
+      try {
+        await withTimeout(fn(), healthCheckTimeoutMs);
+        return { healthy: true, latencyMs: Date.now() - start };
+      } catch (err) {
+        return {
+          healthy: false,
+          latencyMs: Date.now() - start,
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    };
+
+    const [yahooHealth, polygonHealth, finnhubHealth, fredHealth, finvizHealth] = await Promise.all(
+      [
+        check(() => yahoo.getQuote(testSymbol)),
+        polygon.isConfigured()
+          ? check(() => polygon.getPreviousClose(testSymbol))
+          : Promise.resolve({ healthy: false, error: "Not configured" } satisfies ProviderHealth),
+        finnhub.isConfigured()
+          ? check(() => finnhub.getQuote(testSymbol))
+          : Promise.resolve({ healthy: false, error: "Not configured" } satisfies ProviderHealth),
+        fred.isConfigured()
+          ? check(() => fred.getSeries("SP500", 1))
+          : Promise.resolve({ healthy: false, error: "Not configured" } satisfies ProviderHealth),
+        check(() => finviz.getQuote(testSymbol)),
+      ],
+    );
+
+    const providers = {
+      yahoo: yahooHealth,
+      polygon: polygonHealth,
+      finnhub: finnhubHealth,
+      fred: fredHealth,
+      finviz: finvizHealth,
+    };
+
+    const healthyCount = Object.values(providers).filter((p) => p.healthy).length;
+    const status = healthyCount >= 2 ? "healthy" : healthyCount >= 1 ? "degraded" : "unhealthy";
+
+    return {
+      status,
+      providers,
+      timestamp: new Date().toISOString(),
+    };
+  },
 };
+
+export interface ProviderHealth {
+  healthy: boolean;
+  latencyMs?: number;
+  error?: string;
+}
+
+export interface ProviderHealthStatus {
+  status: "healthy" | "degraded" | "unhealthy";
+  providers: Record<string, ProviderHealth>;
+  timestamp: string;
+}
