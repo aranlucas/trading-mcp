@@ -1,4 +1,5 @@
-import { alpaca, type Signal } from "@trading/core";
+import type { Signal } from "@trading/core";
+import { getMarketDataClient } from "./market-data.js";
 
 export interface ScanCriteria {
   minPrice?: number;
@@ -54,6 +55,8 @@ function sma(data: number[], period: number): number {
 }
 
 export class ScreenerService {
+  private marketData = getMarketDataClient().client;
+
   // Default universe if no symbols provided
   private defaultUniverse = [
     "AAPL",
@@ -83,7 +86,7 @@ export class ScreenerService {
     const results: ScanResult[] = [];
 
     // Get snapshots for all symbols
-    const quotes = await alpaca.getSnapshots(symbols);
+    const quotes = await this.marketData.getSnapshots(symbols);
 
     for (const [symbol, quote] of quotes) {
       // Apply price filters
@@ -103,7 +106,7 @@ export class ScreenerService {
         criteria.aboveSma50
       ) {
         try {
-          const bars = await alpaca.getBars(symbol, "1Day", 60);
+          const bars = await this.marketData.getBars(symbol, 60);
           const closes = bars.map((b) => b.c);
 
           if (closes.length >= 20) {
@@ -142,7 +145,7 @@ export class ScreenerService {
   }
 
   async getMovers(direction: "gainers" | "losers", limit = 10): Promise<ScanResult[]> {
-    const quotes = await alpaca.getSnapshots(this.defaultUniverse);
+    const quotes = await this.marketData.getSnapshots(this.defaultUniverse);
     const results: ScanResult[] = [];
 
     for (const [symbol, quote] of quotes) {
@@ -175,7 +178,7 @@ export class ScreenerService {
 
     for (const symbol of symbols) {
       try {
-        const bars = await alpaca.getBars(symbol, "1Day", 60);
+        const bars = await this.marketData.getBars(symbol, 60);
         const closes = bars.map((b) => b.c);
 
         if (closes.length < 20) continue;

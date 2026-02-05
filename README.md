@@ -34,6 +34,20 @@ export ALPACA_PAPER="true"  # Use paper trading (default)
 
 Get free API keys at [alpaca.markets](https://alpaca.markets)
 
+## Telegram Alerts (GitHub Actions)
+
+This repo includes a scheduled workflow that uses the screener API code to send a Telegram message (top movers, scan results, and/or signals).
+
+**Required GitHub secrets:**
+
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (optionally `TELEGRAM_MESSAGE_THREAD_ID`)
+
+**Optional (only if you run the workflow with `provider=alpaca`):**
+
+- `ALPACA_API_KEY`, `ALPACA_API_SECRET` (and optionally `ALPACA_PAPER`)
+
+Workflow file: `.github/workflows/telegram-screener.yml`
+
 ## Packages
 
 ### @trading/core

@@ -1,0 +1,77 @@
+name: Telegram Screener
+
+on:
+  workflow_dispatch:
+    inputs:
+      report:
+        description: "Report to send"
+        required: true
+        default: "movers"
+        type: choice
+        options:
+          - movers
+          - scan
+          - signals
+      provider:
+        description: "Market data provider"
+        required: true
+        default: "yahoo"
+        type: choice
+        options:
+          - yahoo
+          - alpaca
+      limit:
+        description: "Max rows per section"
+        required: true
+        default: 10
+        type: number
+      watchlist:
+        description: "Comma-separated symbols for signals/scan (optional)"
+        required: false
+        type: string
+      scan_json:
+        description: "Scan criteria JSON (only for scan report; optional)"
+        required: false
+        type: string
+
+  # Weekdays during the US market session (UTC-based; adjust as needed)
+  schedule:
+    - cron: "45 14 * * 1-5"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: telegram-screener
+  cancel-in-progress: true
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Send Telegram update
+        run: pnpm --filter @trading/screener exec tsx src/scripts/telegram-screener.ts
+        env:
+          NODE_ENV: production
+          SCREENER_PROVIDER: ${{ github.event.inputs.provider || 'yahoo' }}
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
+          ALPACA_PAPER: ${{ secrets.ALPACA_PAPER || 'true' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_MESSAGE_THREAD_ID: ${{ secrets.TELEGRAM_MESSAGE_THREAD_ID }}
+          SCREENER_REPORT: ${{ github.event.inputs.report || 'movers' }}
+          SCREENER_LIMIT: ${{ github.event.inputs.limit || '10' }}
+          SCREENER_WATCHLIST: ${{ github.event.inputs.watchlist || '' }}
+          SCREENER_SCAN_JSON: ${{ github.event.inputs.scan_json || '' }}
