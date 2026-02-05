@@ -7,6 +7,8 @@
 
 A monorepo for trading tools, including an MCP server and a screener API.
 
+See `ARCHITECTURE.md` for system design and improvement roadmap.
+
 ## Packages
 
 | Package             | Description                                 |
