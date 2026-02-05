@@ -175,6 +175,10 @@ vi.mock("@trading/core", () => ({
       return mockBarsNeutral;
     }),
   },
+  yahoo: {
+    getQuotes: vi.fn().mockResolvedValue([]),
+    getHistory: vi.fn().mockResolvedValue({ quotes: [] }),
+  },
 }));
 
 import { ScreenerService, type ScanCriteria } from "../services/screener.js";
@@ -185,6 +189,7 @@ describe("ScreenerService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.SCREENER_PROVIDER = "alpaca";
     screener = new ScreenerService();
   });
 
