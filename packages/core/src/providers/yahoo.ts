@@ -61,12 +61,7 @@ export const yahoo = {
   // Get company insights/summary (returns raw yahoofinance result)
   async getInsights(symbol: string) {
     return await yahooFinance.quoteSummary(symbol, {
-      modules: [
-        "summaryProfile",
-        "financialData",
-        "recommendationTrend",
-        "earnings",
-      ],
+      modules: ["summaryProfile", "financialData", "recommendationTrend", "earnings"],
     });
   },
 

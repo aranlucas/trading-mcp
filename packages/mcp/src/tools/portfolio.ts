@@ -18,9 +18,7 @@ export function registerPortfolioTools(server: McpServer) {
       try {
         const account = await alpaca.getAccount();
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(account, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(account, null, 2) }],
         };
       } catch (error) {
         return {
@@ -44,9 +42,7 @@ export function registerPortfolioTools(server: McpServer) {
       try {
         const portfolio = await alpaca.getPortfolio();
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(portfolio, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(portfolio, null, 2) }],
         };
       } catch (error) {
         return {
@@ -72,14 +68,10 @@ export function registerPortfolioTools(server: McpServer) {
       try {
         let positions = await alpaca.getPositions();
         if (symbol) {
-          positions = positions.filter(
-            (p) => p.symbol.toUpperCase() === symbol.toUpperCase(),
-          );
+          positions = positions.filter((p) => p.symbol.toUpperCase() === symbol.toUpperCase());
         }
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(positions, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(positions, null, 2) }],
         };
       } catch (error) {
         return {

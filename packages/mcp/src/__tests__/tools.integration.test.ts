@@ -112,12 +112,8 @@ vi.mock("@trading/core", () => ({
   },
   yahoo: {
     search: vi.fn().mockResolvedValue([]),
-    getOptions: vi
-      .fn()
-      .mockResolvedValue({ expirationDates: [], calls: [], puts: [] }),
-    getOptionsForExpiration: vi
-      .fn()
-      .mockResolvedValue({ expiration: "", calls: [], puts: [] }),
+    getOptions: vi.fn().mockResolvedValue({ expirationDates: [], calls: [], puts: [] }),
+    getOptionsForExpiration: vi.fn().mockResolvedValue({ expiration: "", calls: [], puts: [] }),
   },
 }));
 
@@ -175,8 +171,7 @@ describe("MCP Tools Integration", () => {
       const result = await tool!.handler({ symbol: "AAPL" });
 
       expect(result).toHaveProperty("content");
-      const content = (result as { content: Array<{ text: string }> })
-        .content[0]!.text;
+      const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
       const quote = JSON.parse(content);
       expect(quote.symbol).toBe("AAPL");
       expect(quote.price).toBe(175.5);
@@ -191,8 +186,7 @@ describe("MCP Tools Integration", () => {
       });
 
       expect(result).toHaveProperty("content");
-      const content = (result as { content: Array<{ text: string }> })
-        .content[0]!.text;
+      const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
       const bars = JSON.parse(content);
       expect(Array.isArray(bars)).toBe(true);
     });
@@ -202,8 +196,7 @@ describe("MCP Tools Integration", () => {
       const result = await tool!.handler({});
 
       expect(result).toHaveProperty("content");
-      const content = (result as { content: Array<{ text: string }> })
-        .content[0]!.text;
+      const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
       const status = JSON.parse(content);
       expect(status).toHaveProperty("isOpen");
     });
@@ -215,8 +208,7 @@ describe("MCP Tools Integration", () => {
       const result = await tool!.handler({});
 
       expect(result).toHaveProperty("content");
-      const content = (result as { content: Array<{ text: string }> })
-        .content[0]!.text;
+      const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
       const account = JSON.parse(content);
       expect(account).toHaveProperty("equity");
       expect(account).toHaveProperty("cash");
@@ -227,8 +219,7 @@ describe("MCP Tools Integration", () => {
       const result = await tool!.handler({});
 
       expect(result).toHaveProperty("content");
-      const content = (result as { content: Array<{ text: string }> })
-        .content[0]!.text;
+      const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
       const positions = JSON.parse(content);
       expect(Array.isArray(positions)).toBe(true);
     });
@@ -247,8 +238,7 @@ describe("MCP Tools Integration", () => {
       });
 
       expect(result).toHaveProperty("isError", true);
-      const content = (result as { content: Array<{ text: string }> })
-        .content[0]!.text;
+      const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
       expect(content).toContain("limit_price required");
     });
 
@@ -264,8 +254,7 @@ describe("MCP Tools Integration", () => {
       });
 
       expect(result).toHaveProperty("isError", true);
-      const content = (result as { content: Array<{ text: string }> })
-        .content[0]!.text;
+      const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
       expect(content).toContain("stop_price required");
     });
 
@@ -280,8 +269,7 @@ describe("MCP Tools Integration", () => {
       });
 
       expect(result).not.toHaveProperty("isError");
-      const content = (result as { content: Array<{ text: string }> })
-        .content[0]!.text;
+      const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
       const order = JSON.parse(content);
       expect(order.symbol).toBe("AAPL");
     });
@@ -305,8 +293,7 @@ describe("MCP Tools Integration", () => {
       const result = await tool!.handler({ orderId: "order-123" });
 
       expect(result).toHaveProperty("content");
-      const content = (result as { content: Array<{ text: string }> })
-        .content[0]!.text;
+      const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
       const order = JSON.parse(content);
       expect(order.id).toBe("order-123");
     });
@@ -316,8 +303,7 @@ describe("MCP Tools Integration", () => {
       const result = await tool!.handler({ orderId: "order-123" });
 
       expect(result).toHaveProperty("content");
-      const content = (result as { content: Array<{ text: string }> })
-        .content[0]!.text;
+      const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
       const response = JSON.parse(content);
       expect(response.status).toBe("cancelled");
     });
