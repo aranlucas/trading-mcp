@@ -91,6 +91,16 @@ pnpm dev:screener
 - Add env vars (optional, depending on providers): `SCREENER_PROVIDER` (`yahoo` or `alpaca`), `ALPACA_API_KEY`, `ALPACA_API_SECRET`, `ALPACA_PAPER`
 - After deploy, the API is served under `/api/*` (example: `GET /api/health`)
 
+Generate OpenAPI + types from a running server (no build/import step in the generator):
+
+```bash
+# local (default expects http://localhost:3000)
+pnpm -C packages/screener gen:types
+
+# or point at any running instance (local or deployed)
+SCREENER_BASE_URL=http://localhost:3000 pnpm -C packages/screener gen:types
+```
+
 **Endpoints:**
 
 - `GET /api` - Health check

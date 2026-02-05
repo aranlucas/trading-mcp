@@ -8,3 +8,4 @@ dist/
 packages/*/.vercel/
 .vercel
 .env*.local
+packages/screener/generated/
