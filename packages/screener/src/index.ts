@@ -16,4 +16,4 @@ serve({
   port: PORT,
 });
 
-console.log(`Screener API running at http://localhost:${PORT}`);
+console.log(`Screener API running at http://localhost:${PORT}/api`);

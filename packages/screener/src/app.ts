@@ -6,7 +6,7 @@ import { screenerRoutes } from "./routes/screener.js";
 import { quotesRoutes } from "./routes/quotes.js";
 import { openapi } from "./openapi.js";
 
-export const app = new Hono();
+export const app = new Hono().basePath("/api");
 
 // Middleware
 app.use("*", secureHeaders());
@@ -32,5 +32,5 @@ app.get("/health", async (c) => {
 app.get("/openapi.json", (c) => c.json(openapi));
 
 // Routes
-app.route("/api/screener", screenerRoutes);
-app.route("/api/quotes", quotesRoutes);
+app.route("/screener", screenerRoutes);
+app.route("/quotes", quotesRoutes);
