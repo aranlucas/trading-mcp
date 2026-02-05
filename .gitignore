@@ -4,3 +4,7 @@ dist/
 *.log
 .DS_Store
 .turbo
+.vercel/
+packages/*/.vercel/
+.vercel
+.env*.local
