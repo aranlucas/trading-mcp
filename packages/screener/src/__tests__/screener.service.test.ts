@@ -268,7 +268,7 @@ describe("ScreenerService", () => {
         maxRsi: 70,
       };
 
-      const results = await screener.scan(criteria);
+      await screener.scan(criteria);
 
       // Should have called getBars to calculate RSI
       expect(alpaca.getBars).toHaveBeenCalledWith("AAPL", "1Day", 60);
@@ -280,7 +280,7 @@ describe("ScreenerService", () => {
         aboveSma20: true,
       };
 
-      const results = await screener.scan(criteria);
+      await screener.scan(criteria);
 
       // Should have calculated technicals
       expect(alpaca.getBars).toHaveBeenCalled();
@@ -320,11 +320,8 @@ describe("ScreenerService", () => {
       // INTC returns oversold bars
       const signals = await screener.getSignals(["INTC"]);
 
-      const oversoldSignals = signals.filter(
-        (s) => s.type === "RSI_OVERSOLD" && s.symbol === "INTC",
-      );
-
       // May or may not trigger based on generated data, but should process
+      expect(Array.isArray(signals)).toBe(true);
       expect(alpaca.getBars).toHaveBeenCalledWith("INTC", "1Day", 60);
     });
 
@@ -333,6 +330,7 @@ describe("ScreenerService", () => {
       const signals = await screener.getSignals(["NVDA"]);
 
       // Should have processed the symbol
+      expect(Array.isArray(signals)).toBe(true);
       expect(alpaca.getBars).toHaveBeenCalledWith("NVDA", "1Day", 60);
     });
 
