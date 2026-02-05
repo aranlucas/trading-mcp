@@ -19,8 +19,5 @@ jobs:
           node-version: "20"
           cache: "pnpm"
 
-      - run: pnpm install --frozen-lockfile
-
       - name: Prettier
-        run: pnpm run format:check
-
+        run: pnpm dlx prettier@3.8.1 --check "packages/*/src/**/*.ts"
