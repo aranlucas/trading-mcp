@@ -3,18 +3,8 @@
 import { createRequire } from "module";
 import { z } from "zod";
 import { config } from "../config.js";
-import type {
-  Quote,
-  Position,
-  Portfolio,
-  Order,
-  MarketStatus,
-} from "../types/index.js";
-import {
-  AlpacaPositionSchema,
-  AlpacaOrderSchema,
-  AlpacaBarSchema,
-} from "../schemas/index.js";
+import type { Quote, Position, Portfolio, Order, MarketStatus } from "../types/index.js";
+import { AlpacaPositionSchema, AlpacaOrderSchema, AlpacaBarSchema } from "../schemas/index.js";
 
 // CJS import for Alpaca SDK (it doesn't have proper ESM exports)
 const require = createRequire(import.meta.url);
@@ -77,10 +67,7 @@ export async function getPositions(): Promise<Position[]> {
 }
 
 export async function getPortfolio(): Promise<Portfolio> {
-  const [account, positions] = await Promise.all([
-    getAccount(),
-    getPositions(),
-  ]);
+  const [account, positions] = await Promise.all([getAccount(), getPositions()]);
 
   return {
     equity: parseFloat(account.equity),
@@ -125,9 +112,7 @@ export async function getBars(
   symbol: string,
   timeframe = "1Day",
   limit = 100,
-): Promise<
-  { t: string; o: number; h: number; l: number; c: number; v: number }[]
-> {
+): Promise<{ t: string; o: number; h: number; l: number; c: number; v: number }[]> {
   const bars = alpaca.getBarsV2(symbol, {
     timeframe,
     limit,
@@ -248,9 +233,7 @@ export async function getMarketClock(): Promise<MarketStatus> {
 }
 
 // Screener: Get snapshots for multiple symbols
-export async function getSnapshots(
-  symbols: string[],
-): Promise<Map<string, Quote>> {
+export async function getSnapshots(symbols: string[]): Promise<Map<string, Quote>> {
   const results = new Map<string, Quote>();
 
   // Get bars for each symbol

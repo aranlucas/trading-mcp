@@ -61,13 +61,8 @@ async function fetchRealData(symbol: string, days: number): Promise<Bar[]> {
 
     return result.quotes
       .filter(
-        (q: {
-          open?: number;
-          high?: number;
-          low?: number;
-          close?: number;
-          volume?: number;
-        }) => q.open && q.high && q.low && q.close && q.volume
+        (q: { open?: number; high?: number; low?: number; close?: number; volume?: number }) =>
+          q.open && q.high && q.low && q.close && q.volume,
       )
       .map(
         (q: {
@@ -84,7 +79,7 @@ async function fetchRealData(symbol: string, days: number): Promise<Bar[]> {
           l: q.low,
           c: q.close,
           v: q.volume,
-        })
+        }),
       );
   } catch (error) {
     console.error(`Failed to fetch data for ${symbol}:`, error);
@@ -129,10 +124,7 @@ class Backtester {
     this.bars = bars;
   }
 
-  backtestRsiOversold(
-    rsiThreshold: number,
-    holdingPeriod: number
-  ): BacktestResult {
+  backtestRsiOversold(rsiThreshold: number, holdingPeriod: number): BacktestResult {
     const trades: Trade[] = [];
     const closes = this.bars.map((b) => b.c);
 
@@ -167,10 +159,7 @@ class Backtester {
     return this.calculateStats(`RSI_OVERSOLD_${rsiThreshold}`, trades);
   }
 
-  backtestRsiOverbought(
-    rsiThreshold: number,
-    holdingPeriod: number
-  ): BacktestResult {
+  backtestRsiOverbought(rsiThreshold: number, holdingPeriod: number): BacktestResult {
     const trades: Trade[] = [];
     const closes = this.bars.map((b) => b.c);
 
@@ -268,8 +257,7 @@ class Backtester {
 
     const winningTrades = trades.filter((t) => t.pnl > 0);
     const losingTrades = trades.filter((t) => t.pnl <= 0);
-    const avgPnlPercent =
-      trades.reduce((a, b) => a + b.pnlPercent, 0) / trades.length;
+    const avgPnlPercent = trades.reduce((a, b) => a + b.pnlPercent, 0) / trades.length;
     const totalReturn = trades.reduce((a, b) => a + b.pnlPercent, 0);
 
     let peak = 0;
@@ -285,12 +273,9 @@ class Backtester {
 
     const returns = trades.map((t) => t.pnlPercent);
     const meanReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
-    const variance =
-      returns.reduce((a, b) => a + Math.pow(b - meanReturn, 2), 0) /
-      returns.length;
+    const variance = returns.reduce((a, b) => a + Math.pow(b - meanReturn, 2), 0) / returns.length;
     const stdDev = Math.sqrt(variance);
-    const sharpeRatio =
-      stdDev > 0 ? (meanReturn / stdDev) * Math.sqrt(252 / 5) : 0;
+    const sharpeRatio = stdDev > 0 ? (meanReturn / stdDev) * Math.sqrt(252 / 5) : 0;
 
     return {
       strategy,
@@ -329,8 +314,7 @@ function aggregateResults(results: BacktestResult[]) {
   const winningTrades = validResults.reduce((a, b) => a + b.winningTrades, 0);
   const totalReturn = validResults.reduce((a, b) => a + b.totalReturn, 0);
   const maxDrawdown = Math.max(...validResults.map((r) => r.maxDrawdown));
-  const avgSharpe =
-    validResults.reduce((a, b) => a + b.sharpeRatio, 0) / validResults.length;
+  const avgSharpe = validResults.reduce((a, b) => a + b.sharpeRatio, 0) / validResults.length;
 
   return {
     strategy: validResults[0]!.strategy,
@@ -372,9 +356,7 @@ async function main() {
     const bars = await fetchRealData(symbol, 730);
     if (bars.length > 0) {
       dataCache.set(symbol, bars);
-      console.log(
-        ` ✓ ${bars.length} bars (${bars[0]?.t} to ${bars[bars.length - 1]?.t})`
-      );
+      console.log(` ✓ ${bars.length} bars (${bars[0]?.t} to ${bars[bars.length - 1]?.t})`);
     } else {
       console.log(" ✗ No data");
     }
@@ -393,7 +375,7 @@ async function main() {
       name: "RSI < 25 (5d)",
       run: () => {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
-          new Backtester(symbol, bars).backtestRsiOversold(25, 5)
+          new Backtester(symbol, bars).backtestRsiOversold(25, 5),
         );
         return aggregateResults(results);
       },
@@ -402,7 +384,7 @@ async function main() {
       name: "RSI < 30 (5d)",
       run: () => {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
-          new Backtester(symbol, bars).backtestRsiOversold(30, 5)
+          new Backtester(symbol, bars).backtestRsiOversold(30, 5),
         );
         return aggregateResults(results);
       },
@@ -411,7 +393,7 @@ async function main() {
       name: "RSI < 30 (10d)",
       run: () => {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
-          new Backtester(symbol, bars).backtestRsiOversold(30, 10)
+          new Backtester(symbol, bars).backtestRsiOversold(30, 10),
         );
         return aggregateResults(results);
       },
@@ -420,7 +402,7 @@ async function main() {
       name: "RSI < 35 (5d)",
       run: () => {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
-          new Backtester(symbol, bars).backtestRsiOversold(35, 5)
+          new Backtester(symbol, bars).backtestRsiOversold(35, 5),
         );
         return aggregateResults(results);
       },
@@ -429,7 +411,7 @@ async function main() {
       name: "RSI > 70 (5d short)",
       run: () => {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
-          new Backtester(symbol, bars).backtestRsiOverbought(70, 5)
+          new Backtester(symbol, bars).backtestRsiOverbought(70, 5),
         );
         return aggregateResults(results);
       },
@@ -438,7 +420,7 @@ async function main() {
       name: "RSI > 75 (5d short)",
       run: () => {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
-          new Backtester(symbol, bars).backtestRsiOverbought(75, 5)
+          new Backtester(symbol, bars).backtestRsiOverbought(75, 5),
         );
         return aggregateResults(results);
       },
@@ -447,7 +429,7 @@ async function main() {
       name: "MA Bullish (5d)",
       run: () => {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
-          new Backtester(symbol, bars).backtestMaBullishAlignment(5)
+          new Backtester(symbol, bars).backtestMaBullishAlignment(5),
         );
         return aggregateResults(results);
       },
@@ -456,7 +438,7 @@ async function main() {
       name: "MA Bullish (10d)",
       run: () => {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
-          new Backtester(symbol, bars).backtestMaBullishAlignment(10)
+          new Backtester(symbol, bars).backtestMaBullishAlignment(10),
         );
         return aggregateResults(results);
       },
@@ -468,7 +450,7 @@ async function main() {
   console.log("=".repeat(80));
 
   console.log(
-    "\n| Strategy           | Trades | Win Rate |  Avg PnL | Total Ret | Max DD | Sharpe |"
+    "\n| Strategy           | Trades | Win Rate |  Avg PnL | Total Ret | Max DD | Sharpe |",
   );
   console.log(
     "|" +
@@ -485,7 +467,7 @@ async function main() {
       "-".repeat(8) +
       "|" +
       "-".repeat(8) +
-      "|"
+      "|",
   );
 
   const allResults: { name: string; result: ReturnType<typeof aggregateResults> }[] = [];
@@ -495,7 +477,7 @@ async function main() {
     allResults.push({ name: strategy.name, result });
 
     console.log(
-      `| ${strategy.name.padEnd(17)} | ${String(result.totalTrades).padStart(6)} | ${result.winRate.toFixed(1).padStart(7)}% | ${result.avgPnlPercent.toFixed(2).padStart(7)}% | ${result.totalReturn.toFixed(1).padStart(8)}% | ${result.maxDrawdown.toFixed(1).padStart(5)}% | ${result.avgSharpe.toFixed(2).padStart(6)} |`
+      `| ${strategy.name.padEnd(17)} | ${String(result.totalTrades).padStart(6)} | ${result.winRate.toFixed(1).padStart(7)}% | ${result.avgPnlPercent.toFixed(2).padStart(7)}% | ${result.totalReturn.toFixed(1).padStart(8)}% | ${result.maxDrawdown.toFixed(1).padStart(5)}% | ${result.avgSharpe.toFixed(2).padStart(6)} |`,
     );
   }
 
@@ -508,29 +490,29 @@ async function main() {
     console.log("-".repeat(80));
 
     const bestByWinRate = validResults.reduce((a, b) =>
-      a.result.winRate > b.result.winRate ? a : b
+      a.result.winRate > b.result.winRate ? a : b,
     );
     const bestByPnl = validResults.reduce((a, b) =>
-      a.result.avgPnlPercent > b.result.avgPnlPercent ? a : b
+      a.result.avgPnlPercent > b.result.avgPnlPercent ? a : b,
     );
     const bestByTotal = validResults.reduce((a, b) =>
-      a.result.totalReturn > b.result.totalReturn ? a : b
+      a.result.totalReturn > b.result.totalReturn ? a : b,
     );
     const bestBySharpe = validResults.reduce((a, b) =>
-      a.result.avgSharpe > b.result.avgSharpe ? a : b
+      a.result.avgSharpe > b.result.avgSharpe ? a : b,
     );
 
     console.log(
-      `📈 Best Win Rate:     ${bestByWinRate.name} (${bestByWinRate.result.winRate.toFixed(1)}%)`
+      `📈 Best Win Rate:     ${bestByWinRate.name} (${bestByWinRate.result.winRate.toFixed(1)}%)`,
     );
     console.log(
-      `💰 Best Avg PnL:      ${bestByPnl.name} (${bestByPnl.result.avgPnlPercent.toFixed(2)}% per trade)`
+      `💰 Best Avg PnL:      ${bestByPnl.name} (${bestByPnl.result.avgPnlPercent.toFixed(2)}% per trade)`,
     );
     console.log(
-      `📊 Best Total Return: ${bestByTotal.name} (${bestByTotal.result.totalReturn.toFixed(1)}%)`
+      `📊 Best Total Return: ${bestByTotal.name} (${bestByTotal.result.totalReturn.toFixed(1)}%)`,
     );
     console.log(
-      `⚖️  Best Sharpe:       ${bestBySharpe.name} (${bestBySharpe.result.avgSharpe.toFixed(2)})`
+      `⚖️  Best Sharpe:       ${bestBySharpe.name} (${bestBySharpe.result.avgSharpe.toFixed(2)})`,
     );
 
     console.log("\n" + "-".repeat(80));
@@ -538,23 +520,21 @@ async function main() {
     console.log("-".repeat(80));
 
     const profitableStrategies = validResults.filter(
-      (r) => r.result.avgPnlPercent > 0 && r.result.winRate > 50
+      (r) => r.result.avgPnlPercent > 0 && r.result.winRate > 50,
     );
 
     if (profitableStrategies.length > 0) {
       console.log("✅ WORTHWHILE strategies:\n");
       for (const s of profitableStrategies) {
         console.log(
-          `   • ${s.name}: ${s.result.winRate.toFixed(1)}% win rate, ${s.result.avgPnlPercent.toFixed(2)}% avg gain`
+          `   • ${s.name}: ${s.result.winRate.toFixed(1)}% win rate, ${s.result.avgPnlPercent.toFixed(2)}% avg gain`,
         );
       }
     } else {
       console.log("⚠️  No clearly profitable strategies found.");
     }
 
-    const unprofitableStrategies = validResults.filter(
-      (r) => r.result.avgPnlPercent < 0
-    );
+    const unprofitableStrategies = validResults.filter((r) => r.result.avgPnlPercent < 0);
 
     if (unprofitableStrategies.length > 0) {
       console.log("\n❌ NOT WORTHWHILE (negative expected return):\n");

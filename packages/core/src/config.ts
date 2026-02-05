@@ -22,9 +22,7 @@ export function loadConfig(): Config {
   const alpacaPaper = process.env.ALPACA_PAPER !== "false";
 
   if (!alpacaKey || !alpacaSecret) {
-    console.error(
-      "Warning: ALPACA_API_KEY and ALPACA_API_SECRET not set. API calls will fail.",
-    );
+    console.error("Warning: ALPACA_API_KEY and ALPACA_API_SECRET not set. API calls will fail.");
   }
 
   return {
