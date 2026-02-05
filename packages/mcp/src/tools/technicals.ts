@@ -239,6 +239,30 @@ export function registerTechnicalTools(server: McpServer) {
           });
         }
 
+        // MACD momentum signal
+        const macdData = macd(closes);
+        const macdStrength =
+          Math.min(1, Math.abs(macdData.histogram) / (Math.abs(macdData.value) || 1)) || 0.3;
+        if (macdData.histogram > 0 && macdData.value > 0) {
+          signals.push({
+            symbol: symbol.toUpperCase(),
+            type: "MACD_BULLISH",
+            direction: "bullish",
+            strength: macdStrength,
+            timestamp: new Date().toISOString(),
+            description: "MACD histogram above zero (bullish momentum)",
+          });
+        } else if (macdData.histogram < 0 && macdData.value < 0) {
+          signals.push({
+            symbol: symbol.toUpperCase(),
+            type: "MACD_BEARISH",
+            direction: "bearish",
+            strength: macdStrength,
+            timestamp: new Date().toISOString(),
+            description: "MACD histogram below zero (bearish momentum)",
+          });
+        }
+
         return {
           content: [{ type: "text" as const, text: JSON.stringify(signals, null, 2) }],
         };
