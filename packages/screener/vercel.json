@@ -6,6 +6,8 @@
   "outputDirectory": ".",
   "framework": null,
   "functions": {
-    "api/[[...path]].ts": {}
+    "api/[[...path]].ts": {
+      "maxDuration": 30
+    }
   }
 }
