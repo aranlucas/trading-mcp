@@ -1,0 +1,105 @@
+name: Screener
+
+on:
+  # Manual trigger with options
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Action to perform"
+        required: true
+        default: "backtest"
+        type: choice
+        options:
+          - backtest
+          - health-check
+          - deploy-preview
+
+  # Run backtest weekly on Monday at 9am UTC (after market data updates)
+  schedule:
+    - cron: "0 9 * * 1"
+
+jobs:
+  backtest:
+    if: ${{ github.event.inputs.action == 'backtest' || github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+
+      - name: Run Backtest
+        run: pnpm --filter @trading/screener exec tsx src/scripts/run-backtest.ts
+        env:
+          NODE_ENV: production
+
+      - name: Upload Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backtest-results-${{ github.run_id }}
+          path: |
+            packages/screener/backtest-*.json
+          retention-days: 30
+
+  health-check:
+    if: ${{ github.event.inputs.action == 'health-check' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+
+      - name: Start Screener API
+        run: |
+          pnpm --filter @trading/screener start &
+          sleep 5
+
+      - name: Health Check
+        run: |
+          curl -f http://localhost:3000/ || exit 1
+          echo "Health check passed!"
+
+  deploy-preview:
+    if: ${{ github.event.inputs.action == 'deploy-preview' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Deploy to Vercel Preview
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: packages/screener

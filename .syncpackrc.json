@@ -1,0 +1,37 @@
+{
+  "$schema": "https://unpkg.com/syncpack@13/dist/schema.json",
+  "sortFirst": [
+    "name",
+    "version",
+    "description",
+    "type",
+    "private",
+    "packageManager",
+    "exports",
+    "bin",
+    "scripts",
+    "keywords",
+    "license",
+    "dependencies",
+    "devDependencies",
+    "peerDependencies",
+    "engines"
+  ],
+  "versionGroups": [
+    {
+      "label": "Use workspace protocol for internal packages",
+      "packages": ["@trading/*"],
+      "dependencies": ["@trading/*"],
+      "dependencyTypes": ["prod", "dev"],
+      "pinVersion": "workspace:*"
+    }
+  ],
+  "semverGroups": [
+    {
+      "label": "Use exact versions in production",
+      "packages": ["**"],
+      "dependencyTypes": ["prod"],
+      "range": ""
+    }
+  ]
+}

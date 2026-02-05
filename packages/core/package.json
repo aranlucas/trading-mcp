@@ -1,0 +1,49 @@
+{
+  "name": "@trading/core",
+  "version": "0.1.0",
+  "description": "Shared types and utilities for trading packages",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js"
+    },
+    "./providers": {
+      "types": "./dist/providers/index.d.ts",
+      "import": "./dist/providers/index.js"
+    },
+    "./providers/*": {
+      "types": "./dist/providers/*.d.ts",
+      "import": "./dist/providers/*.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas/index.d.ts",
+      "import": "./dist/schemas/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@alpacahq/alpaca-trade-api": "^3.1.3",
+    "@polygon.io/client-js": "^8.2.0",
+    "bottleneck": "^2.19.5",
+    "finnhub": "^2.0.13",
+    "lru-cache": "^11.0.2",
+    "pino": "^9.6.0",
+    "yahoo-finance2": "^3.13.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.1.0",
+    "typescript": "^5.9.3"
+  }
+}
