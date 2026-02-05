@@ -327,7 +327,7 @@ describe("ScreenerService", () => {
 
     it("should generate RSI_OVERBOUGHT signal when RSI > 70", async () => {
       // NVDA returns overbought bars
-      await screener.getSignals(["NVDA"]);
+      const signals = await screener.getSignals(["NVDA"]);
 
       // Should have processed the symbol
       expect(Array.isArray(signals)).toBe(true);
