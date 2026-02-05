@@ -91,9 +91,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Deploy to Vercel Preview
+        id: vercel
         uses: amondnet/vercel-action@v41.1.4
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: packages/screener
+
+      - name: Run integration tests against preview
+        run: pnpm exec vitest run -c vitest.vercel.config.ts
+        env:
+          VERCEL_DEPLOY_URL: ${{ steps.vercel.outputs.preview-url }}

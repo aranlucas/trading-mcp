@@ -7,8 +7,44 @@ import { AlpacaPositionSchema, AlpacaOrderSchema, AlpacaBarSchema } from "../sch
 import { ValidationError } from "./errors.js";
 import Alpaca from "@alpacahq/alpaca-trade-api";
 
+type AlpacaClientOptions = {
+  keyId: string;
+  secretKey: string;
+  paper: boolean;
+};
+
+type AlpacaBarsV2Params = {
+  timeframe: string;
+  limit: number;
+};
+
+type AlpacaClient = {
+  getAccount(): Promise<unknown>;
+  getPositions(): Promise<unknown>;
+  getBarsV2(symbol: string, params: AlpacaBarsV2Params): AsyncIterable<unknown>;
+  createOrder(params: unknown): Promise<unknown>;
+  getOrder(orderId: string): Promise<unknown>;
+  cancelOrder(orderId: string): Promise<unknown>;
+  getOrders(params: unknown): Promise<unknown>;
+  getClock(): Promise<unknown>;
+};
+
+type AlpacaCtor = new (opts: AlpacaClientOptions) => AlpacaClient;
+
+function getAlpacaCtor(): AlpacaCtor {
+  // The SDK is published as CJS; depending on the Node/TS module interop settings,
+  // `import Alpaca from ...` can be either the ctor itself or `{ default: ctor }`.
+  const maybe = Alpaca as unknown as { default?: unknown };
+  const ctor = (maybe.default ?? Alpaca) as unknown;
+  if (typeof ctor !== "function") {
+    throw new Error("Invalid Alpaca SDK import (constructor not found)");
+  }
+  return ctor as AlpacaCtor;
+}
+
 // Initialize official Alpaca client
-const alpaca = new Alpaca.default({
+const AlpacaCtor = getAlpacaCtor();
+const alpaca = new AlpacaCtor({
   keyId: config.alpaca.apiKey,
   secretKey: config.alpaca.apiSecret,
   paper: config.alpaca.paper,
