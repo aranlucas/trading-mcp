@@ -1,11 +1,13 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
 import { screenerRoutes } from "./routes/screener.js";
 import { quotesRoutes } from "./routes/quotes.js";
 
 export const app = new Hono();
 
 // Middleware
+app.use("*", secureHeaders());
 app.use("*", cors());
 
 // Health check

@@ -16,8 +16,8 @@ const client = new finnhub.DefaultApi(apiKey);
 
 // Promisify callback-based API
 function promisify<T>(
-  fn: (callback: (err: Error | null, data: T) => void) => void,
-): Promise<T> {
+  fn: (callback: (err: Error | null, data?: T) => void) => void,
+): Promise<T | undefined> {
   return new Promise((resolve, reject) => {
     fn((err, data) => {
       if (err) reject(err);

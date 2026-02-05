@@ -1,16 +1,25 @@
-# Trading MCP - Improvement Roadmap
+# Trading MCP - Remaining Improvements
+
+This document tracks remaining work for the trading-mcp repository.
 
 ## Current State
 
 **Score:** 8.5/10
-**Status:** Production-ready infrastructure complete. Focus now on testing, documentation, and advanced features.
+**Status:** Production-ready infrastructure with comprehensive tooling
 
-**Guiding Principles**
+### Completed
 
-- Ship incremental improvements with measurable outcomes.
-- Prefer automation (tests, linting, CI) over manual checks.
-- Favor stable APIs/providers over brittle scraping.
-- Keep roadmap items scoped to a single, testable outcome when possible.
+- Type Safety (Zod schemas, no `any` types)
+- CI/CD Pipeline (GitHub Actions)
+- Input Validation (Zod + @hono/zod-validator)
+- Rate Limiting (Bottleneck)
+- Structured Logging (Pino)
+- Caching Layer (LRU cache)
+- Code Quality (ESLint + Prettier + Husky + lint-staged)
+- Docker Support
+- Vercel Deployment
+- Test Suite (41+ tests)
+- Security Headers (Hono secureHeaders middleware)
 
 ---
 
@@ -18,197 +27,104 @@
 
 ### 1. Increase Test Coverage
 
-**Priority:** Critical
+**Current:** ~40% coverage with 41+ tests
+**Target:** 80%+ coverage
 
-**Action Items:**
-
-- [ ] Add unit tests for technical indicator calculations (RSI, SMA)
-- [ ] Add integration tests for provider fallback logic
-- [ ] Add API route tests with mocked responses
-- [ ] Target: 80%+ coverage
-- [ ] Add mutation testing or snapshot tests for key outputs
-
-**Definition of Done**
-
-- ✅ 80%+ coverage on `packages/core` and `packages/screener`
-- ✅ All critical paths have tests (indicator calc, provider failover, and API routes)
-
-### 2. Add OpenAPI Documentation
+**Remaining:**
+- Add unit tests for provider fallback logic
+- Add tests for order placement validation
+- Add error handling tests
 
 **Priority:** High
 
-**Action Items:**
+### 2. Error Handling Improvements
 
-- [ ] Add `@hono/swagger-ui` for auto-generated docs
-- [ ] Document all endpoints with request/response examples
-- [ ] Add error code reference
-- [ ] Publish a versioned `/docs` endpoint
-- [ ] Add OpenAPI schema validation in CI to prevent drift
+**Current:** Pino structured logging in place
 
-**Definition of Done**
+**Remaining:**
+- Create custom error classes for each domain
+- Add retry logic with exponential backoff
+- Track error rates per provider
 
-- ✅ Swagger UI loads in dev and production
-- ✅ All routes and error responses visible in docs
+---
 
 ### 3. Replace Finviz HTML Scraping
 
-**Priority:** High
-**Risk:** Brittle, may violate ToS
+**Problem:** `packages/core/src/providers/finviz.ts` uses regex to parse HTML - brittle and may violate ToS.
 
 **Alternatives:**
-
-- Finviz Elite API (paid)
-- Alpha Vantage (free tier)
-- Tradier (free)
-- IEX Cloud (pay-per-call)
-
-**Decision Criteria**
-
-- API reliability and rate limits
-- Cost per request at expected volume
-- Compliance with ToS and long-term stability
-
-### 4. Add Pre-commit Hooks
-
-**Priority:** Medium
-
-**Action Items:**
-
-- [ ] Add Husky for git hooks
-- [ ] Add lint-staged for staged file linting
-- [ ] Run typecheck on commit
-
-**Definition of Done**
-
-- ✅ Pre-commit runs `lint` and `typecheck` for staged files only
-- ✅ Hooks are documented in README
-
-### 5. Security Hardening
-
-**Priority:** Medium
-
-**Action Items:**
-
-- [ ] Add `helmet` for security headers
-- [ ] Add `@secretlint/secretlint-rule-preset-recommend`
-- [ ] Sanitize error messages in API responses
-- [ ] Validate environment variables on startup
-
-**Definition of Done**
-
-- ✅ Security headers enabled and verified with a simple curl check
-- ✅ Secrets scanning integrated in CI
-- ✅ Startup fails fast with clear env validation errors
-
-### 6. Monitoring & Observability
-
-**Priority:** Medium
-
-**Action Items:**
-
-- [ ] Integrate Pino logger with cloud logging (Datadog, Axiom, etc.)
-- [ ] Add request timing metrics
-- [ ] Add provider health monitoring
-- [ ] Set up alerts for API errors
-
-**Definition of Done**
-
-- ✅ Structured logs include request IDs and timings
-- ✅ Provider health dashboard or a periodic health report
+1. Finviz Elite API (paid)
+2. Alpha Vantage (free tier)
+3. Tradier (free market data)
+4. IEX Cloud (pay-per-call)
 
 ---
 
-## New Suggestions
+### 4. API Documentation
 
-### 7. Add WebSocket Support for Real-time Data
+**Missing:**
+- OpenAPI/Swagger specification
+- Example requests and responses
+- Error codes and handling guide
+- Rate limiting documentation
 
-**Priority:** Low
-**Value:** Enable real-time price updates
+---
+
+### 5. Provider Fallback Optimization
+
+**Current:** Sequential fallback on failure
+**Improvement:** Parallel requests with first-success pattern
 
 ```typescript
-// Example with Hono WebSocket
-app.get("/ws/quotes/:symbol", upgradeWebSocket((c) => ({
-  onMessage(event, ws) {
-    // Stream real-time quotes
-  }
-})));
-```
+export async function getQuote(symbol: string): Promise<Quote> {
+  const results = await Promise.allSettled([
+    withTimeout(yahoo.getQuote(symbol), 2000),
+    withTimeout(polygon.getQuote(symbol), 2000),
+    withTimeout(alpaca.getQuote(symbol), 2000),
+  ]);
 
-### 8. Add Portfolio Analytics
+  const success = results.find((r) => r.status === "fulfilled");
+  if (success) return success.value;
 
-**Priority:** Low
-**Value:** Advanced portfolio insights
-
-- Sharpe ratio calculation
-- Beta vs market index
-- Sector allocation breakdown
-- Risk metrics (VaR, max drawdown)
-
-### 9. Add Options Greeks Calculator
-
-**Priority:** Low
-**Value:** Options trading support
-
-- Black-Scholes implementation
-- Delta, Gamma, Theta, Vega calculations
-- IV surface visualization data
-
-### 10. Add Backtesting API Endpoint
-
-**Priority:** Medium
-**Value:** Run backtests via API instead of CLI
-
-```
-POST /api/backtest
-{
-  "strategy": "RSI_OVERSOLD",
-  "symbols": ["AAPL", "MSFT"],
-  "period": "1y",
-  "params": { "rsiThreshold": 30, "holdingDays": 5 }
+  throw new AggregateError(
+    results.filter((r) => r.status === "rejected").map((r) => r.reason),
+    "All providers failed",
+  );
 }
 ```
 
-### 11. Add Alert/Notification System
+---
 
-**Priority:** Medium
-**Value:** Proactive trading signals
+### 6. Security Hardening
 
-- Price alerts
-- RSI threshold alerts
-- Unusual volume detection
-- Webhook delivery
-
-### 12. Add Multi-timeframe Analysis
-
-**Priority:** Low
-**Value:** Better signal quality
-
-- Combine daily/weekly/monthly signals
-- Trend alignment across timeframes
-- Higher timeframe confirmation
+**Recommendations:**
+1. Add `@secretlint/secretlint-rule-preset-recommend`
+2. Sanitize error messages before returning to clients
+3. Use environment variable validation on startup
+4. ~~Add security headers to REST API~~ (done - using Hono's secureHeaders)
 
 ---
 
-## Suggested Order of Execution
+## Implementation Roadmap
 
-1. Increase Test Coverage
-2. Add OpenAPI Documentation
-3. Replace Finviz HTML Scraping
-4. Add Pre-commit Hooks
-5. Security Hardening
-6. Monitoring & Observability
+### Phase 3: Quality (In Progress)
+
+- [ ] Reach 80% test coverage
+- [ ] Add OpenAPI documentation
+- [ ] Replace Finviz scraping
+
+### Phase 4: Production
+
+- [ ] Add monitoring/APM hooks
+- [ ] Security audit
+- [ ] Performance testing
 
 ---
 
-## Quick Reference
+## Priority Order
 
-| Feature | Status | File/Location |
-|---------|--------|---------------|
-| CI/CD | Done | `.github/workflows/ci.yml` |
-| Screener Workflow | Done | `.github/workflows/screener.yml` |
-| Input Validation | Done | `packages/screener/src/routes/*.ts` |
-| Rate Limiting | Done | `packages/core/src/lib/rate-limiter.ts` |
-| Logging | Done | `packages/core/src/lib/logger.ts` |
-| Caching | Done | `packages/core/src/lib/cache.ts` |
-| Docker | Done | `Dockerfile` |
-| ESLint/Prettier | Done | `eslint.config.js`, `.prettierrc` |
+1. **High:** Test coverage to 80%+
+2. **High:** OpenAPI documentation
+3. **Medium:** Replace Finviz scraping
+4. **Medium:** Security hardening
+5. **Low:** Provider fallback optimization
