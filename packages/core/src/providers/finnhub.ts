@@ -15,10 +15,11 @@ const apiKey = process.env.FINNHUB_API_KEY || "";
 const client = new finnhub.DefaultApi(apiKey);
 
 // Promisify callback-based API
-function promisify<T>(fn: (callback: (err: Error | null, data: T) => void) => void): Promise<T> {
+function promisify<T>(fn: (callback: (err: Error | null, data?: T) => void) => void): Promise<T> {
   return new Promise((resolve, reject) => {
     fn((err, data) => {
       if (err) reject(err);
+      else if (data === undefined) reject(new Error("Finnhub callback returned no data"));
       else resolve(data);
     });
   });
