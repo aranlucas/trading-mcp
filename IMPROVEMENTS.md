@@ -14,6 +14,11 @@ This document tracks remaining work for the trading-mcp repository. Delete this 
 - **Order placement validation** at the core Alpaca client boundary (limit/stop price requirements)
 - **OpenAPI**: `GET /openapi.json` added (basic spec)
 - **Provider error-rate tracking** (rolling-window metrics snapshot)
+- **Secret scanning**: Secretlint configured with recommended preset
+- **API error responses** include stable `code` fields (in addition to `error`)
+- **OpenAPI** schemas expanded (core request/response + error payloads)
+- **Provider fallback tests** expanded (timeouts, all-fail AggregateError, invalid payloads)
+- **Dependency hygiene**: `@hono/zod-validator` upgraded to support Zod v4
 
 ---
 
@@ -24,23 +29,15 @@ This document tracks remaining work for the trading-mcp repository. Delete this 
 **Target:** 80%+ coverage
 
 **Remaining:**
-- Expand unit tests for provider fallback edge cases (timeouts, all-fail AggregateError, null returns)
-- Add additional error-path tests (provider errors, timeouts, invalid upstream responses)
 - Add coverage for trading/order flows beyond parameter validation
 
 **Priority:** High
 
 ---
 
-### 2. Error Handling Improvements
-
-**Current:** Structured logging in place; public error sanitization for REST responses
-
-**Remaining:** (none)
-
 ---
 
-### 3. Replace Finviz HTML Scraping
+### 2. Replace Finviz HTML Scraping
 
 **Problem:** `packages/core/src/providers/finviz.ts` parses HTML with regex (brittle, possible ToS issues).
 
@@ -54,25 +51,16 @@ This document tracks remaining work for the trading-mcp repository. Delete this 
 
 ---
 
-### 4. API Documentation Improvements
+### 3. API Documentation Improvements
 
 **Current:** Basic OpenAPI spec exists at `GET /openapi.json`.
 
 **Remaining:**
-- Expand OpenAPI schemas (request/response bodies, examples)
-- Document error codes and handling guide
 - Document rate limiting behavior
 
 **Priority:** High
 
 ---
-
-### 5. Security Hardening
-
-**Remaining:**
-1. Add `@secretlint/secretlint-rule-preset-recommend`
-
-**Priority:** Medium
 
 ---
 
@@ -93,3 +81,10 @@ Temporarily disable unhealthy providers to avoid repeated slow failures.
 ### Watchlist Persistence
 
 Add simple storage (SQLite or file-based) for watchlists.
+
+---
+
+## Newly Noted
+
+- Consolidate repeated `symbolSchema` validation between `packages/screener/src/routes/quotes.ts` and `packages/screener/src/routes/screener.ts`
+- Consider removing or using unused helper `raceToSuccess()` in `packages/core/src/lib/timeout.ts`

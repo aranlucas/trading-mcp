@@ -37,7 +37,7 @@ quotesRoutes.get("/:symbol", zValidator("param", symbolParamSchema), async (c) =
     return c.json(yahooQuote);
   } catch (error) {
     const pub = toPublicError(error);
-    return c.json({ error: pub.message }, pub.status);
+    return c.json({ error: pub.message, code: pub.code }, pub.status);
   }
 });
 
@@ -50,7 +50,7 @@ quotesRoutes.post("/batch", zValidator("json", batchQuotesSchema), async (c) => 
     return c.json(yahooQuotes);
   } catch (error) {
     const pub = toPublicError(error);
-    return c.json({ error: pub.message }, pub.status);
+    return c.json({ error: pub.message, code: pub.code }, pub.status);
   }
 });
 
@@ -71,7 +71,7 @@ quotesRoutes.get(
       return c.json(chart);
     } catch (error) {
       const pub = toPublicError(error);
-      return c.json({ error: pub.message }, pub.status);
+      return c.json({ error: pub.message, code: pub.code }, pub.status);
     }
   },
 );

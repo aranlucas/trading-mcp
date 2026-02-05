@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createUnified } from "../providers/index.js";
+import { ProviderError } from "../lib/errors.js";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -117,5 +118,64 @@ describe("unified.getQuote fallback", () => {
 
     await expect(pending).resolves.toMatchObject({ symbol: "MSFT", price: 333 });
     expect(yahooSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("wraps all-provider failure into a unified ProviderError (AggregateError cause)", async () => {
+    const finnhub = (await import("../providers/finnhub.js")).finnhubProvider;
+    const polygon = (await import("../providers/polygon.js")).polygon;
+    vi.spyOn(finnhub, "isConfigured").mockReturnValue(false);
+    vi.spyOn(polygon, "isConfigured").mockReturnValue(false);
+
+    const unified = createUnified({ quoteRetries: 0 });
+
+    const yahoo = (await import("../providers/yahoo.js")).yahoo;
+    const finviz = (await import("../providers/finviz.js")).finviz;
+
+    vi.spyOn(yahoo, "getQuoteNormalized").mockRejectedValueOnce(new Error("yahoo down"));
+    vi.spyOn(finviz, "getQuote").mockRejectedValueOnce(new Error("finviz down"));
+
+    try {
+      await unified.getQuote("AAPL");
+      throw new Error("expected unified.getQuote to throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ProviderError);
+      const pe = err as ProviderError;
+      expect(pe.provider).toBe("unified");
+      expect(pe.operation).toBe("getQuote");
+      expect(pe.cause).toBeInstanceOf(AggregateError);
+    }
+  });
+
+  it("treats provider timeouts as failures and records metrics", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-02-05T00:00:00.000Z"));
+
+    const finnhub = (await import("../providers/finnhub.js")).finnhubProvider;
+    const polygon = (await import("../providers/polygon.js")).polygon;
+    vi.spyOn(finnhub, "isConfigured").mockReturnValue(false);
+    vi.spyOn(polygon, "isConfigured").mockReturnValue(false);
+
+    const unified = createUnified({ quoteTimeoutMs: 10, quoteRetries: 0 });
+
+    const yahoo = (await import("../providers/yahoo.js")).yahoo;
+    const finviz = (await import("../providers/finviz.js")).finviz;
+
+    vi.spyOn(yahoo, "getQuoteNormalized").mockImplementation(async () => {
+      await new Promise<void>(() => {});
+      throw new Error("unreachable");
+    });
+    vi.spyOn(finviz, "getQuote").mockImplementation(async () => {
+      await new Promise<void>(() => {});
+      return null;
+    });
+
+    const pending = unified.getQuote("TSLA");
+    const assertion = expect(pending).rejects.toBeInstanceOf(ProviderError);
+    await vi.advanceTimersByTimeAsync(20);
+    await assertion;
+
+    const snap = unified.getProviderMetrics();
+    expect(snap.providers.yahoo?.getQuote?.totals.failure).toBe(1);
+    expect(snap.providers.finviz?.getQuote?.totals.failure).toBe(1);
   });
 });
