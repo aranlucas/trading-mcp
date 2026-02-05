@@ -5,7 +5,7 @@ export const openapi = {
     version: "0.1.0",
   },
   paths: {
-    "/": {
+    "/api": {
       get: {
         summary: "Service status",
         responses: {
@@ -16,7 +16,7 @@ export const openapi = {
         },
       },
     },
-    "/health": {
+    "/api/health": {
       get: {
         summary: "Provider health check",
         responses: {
@@ -26,6 +26,17 @@ export const openapi = {
           },
           "503": {
             description: "Unhealthy",
+            content: { "application/json": { schema: { type: "object" } } },
+          },
+        },
+      },
+    },
+    "/api/openapi.json": {
+      get: {
+        summary: "OpenAPI 3.0 spec",
+        responses: {
+          "200": {
+            description: "OpenAPI spec",
             content: { "application/json": { schema: { type: "object" } } },
           },
         },

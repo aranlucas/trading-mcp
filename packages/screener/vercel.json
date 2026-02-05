@@ -1,18 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "cd ../.. && npm run build",
-  "installCommand": "cd ../.. && npm install",
+  "buildCommand": "cd ../.. && pnpm turbo run build --filter=@trading/screener",
+  "installCommand": "cd ../.. && corepack enable && pnpm install --frozen-lockfile",
   "framework": null,
   "functions": {
-    "api/index.ts": {
+    "api/[[...path]].ts": {
       "runtime": "@vercel/node@3.0.0"
     }
-  },
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/api"
-    }
-  ]
+  }
 }
