@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Generate bars with a specific RSI tendency
 function generateBarsForRsi(
   targetRsi: number,
-  periods = 30
+  periods = 30,
 ): { t: string; o: number; h: number; l: number; c: number; v: number }[] {
   const bars = [];
   let price = 100;
@@ -15,9 +15,7 @@ function generateBarsForRsi(
   for (let i = 0; i < periods; i++) {
     const date = new Date(2024, 0, i + 1);
     const isUpDay = Math.random() < upDayProb;
-    const change = isUpDay
-      ? Math.random() * 2 + 0.5
-      : -(Math.random() * 2 + 0.5);
+    const change = isUpDay ? Math.random() * 2 + 0.5 : -(Math.random() * 2 + 0.5);
     price = Math.max(10, price + change);
 
     bars.push({
@@ -37,7 +35,7 @@ function generateBarsForRsi(
 function generateBarsForSmaAlignment(
   aboveSma20: boolean,
   aboveSma50: boolean,
-  periods = 60
+  periods = 60,
 ): { t: string; o: number; h: number; l: number; c: number; v: number }[] {
   const bars = [];
 
@@ -296,9 +294,7 @@ describe("ScreenerService", () => {
       expect(movers.length).toBeLessThanOrEqual(5);
       // Should be sorted descending by changePercent
       for (let i = 1; i < movers.length; i++) {
-        expect(movers[i - 1]!.changePercent).toBeGreaterThanOrEqual(
-          movers[i]!.changePercent
-        );
+        expect(movers[i - 1]!.changePercent).toBeGreaterThanOrEqual(movers[i]!.changePercent);
       }
     });
 
@@ -308,9 +304,7 @@ describe("ScreenerService", () => {
       expect(movers.length).toBeLessThanOrEqual(5);
       // Should be sorted ascending by changePercent (most negative first)
       for (let i = 1; i < movers.length; i++) {
-        expect(movers[i - 1]!.changePercent).toBeLessThanOrEqual(
-          movers[i]!.changePercent
-        );
+        expect(movers[i - 1]!.changePercent).toBeLessThanOrEqual(movers[i]!.changePercent);
       }
     });
 
@@ -327,7 +321,7 @@ describe("ScreenerService", () => {
       const signals = await screener.getSignals(["INTC"]);
 
       const oversoldSignals = signals.filter(
-        (s) => s.type === "RSI_OVERSOLD" && s.symbol === "INTC"
+        (s) => s.type === "RSI_OVERSOLD" && s.symbol === "INTC",
       );
 
       // May or may not trigger based on generated data, but should process

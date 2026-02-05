@@ -81,11 +81,7 @@ export const unified = {
     if (symbol) {
       try {
         const yahooResult = await yahoo.getNews(symbol);
-        if (
-          yahooResult &&
-          "news" in yahooResult &&
-          Array.isArray(yahooResult.news)
-        ) {
+        if (yahooResult && "news" in yahooResult && Array.isArray(yahooResult.news)) {
           for (const item of yahooResult.news) {
             allNews.push({
               id: item.uuid || "",
@@ -107,9 +103,7 @@ export const unified = {
     if (symbol) {
       try {
         const to = new Date().toISOString().slice(0, 10);
-        const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .slice(0, 10);
+        const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
         const fhNews = await finnhub.getNews(symbol, from, to);
         allNews.push(...fhNews);
       } catch {
@@ -166,9 +160,7 @@ export const unified = {
     // Fall back to Finviz
     try {
       const fvMovers =
-        direction === "gainers"
-          ? await finviz.getGainers()
-          : await finviz.getLosers();
+        direction === "gainers" ? await finviz.getGainers() : await finviz.getLosers();
       return fvMovers.map((m) => ({
         ticker: m.symbol,
         todaysChangePerc: m.changePercent,
@@ -214,9 +206,7 @@ export const unified = {
   // Get earnings calendar
   async getEarningsCalendar(days = 7): Promise<unknown[]> {
     const from = new Date().toISOString().slice(0, 10);
-    const to = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10);
+    const to = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     try {
       return await finnhub.getEarningsCalendar(from, to);
     } catch {
