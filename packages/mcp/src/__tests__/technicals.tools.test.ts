@@ -23,7 +23,10 @@ vi.mock("@trading/core", () => ({
 import { registerTechnicalTools } from "../tools/technicals.js";
 
 describe("Technical MCP tools", () => {
-  let registeredTools: Map<string, { handler: (args: Record<string, unknown>) => Promise<unknown> }>;
+  let registeredTools: Map<
+    string,
+    { handler: (args: Record<string, unknown>) => Promise<unknown> }
+  >;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -45,7 +48,9 @@ describe("Technical MCP tools", () => {
   });
 
   it("get_technicals returns indicator payload for valid history", async () => {
-    alpacaMock.getBars.mockResolvedValueOnce(barsFromCloses(Array.from({ length: 30 }, (_, i) => 100 + i)));
+    alpacaMock.getBars.mockResolvedValueOnce(
+      barsFromCloses(Array.from({ length: 30 }, (_, i) => 100 + i)),
+    );
 
     const tool = registeredTools.get("get_technicals");
     const result = await tool!.handler({ symbol: "aapl" });
@@ -59,7 +64,9 @@ describe("Technical MCP tools", () => {
   });
 
   it("get_signals emits RSI oversold + MA bearish for downtrend", async () => {
-    alpacaMock.getBars.mockResolvedValueOnce(barsFromCloses(Array.from({ length: 60 }, (_, i) => 160 - i)));
+    alpacaMock.getBars.mockResolvedValueOnce(
+      barsFromCloses(Array.from({ length: 60 }, (_, i) => 160 - i)),
+    );
 
     const tool = registeredTools.get("get_signals");
     const result = await tool!.handler({ symbol: "aapl" });
@@ -73,7 +80,9 @@ describe("Technical MCP tools", () => {
   });
 
   it("get_signals emits RSI overbought + MA bullish for uptrend", async () => {
-    alpacaMock.getBars.mockResolvedValueOnce(barsFromCloses(Array.from({ length: 60 }, (_, i) => 100 + i)));
+    alpacaMock.getBars.mockResolvedValueOnce(
+      barsFromCloses(Array.from({ length: 60 }, (_, i) => 100 + i)),
+    );
 
     const tool = registeredTools.get("get_signals");
     const result = await tool!.handler({ symbol: "aapl" });
@@ -86,7 +95,9 @@ describe("Technical MCP tools", () => {
   });
 
   it("get_signals returns an error when history is too short", async () => {
-    alpacaMock.getBars.mockResolvedValueOnce(barsFromCloses([100, 99, 98, 97, 96, 95, 94, 93, 92, 91]));
+    alpacaMock.getBars.mockResolvedValueOnce(
+      barsFromCloses([100, 99, 98, 97, 96, 95, 94, 93, 92, 91]),
+    );
 
     const tool = registeredTools.get("get_signals");
     const result = await tool!.handler({ symbol: "aapl" });
