@@ -69,7 +69,7 @@ function generateHistoricalData(
   days: number,
   startPrice: number,
   volatility: number,
-  drift: number
+  drift: number,
 ): Bar[] {
   const bars: Bar[] = [];
   let price = startPrice;
@@ -84,8 +84,7 @@ function generateHistoricalData(
     if (date.getDay() === 0 || date.getDay() === 6) continue;
 
     // Random walk with drift
-    const dailyReturn =
-      drift / 252 + volatility * Math.sqrt(1 / 252) * (Math.random() * 2 - 1);
+    const dailyReturn = drift / 252 + volatility * Math.sqrt(1 / 252) * (Math.random() * 2 - 1);
     price = price * (1 + dailyReturn);
 
     const open = price * (1 + (Math.random() - 0.5) * 0.005);
@@ -115,10 +114,7 @@ class Backtester {
 
   // Backtest RSI oversold strategy
   // Buy when RSI < threshold, sell after N days
-  backtestRsiOversold(
-    rsiThreshold: number,
-    holdingPeriod: number
-  ): BacktestResult {
+  backtestRsiOversold(rsiThreshold: number, holdingPeriod: number): BacktestResult {
     const trades: Trade[] = [];
     const closes = this.bars.map((b) => b.c);
 
@@ -155,10 +151,7 @@ class Backtester {
   }
 
   // Backtest RSI overbought strategy (short or exit long)
-  backtestRsiOverbought(
-    rsiThreshold: number,
-    holdingPeriod: number
-  ): BacktestResult {
+  backtestRsiOverbought(rsiThreshold: number, holdingPeriod: number): BacktestResult {
     const trades: Trade[] = [];
     const closes = this.bars.map((b) => b.c);
 
@@ -243,10 +236,7 @@ class Backtester {
   }
 
   // Combined strategy - buy on oversold OR bullish alignment
-  backtestCombinedStrategy(
-    rsiThreshold: number,
-    holdingPeriod: number
-  ): BacktestResult {
+  backtestCombinedStrategy(rsiThreshold: number, holdingPeriod: number): BacktestResult {
     const trades: Trade[] = [];
     const closes = this.bars.map((b) => b.c);
 
@@ -310,18 +300,15 @@ class Backtester {
 
     const avgWin =
       winningTrades.length > 0
-        ? winningTrades.reduce((a, b) => a + b.pnlPercent, 0) /
-          winningTrades.length
+        ? winningTrades.reduce((a, b) => a + b.pnlPercent, 0) / winningTrades.length
         : 0;
 
     const avgLoss =
       losingTrades.length > 0
-        ? losingTrades.reduce((a, b) => a + b.pnlPercent, 0) /
-          losingTrades.length
+        ? losingTrades.reduce((a, b) => a + b.pnlPercent, 0) / losingTrades.length
         : 0;
 
-    const avgPnlPercent =
-      trades.reduce((a, b) => a + b.pnlPercent, 0) / trades.length;
+    const avgPnlPercent = trades.reduce((a, b) => a + b.pnlPercent, 0) / trades.length;
 
     // Calculate max drawdown
     let peak = 0;
@@ -338,9 +325,7 @@ class Backtester {
     // Calculate Sharpe ratio (simplified)
     const returns = trades.map((t) => t.pnlPercent);
     const meanReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
-    const variance =
-      returns.reduce((a, b) => a + Math.pow(b - meanReturn, 2), 0) /
-      returns.length;
+    const variance = returns.reduce((a, b) => a + Math.pow(b - meanReturn, 2), 0) / returns.length;
     const stdDev = Math.sqrt(variance);
     const sharpeRatio = stdDev > 0 ? meanReturn / stdDev : 0;
 
@@ -385,9 +370,15 @@ describe("Backtesting Framework", () => {
 
       // Lower threshold = fewer but potentially higher quality signals
       console.log("\n=== RSI Oversold Strategy Results ===");
-      console.log(`RSI < 20: ${rsi20.totalTrades} trades, Win rate: ${rsi20.winRate.toFixed(1)}%, Avg PnL: ${rsi20.avgPnlPercent.toFixed(2)}%`);
-      console.log(`RSI < 30: ${rsi30.totalTrades} trades, Win rate: ${rsi30.winRate.toFixed(1)}%, Avg PnL: ${rsi30.avgPnlPercent.toFixed(2)}%`);
-      console.log(`RSI < 40: ${rsi40.totalTrades} trades, Win rate: ${rsi40.winRate.toFixed(1)}%, Avg PnL: ${rsi40.avgPnlPercent.toFixed(2)}%`);
+      console.log(
+        `RSI < 20: ${rsi20.totalTrades} trades, Win rate: ${rsi20.winRate.toFixed(1)}%, Avg PnL: ${rsi20.avgPnlPercent.toFixed(2)}%`,
+      );
+      console.log(
+        `RSI < 30: ${rsi30.totalTrades} trades, Win rate: ${rsi30.winRate.toFixed(1)}%, Avg PnL: ${rsi30.avgPnlPercent.toFixed(2)}%`,
+      );
+      console.log(
+        `RSI < 40: ${rsi40.totalTrades} trades, Win rate: ${rsi40.winRate.toFixed(1)}%, Avg PnL: ${rsi40.avgPnlPercent.toFixed(2)}%`,
+      );
 
       // Generally, lower RSI threshold should have fewer trades
       expect(rsi20.totalTrades).toBeLessThanOrEqual(rsi40.totalTrades);
@@ -402,9 +393,15 @@ describe("Backtesting Framework", () => {
       const hold10 = backtester.backtestRsiOversold(30, 10);
 
       console.log("\n=== Holding Period Comparison (RSI < 30) ===");
-      console.log(`3 days: ${hold3.totalTrades} trades, Win rate: ${hold3.winRate.toFixed(1)}%, Avg PnL: ${hold3.avgPnlPercent.toFixed(2)}%`);
-      console.log(`5 days: ${hold5.totalTrades} trades, Win rate: ${hold5.winRate.toFixed(1)}%, Avg PnL: ${hold5.avgPnlPercent.toFixed(2)}%`);
-      console.log(`10 days: ${hold10.totalTrades} trades, Win rate: ${hold10.winRate.toFixed(1)}%, Avg PnL: ${hold10.avgPnlPercent.toFixed(2)}%`);
+      console.log(
+        `3 days: ${hold3.totalTrades} trades, Win rate: ${hold3.winRate.toFixed(1)}%, Avg PnL: ${hold3.avgPnlPercent.toFixed(2)}%`,
+      );
+      console.log(
+        `5 days: ${hold5.totalTrades} trades, Win rate: ${hold5.winRate.toFixed(1)}%, Avg PnL: ${hold5.avgPnlPercent.toFixed(2)}%`,
+      );
+      console.log(
+        `10 days: ${hold10.totalTrades} trades, Win rate: ${hold10.winRate.toFixed(1)}%, Avg PnL: ${hold10.avgPnlPercent.toFixed(2)}%`,
+      );
 
       // All should be valid results
       expect(typeof hold3.avgPnlPercent).toBe("number");
@@ -421,7 +418,9 @@ describe("Backtesting Framework", () => {
       const result = backtester.backtestRsiOverbought(70, 5);
 
       console.log("\n=== RSI Overbought Strategy Results ===");
-      console.log(`RSI > 70: ${result.totalTrades} trades, Win rate: ${result.winRate.toFixed(1)}%, Avg PnL: ${result.avgPnlPercent.toFixed(2)}%`);
+      console.log(
+        `RSI > 70: ${result.totalTrades} trades, Win rate: ${result.winRate.toFixed(1)}%, Avg PnL: ${result.avgPnlPercent.toFixed(2)}%`,
+      );
 
       expect(result.totalTrades).toBeGreaterThanOrEqual(0);
     });
@@ -435,8 +434,12 @@ describe("Backtesting Framework", () => {
       const result = backtester.backtestMaBullishAlignment(10);
 
       console.log("\n=== MA Bullish Alignment Strategy Results ===");
-      console.log(`Total: ${result.totalTrades} trades, Win rate: ${result.winRate.toFixed(1)}%, Avg PnL: ${result.avgPnlPercent.toFixed(2)}%`);
-      console.log(`Max Drawdown: ${result.maxDrawdown.toFixed(2)}%, Sharpe: ${result.sharpeRatio.toFixed(2)}`);
+      console.log(
+        `Total: ${result.totalTrades} trades, Win rate: ${result.winRate.toFixed(1)}%, Avg PnL: ${result.avgPnlPercent.toFixed(2)}%`,
+      );
+      console.log(
+        `Max Drawdown: ${result.maxDrawdown.toFixed(2)}%, Sharpe: ${result.sharpeRatio.toFixed(2)}`,
+      );
 
       expect(result.totalTrades).toBeGreaterThanOrEqual(0);
     });
@@ -450,8 +453,12 @@ describe("Backtesting Framework", () => {
       const result = backtester.backtestCombinedStrategy(30, 5);
 
       console.log("\n=== Combined Strategy Results ===");
-      console.log(`Total: ${result.totalTrades} trades, Win rate: ${result.winRate.toFixed(1)}%, Avg PnL: ${result.avgPnlPercent.toFixed(2)}%`);
-      console.log(`Max Drawdown: ${result.maxDrawdown.toFixed(2)}%, Sharpe: ${result.sharpeRatio.toFixed(2)}`);
+      console.log(
+        `Total: ${result.totalTrades} trades, Win rate: ${result.winRate.toFixed(1)}%, Avg PnL: ${result.avgPnlPercent.toFixed(2)}%`,
+      );
+      console.log(
+        `Max Drawdown: ${result.maxDrawdown.toFixed(2)}%, Sharpe: ${result.sharpeRatio.toFixed(2)}`,
+      );
 
       expect(result.totalTrades).toBeGreaterThanOrEqual(0);
     });
@@ -479,16 +486,23 @@ describe("Backtesting Framework", () => {
         if (ma.totalTrades > 0) maResults.push(ma.avgPnlPercent);
       }
 
-      const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+      const avg = (arr: number[]) =>
+        arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
       const std = (arr: number[]) => {
         if (arr.length < 2) return 0;
         const mean = avg(arr);
         return Math.sqrt(arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length);
       };
 
-      console.log(`RSI Oversold: Avg PnL: ${avg(oversoldResults).toFixed(2)}% ± ${std(oversoldResults).toFixed(2)}%`);
-      console.log(`RSI Overbought: Avg PnL: ${avg(overboughtResults).toFixed(2)}% ± ${std(overboughtResults).toFixed(2)}%`);
-      console.log(`MA Bullish: Avg PnL: ${avg(maResults).toFixed(2)}% ± ${std(maResults).toFixed(2)}%`);
+      console.log(
+        `RSI Oversold: Avg PnL: ${avg(oversoldResults).toFixed(2)}% ± ${std(oversoldResults).toFixed(2)}%`,
+      );
+      console.log(
+        `RSI Overbought: Avg PnL: ${avg(overboughtResults).toFixed(2)}% ± ${std(overboughtResults).toFixed(2)}%`,
+      );
+      console.log(
+        `MA Bullish: Avg PnL: ${avg(maResults).toFixed(2)}% ± ${std(maResults).toFixed(2)}%`,
+      );
 
       // Just verify we got valid numbers
       expect(typeof avg(oversoldResults)).toBe("number");
@@ -523,7 +537,7 @@ describe("Strategy Evaluation Summary", () => {
 
     for (const { name, result } of strategies) {
       console.log(
-        `| ${name.padEnd(20)} | ${String(result.totalTrades).padStart(6)} | ${result.winRate.toFixed(1).padStart(7)}% | ${result.avgPnlPercent.toFixed(2).padStart(6)}% | ${result.maxDrawdown.toFixed(1).padStart(5)}% | ${result.sharpeRatio.toFixed(2).padStart(6)} |`
+        `| ${name.padEnd(20)} | ${String(result.totalTrades).padStart(6)} | ${result.winRate.toFixed(1).padStart(7)}% | ${result.avgPnlPercent.toFixed(2).padStart(6)}% | ${result.maxDrawdown.toFixed(1).padStart(5)}% | ${result.sharpeRatio.toFixed(2).padStart(6)} |`,
       );
     }
 
@@ -535,18 +549,24 @@ describe("Strategy Evaluation Summary", () => {
     const validStrategies = strategies.filter((s) => s.result.totalTrades >= 5);
     if (validStrategies.length > 0) {
       const bestByWinRate = validStrategies.reduce((a, b) =>
-        a.result.winRate > b.result.winRate ? a : b
+        a.result.winRate > b.result.winRate ? a : b,
       );
       const bestByPnl = validStrategies.reduce((a, b) =>
-        a.result.avgPnlPercent > b.result.avgPnlPercent ? a : b
+        a.result.avgPnlPercent > b.result.avgPnlPercent ? a : b,
       );
       const bestBySharpe = validStrategies.reduce((a, b) =>
-        a.result.sharpeRatio > b.result.sharpeRatio ? a : b
+        a.result.sharpeRatio > b.result.sharpeRatio ? a : b,
       );
 
-      console.log(`Best by Win Rate: ${bestByWinRate.name} (${bestByWinRate.result.winRate.toFixed(1)}%)`);
-      console.log(`Best by Avg PnL: ${bestByPnl.name} (${bestByPnl.result.avgPnlPercent.toFixed(2)}%)`);
-      console.log(`Best by Sharpe: ${bestBySharpe.name} (${bestBySharpe.result.sharpeRatio.toFixed(2)})`);
+      console.log(
+        `Best by Win Rate: ${bestByWinRate.name} (${bestByWinRate.result.winRate.toFixed(1)}%)`,
+      );
+      console.log(
+        `Best by Avg PnL: ${bestByPnl.name} (${bestByPnl.result.avgPnlPercent.toFixed(2)}%)`,
+      );
+      console.log(
+        `Best by Sharpe: ${bestBySharpe.name} (${bestBySharpe.result.sharpeRatio.toFixed(2)})`,
+      );
     }
 
     console.log("=".repeat(60));

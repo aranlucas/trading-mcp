@@ -44,9 +44,7 @@ vi.mock("../providers/index.js", () => {
         exchange: "NASDAQ",
       },
     ]),
-    getTrending: vi
-      .fn()
-      .mockResolvedValue([{ symbol: "AAPL" }, { symbol: "MSFT" }]),
+    getTrending: vi.fn().mockResolvedValue([{ symbol: "AAPL" }, { symbol: "MSFT" }]),
     getOptions: vi.fn().mockResolvedValue({
       expirationDates: ["2024-02-16", "2024-03-15"],
       calls: [{ strike: 175, bid: 2.5, ask: 2.6 }],
@@ -80,12 +78,8 @@ vi.mock("../providers/index.js", () => {
   const mockFinviz = {
     name: "finviz",
     getQuote: vi.fn().mockResolvedValue(null),
-    getGainers: vi
-      .fn()
-      .mockResolvedValue([{ symbol: "AAPL", changePercent: 3.0 }]),
-    getLosers: vi
-      .fn()
-      .mockResolvedValue([{ symbol: "TSLA", changePercent: -2.5 }]),
+    getGainers: vi.fn().mockResolvedValue([{ symbol: "AAPL", changePercent: 3.0 }]),
+    getLosers: vi.fn().mockResolvedValue([{ symbol: "TSLA", changePercent: -2.5 }]),
   };
 
   return {
@@ -100,9 +94,7 @@ vi.mock("../providers/index.js", () => {
       getQuotes: mockYahoo.getQuotes,
       getBars: mockYahoo.getHistory,
       getNews: vi.fn().mockResolvedValue([]),
-      getMovers: vi
-        .fn()
-        .mockResolvedValue([{ ticker: "AAPL", todaysChangePerc: 3.0 }]),
+      getMovers: vi.fn().mockResolvedValue([{ ticker: "AAPL", todaysChangePerc: 3.0 }]),
       getSentiment: vi.fn().mockResolvedValue({}),
       getMacro: mockFred.getMacroSnapshot,
       getRecommendations: vi.fn().mockResolvedValue([]),
