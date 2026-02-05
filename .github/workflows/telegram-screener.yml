@@ -60,6 +60,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Build all packages
+        run: pnpm run build
+
       - name: Send Telegram update
         run: pnpm --filter @trading/screener exec tsx src/scripts/telegram-screener.ts
         env:
