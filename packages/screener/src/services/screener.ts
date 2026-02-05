@@ -1,4 +1,4 @@
-import { alpaca, type Quote, type Signal } from "@trading/core";
+import { alpaca, type Signal } from "@trading/core";
 
 export interface ScanCriteria {
   minPrice?: number;

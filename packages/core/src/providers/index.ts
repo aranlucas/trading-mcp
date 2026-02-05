@@ -11,6 +11,7 @@ import { polygon } from "./polygon.js";
 import { finnhubProvider as finnhub } from "./finnhub.js";
 import { fred } from "./fred.js";
 import { finviz } from "./finviz.js";
+import { withTimeout } from "../lib/timeout.js";
 import type { NewsItem, SentimentData } from "../types/index.js";
 
 // Unified data fetcher that tries multiple sources
@@ -34,6 +35,47 @@ export const unified = {
 
       throw new Error(`Could not get quote for ${symbol}`);
     }
+  },
+
+  // Direct provider access - use these for explicit provider selection
+  providers: {
+    yahoo: {
+      getQuote: (symbol: string) => yahoo.getQuote(symbol),
+      getQuotes: (symbols: string[]) => yahoo.getQuotes(symbols),
+      getHistory: (symbol: string, from: Date, to: Date) => yahoo.getHistory(symbol, from, to),
+      getOptions: (symbol: string) => yahoo.getOptions(symbol),
+      search: (query: string) => yahoo.search(query),
+      getTrending: (count?: number) => yahoo.getTrending(count),
+    },
+    polygon: {
+      getQuote: (symbol: string) => polygon.getPreviousClose(symbol),
+      getBars: (symbol: string, from: string, to: string) =>
+        polygon.getAggregates(symbol, 1, "day", from, to),
+      getNews: (symbol: string | undefined, limit: number) => polygon.getNews(symbol, limit),
+      getGainersLosers: (direction: "gainers" | "losers") => polygon.getGainersLosers(direction),
+      isConfigured: () => polygon.isConfigured(),
+    },
+    finnhub: {
+      getQuote: (symbol: string) => finnhub.getQuote(symbol),
+      getNews: (symbol: string, from: string, to: string) => finnhub.getNews(symbol, from, to),
+      getMarketNews: () => finnhub.getMarketNews(),
+      getNewsSentiment: (symbol: string) => finnhub.getNewsSentiment(symbol),
+      getSocialSentiment: (symbol: string) => finnhub.getSocialSentiment(symbol),
+      getRecommendations: (symbol: string) => finnhub.getRecommendations(symbol),
+      getEarningsCalendar: (from: string, to: string) => finnhub.getEarningsCalendar(from, to),
+      isConfigured: () => finnhub.isConfigured(),
+    },
+    finviz: {
+      getQuote: (symbol: string) => finviz.getQuote(symbol),
+      screen: (filters: Parameters<typeof finviz.screen>[0]) => finviz.screen(filters),
+      getGainers: () => finviz.getGainers(),
+      getLosers: () => finviz.getLosers(),
+    },
+    fred: {
+      getSeries: (id: string, limit?: number) => fred.getSeries(id, limit),
+      getMacroSnapshot: () => fred.getMacroSnapshot(),
+      isConfigured: () => fred.isConfigured(),
+    },
   },
 
   // Get multiple quotes
@@ -81,11 +123,7 @@ export const unified = {
     if (symbol) {
       try {
         const yahooResult = await yahoo.getNews(symbol);
-        if (
-          yahooResult &&
-          "news" in yahooResult &&
-          Array.isArray(yahooResult.news)
-        ) {
+        if (yahooResult && "news" in yahooResult && Array.isArray(yahooResult.news)) {
           for (const item of yahooResult.news) {
             allNews.push({
               id: item.uuid || "",
@@ -107,9 +145,7 @@ export const unified = {
     if (symbol) {
       try {
         const to = new Date().toISOString().slice(0, 10);
-        const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .slice(0, 10);
+        const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
         const fhNews = await finnhub.getNews(symbol, from, to);
         allNews.push(...fhNews);
       } catch {
@@ -166,9 +202,7 @@ export const unified = {
     // Fall back to Finviz
     try {
       const fvMovers =
-        direction === "gainers"
-          ? await finviz.getGainers()
-          : await finviz.getLosers();
+        direction === "gainers" ? await finviz.getGainers() : await finviz.getLosers();
       return fvMovers.map((m) => ({
         ticker: m.symbol,
         todaysChangePerc: m.changePercent,
@@ -214,9 +248,7 @@ export const unified = {
   // Get earnings calendar
   async getEarningsCalendar(days = 7): Promise<unknown[]> {
     const from = new Date().toISOString().slice(0, 10);
-    const to = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10);
+    const to = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     try {
       return await finnhub.getEarningsCalendar(from, to);
     } catch {
@@ -234,4 +266,78 @@ export const unified = {
       finviz: { configured: true, rateLimit: "web scraping" },
     };
   },
+
+  /**
+   * Health check for all providers.
+   * Tests each configured provider with a quick request and returns health status.
+   */
+  async healthCheck(): Promise<ProviderHealthStatus> {
+    const testSymbol = "AAPL";
+    const healthCheckTimeout = 3000; // 3 seconds
+
+    const checkProvider = async (
+      name: string,
+      fn: () => Promise<unknown>,
+    ): Promise<ProviderHealth> => {
+      const start = Date.now();
+      try {
+        await withTimeout(fn(), healthCheckTimeout);
+        return {
+          healthy: true,
+          latencyMs: Date.now() - start,
+        };
+      } catch (err) {
+        return {
+          healthy: false,
+          latencyMs: Date.now() - start,
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    };
+
+    const [yahooHealth, polygonHealth, finnhubHealth, fredHealth, finvizHealth] = await Promise.all(
+      [
+        checkProvider("yahoo", () => yahoo.getQuote(testSymbol)),
+        polygon.isConfigured()
+          ? checkProvider("polygon", () => polygon.getPreviousClose(testSymbol))
+          : Promise.resolve({ healthy: false, error: "Not configured" } as ProviderHealth),
+        finnhub.isConfigured()
+          ? checkProvider("finnhub", () => finnhub.getQuote(testSymbol))
+          : Promise.resolve({ healthy: false, error: "Not configured" } as ProviderHealth),
+        fred.isConfigured()
+          ? checkProvider("fred", () => fred.getSeries("SP500", 1))
+          : Promise.resolve({ healthy: false, error: "Not configured" } as ProviderHealth),
+        checkProvider("finviz", () => finviz.getQuote(testSymbol)),
+      ],
+    );
+
+    const providers = {
+      yahoo: yahooHealth,
+      polygon: polygonHealth,
+      finnhub: finnhubHealth,
+      fred: fredHealth,
+      finviz: finvizHealth,
+    };
+
+    const healthyCount = Object.values(providers).filter((p) => p.healthy).length;
+
+    return {
+      status: healthyCount >= 2 ? "healthy" : healthyCount >= 1 ? "degraded" : "unhealthy",
+      providers,
+      timestamp: new Date().toISOString(),
+    };
+  },
 };
+
+// Types for health check
+export interface ProviderHealth {
+  healthy: boolean;
+  latencyMs?: number;
+  error?: string;
+}
+
+export interface ProviderHealthStatus {
+  status: "healthy" | "degraded" | "unhealthy";
+  providers: Record<string, ProviderHealth>;
+  timestamp: string;
+}
