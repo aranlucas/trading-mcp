@@ -20,9 +20,7 @@ export function registerMarketTools(server: McpServer) {
       try {
         const quote = await alpaca.getQuote(symbol.toUpperCase());
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(quote, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(quote, null, 2) }],
         };
       } catch (error) {
         return {
@@ -45,26 +43,15 @@ export function registerMarketTools(server: McpServer) {
           .enum(["1Min", "5Min", "15Min", "1Hour", "1Day"])
           .default("1Day")
           .describe("Bar timeframe"),
-        limit: z
-          .number()
-          .min(1)
-          .max(1000)
-          .default(100)
-          .describe("Number of bars"),
+        limit: z.number().min(1).max(1000).default(100).describe("Number of bars"),
       },
       annotations: { readOnlyHint: true },
     },
     async ({ symbol, timeframe, limit }) => {
       try {
-        const bars = await alpaca.getBars(
-          symbol.toUpperCase(),
-          timeframe,
-          limit,
-        );
+        const bars = await alpaca.getBars(symbol.toUpperCase(), timeframe, limit);
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(bars, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(bars, null, 2) }],
         };
       } catch (error) {
         return {
@@ -80,8 +67,7 @@ export function registerMarketTools(server: McpServer) {
     "get_market_status",
     {
       title: "Get Market Status",
-      description:
-        "Check if the market is currently open and get session times",
+      description: "Check if the market is currently open and get session times",
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },
@@ -89,9 +75,7 @@ export function registerMarketTools(server: McpServer) {
       try {
         const status = await alpaca.getMarketClock();
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(status, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(status, null, 2) }],
         };
       } catch (error) {
         return {
