@@ -37,6 +37,47 @@ export const unified = {
     }
   },
 
+  // Direct provider access - use these for explicit provider selection
+  providers: {
+    yahoo: {
+      getQuote: (symbol: string) => yahoo.getQuote(symbol),
+      getQuotes: (symbols: string[]) => yahoo.getQuotes(symbols),
+      getHistory: (symbol: string, from: Date, to: Date) => yahoo.getHistory(symbol, from, to),
+      getOptions: (symbol: string) => yahoo.getOptions(symbol),
+      search: (query: string) => yahoo.search(query),
+      getTrending: (count?: number) => yahoo.getTrending(count),
+    },
+    polygon: {
+      getQuote: (symbol: string) => polygon.getPreviousClose(symbol),
+      getBars: (symbol: string, from: string, to: string) =>
+        polygon.getAggregates(symbol, 1, "day", from, to),
+      getNews: (symbol: string | undefined, limit: number) => polygon.getNews(symbol, limit),
+      getGainersLosers: (direction: "gainers" | "losers") => polygon.getGainersLosers(direction),
+      isConfigured: () => polygon.isConfigured(),
+    },
+    finnhub: {
+      getQuote: (symbol: string) => finnhub.getQuote(symbol),
+      getNews: (symbol: string, from: string, to: string) => finnhub.getNews(symbol, from, to),
+      getMarketNews: () => finnhub.getMarketNews(),
+      getNewsSentiment: (symbol: string) => finnhub.getNewsSentiment(symbol),
+      getSocialSentiment: (symbol: string) => finnhub.getSocialSentiment(symbol),
+      getRecommendations: (symbol: string) => finnhub.getRecommendations(symbol),
+      getEarningsCalendar: (from: string, to: string) => finnhub.getEarningsCalendar(from, to),
+      isConfigured: () => finnhub.isConfigured(),
+    },
+    finviz: {
+      getQuote: (symbol: string) => finviz.getQuote(symbol),
+      screen: (filters: Parameters<typeof finviz.screen>[0]) => finviz.screen(filters),
+      getGainers: () => finviz.getGainers(),
+      getLosers: () => finviz.getLosers(),
+    },
+    fred: {
+      getSeries: (id: string, limit?: number) => fred.getSeries(id, limit),
+      getMacroSnapshot: () => fred.getMacroSnapshot(),
+      isConfigured: () => fred.isConfigured(),
+    },
+  },
+
   // Get multiple quotes
   async getQuotes(symbols: string[]) {
     try {

@@ -22,3 +22,19 @@ export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
       });
   });
 }
+
+export async function raceToSuccess<T>(promises: Array<Promise<T | null>>): Promise<T> {
+  const results = await Promise.allSettled(promises);
+
+  for (const result of results) {
+    if (result.status === "fulfilled" && result.value !== null) return result.value;
+  }
+
+  const errors: unknown[] = [];
+  for (const result of results) {
+    if (result.status === "rejected") errors.push(result.reason);
+    else if (result.value === null) errors.push(new Error("Provider returned null"));
+  }
+
+  throw new AggregateError(errors, "All providers failed");
+}
