@@ -43,9 +43,7 @@ export const finviz = {
 
       // Extract price and change from snapshot table
       const priceMatch = html.match(/class="snapshot-td2-cp"[^>]*>([^<]+)/);
-      const changeMatch = html.match(
-        /class="snapshot-td2[^"]*"[^>]*>([+-]?\d+\.?\d*%?)/,
-      );
+      const changeMatch = html.match(/class="snapshot-td2[^"]*"[^>]*>([+-]?\d+\.?\d*%?)/);
 
       const price = parseValue(priceMatch?.[1]);
       const change = parseValue(changeMatch?.[1]);
@@ -87,8 +85,7 @@ export const finviz = {
 
       const response = await fetch(`${FINVIZ_BASE}/screener.ashx?${params}`, {
         headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
         },
       });
       const html = await response.text();
@@ -96,9 +93,7 @@ export const finviz = {
       // Extract screener results from table rows
       const results: FinvizScreenerResult[] = [];
       const rowMatches = [
-        ...html.matchAll(
-          /<tr[^>]*class="[^"]*-row[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi,
-        ),
+        ...html.matchAll(/<tr[^>]*class="[^"]*-row[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi),
       ];
 
       for (const rowMatch of rowMatches) {
@@ -128,9 +123,7 @@ export const finviz = {
 
         // Extract volume (usually last numeric td)
         const volumeMatch = row.match(/([0-9,]+)<\/a><\/td>\s*$/);
-        const volume = volumeMatch?.[1]
-          ? parseInt(volumeMatch[1].replace(/,/g, ""))
-          : 0;
+        const volume = volumeMatch?.[1] ? parseInt(volumeMatch[1].replace(/,/g, "")) : 0;
 
         // Extract market cap
         const mcMatch = row.match(/>([0-9.]+[BMK])</);

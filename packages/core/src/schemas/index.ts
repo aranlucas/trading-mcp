@@ -128,9 +128,7 @@ export const PolygonNewsResponseSchema = z.object({
 
 export const PolygonTickerSnapshotSchema = z.object({
   ticker: z.string(),
-  day: z
-    .object({ c: z.number().optional(), v: z.number().optional() })
-    .optional(),
+  day: z.object({ c: z.number().optional(), v: z.number().optional() }).optional(),
   prevDay: z.object({ c: z.number().optional() }).optional(),
   todaysChange: z.number().optional(),
   todaysChangePerc: z.number().optional(),
@@ -241,9 +239,7 @@ export const FinvizScreenFiltersSchema = z.object({
   sector: z.string().optional(),
   industry: z.string().optional(),
   country: z.string().optional(),
-  price: z
-    .object({ min: z.number().optional(), max: z.number().optional() })
-    .optional(),
+  price: z.object({ min: z.number().optional(), max: z.number().optional() }).optional(),
   change: z.enum(["up", "down"]).optional(),
   volume: z.object({ min: z.number().optional() }).optional(),
   signal: z.string().optional(),
