@@ -4,6 +4,7 @@ import { secureHeaders } from "hono/secure-headers";
 import { unified } from "@trading/core";
 import { screenerRoutes } from "./routes/screener.js";
 import { quotesRoutes } from "./routes/quotes.js";
+import { openapi } from "./openapi.js";
 
 export const app = new Hono();
 
@@ -26,6 +27,9 @@ app.get("/health", async (c) => {
   const statusCode = health.status === "unhealthy" ? 503 : 200;
   return c.json(health, statusCode);
 });
+
+// OpenAPI spec
+app.get("/openapi.json", (c) => c.json(openapi));
 
 // Routes
 app.route("/api/screener", screenerRoutes);

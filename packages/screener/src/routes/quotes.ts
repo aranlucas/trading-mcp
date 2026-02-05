@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { yahoo } from "@trading/core";
+import { yahoo, toPublicError } from "@trading/core";
 
 export const quotesRoutes = new Hono();
 
@@ -36,7 +36,8 @@ quotesRoutes.get("/:symbol", zValidator("param", symbolParamSchema), async (c) =
     const yahooQuote = await yahoo.getQuote(symbol.toUpperCase());
     return c.json(yahooQuote);
   } catch (error) {
-    return c.json({ error: String(error) }, 500);
+    const pub = toPublicError(error);
+    return c.json({ error: pub.message }, pub.status);
   }
 });
 
@@ -48,7 +49,8 @@ quotesRoutes.post("/batch", zValidator("json", batchQuotesSchema), async (c) => 
     const yahooQuotes = await yahoo.getQuotes(symbols.map((s) => s.toUpperCase()));
     return c.json(yahooQuotes);
   } catch (error) {
-    return c.json({ error: String(error) }, 500);
+    const pub = toPublicError(error);
+    return c.json({ error: pub.message }, pub.status);
   }
 });
 
@@ -68,7 +70,8 @@ quotesRoutes.get(
       const chart = await yahoo.getHistory(symbol.toUpperCase(), period1);
       return c.json(chart);
     } catch (error) {
-      return c.json({ error: String(error) }, 500);
+      const pub = toPublicError(error);
+      return c.json({ error: pub.message }, pub.status);
     }
   },
 );

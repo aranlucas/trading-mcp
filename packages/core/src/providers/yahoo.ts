@@ -1,6 +1,8 @@
 // Yahoo Finance provider - FREE, no API key needed
 
 import YahooFinance from "yahoo-finance2";
+import { YahooQuoteSchema } from "../schemas/index.js";
+import type { Quote } from "../types/index.js";
 
 // Instantiate the client (required in v3)
 export const yahooFinance = new YahooFinance({
@@ -13,6 +15,40 @@ export const yahoo = {
   // Get real-time quote (returns raw yahoofinance result)
   async getQuote(symbol: string) {
     return await yahooFinance.quote(symbol);
+  },
+
+  // Get real-time quote normalized into the core `Quote` shape
+  async getQuoteNormalized(symbol: string): Promise<Quote> {
+    const raw = await yahooFinance.quote(symbol);
+    const parsed = YahooQuoteSchema.safeParse(raw);
+    if (!parsed.success) {
+      return {
+        symbol: symbol.toUpperCase(),
+        price: 0,
+        open: 0,
+        high: 0,
+        low: 0,
+        close: 0,
+        volume: 0,
+        change: 0,
+        changePercent: 0,
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    const q = parsed.data;
+    return {
+      symbol: (q.symbol ?? symbol).toUpperCase(),
+      price: q.regularMarketPrice ?? 0,
+      open: q.regularMarketOpen ?? 0,
+      high: q.regularMarketDayHigh ?? 0,
+      low: q.regularMarketDayLow ?? 0,
+      close: q.regularMarketPreviousClose ?? q.regularMarketPrice ?? 0,
+      volume: q.regularMarketVolume ?? 0,
+      change: q.regularMarketChange ?? 0,
+      changePercent: q.regularMarketChangePercent ?? 0,
+      timestamp: new Date().toISOString(),
+    };
   },
 
   // Get multiple quotes (returns raw yahoofinance result)

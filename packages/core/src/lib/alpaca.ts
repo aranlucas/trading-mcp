@@ -5,6 +5,7 @@ import { z } from "zod";
 import { config } from "../config.js";
 import type { Quote, Position, Portfolio, Order, MarketStatus } from "../types/index.js";
 import { AlpacaPositionSchema, AlpacaOrderSchema, AlpacaBarSchema } from "../schemas/index.js";
+import { ValidationError } from "./errors.js";
 
 // CJS import for Alpaca SDK (it doesn't have proper ESM exports)
 const require = createRequire(import.meta.url);
@@ -143,6 +144,37 @@ export async function getBars(
 }
 
 // Orders
+export const AlpacaOrderRequestSchema = z
+  .object({
+    symbol: z
+      .string()
+      .min(1)
+      .max(10)
+      .regex(/^[A-Z0-9.]+$/i, "Invalid symbol format"),
+    qty: z.number().finite().positive(),
+    side: z.enum(["buy", "sell"]),
+    type: z.enum(["market", "limit", "stop", "stop_limit"]),
+    time_in_force: z.enum(["day", "gtc", "ioc", "fok"]),
+    limit_price: z.number().finite().positive().optional(),
+    stop_price: z.number().finite().positive().optional(),
+  })
+  .superRefine((val, ctx) => {
+    if ((val.type === "limit" || val.type === "stop_limit") && val.limit_price === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["limit_price"],
+        message: "limit_price is required for limit and stop_limit orders",
+      });
+    }
+    if ((val.type === "stop" || val.type === "stop_limit") && val.stop_price === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["stop_price"],
+        message: "stop_price is required for stop and stop_limit orders",
+      });
+    }
+  });
+
 export async function placeOrder(params: {
   symbol: string;
   qty: number;
@@ -152,14 +184,19 @@ export async function placeOrder(params: {
   limit_price?: number;
   stop_price?: number;
 }): Promise<Order> {
+  const parsed = AlpacaOrderRequestSchema.safeParse(params);
+  if (!parsed.success) {
+    throw new ValidationError("Invalid order parameters", parsed.error.issues);
+  }
+
   const raw = await alpaca.createOrder({
-    symbol: params.symbol,
-    qty: params.qty,
-    side: params.side,
-    type: params.type,
-    time_in_force: params.time_in_force,
-    limit_price: params.limit_price,
-    stop_price: params.stop_price,
+    symbol: parsed.data.symbol,
+    qty: parsed.data.qty,
+    side: parsed.data.side,
+    type: parsed.data.type,
+    time_in_force: parsed.data.time_in_force,
+    limit_price: parsed.data.limit_price,
+    stop_price: parsed.data.stop_price,
   });
 
   const order = AlpacaOrderSchema.parse(raw);
