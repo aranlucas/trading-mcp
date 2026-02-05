@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "cd ../.. && pnpm turbo run build --filter=@trading/screener",
+  "buildCommand": "cd ../.. && pnpm --filter @trading/core build && pnpm --filter @trading/screener build",
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
   "framework": null,
   "functions": {
