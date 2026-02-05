@@ -29,21 +29,10 @@ export function registerOrderTools(server: McpServer) {
           .positive()
           .optional()
           .describe("Stop price (required for stop/stop_limit)"),
-        timeInForce: z
-          .enum(["day", "gtc", "ioc", "fok"])
-          .default("day")
-          .describe("Time in force"),
+        timeInForce: z.enum(["day", "gtc", "ioc", "fok"]).default("day").describe("Time in force"),
       },
     },
-    async ({
-      symbol,
-      side,
-      quantity,
-      type,
-      limitPrice,
-      stopPrice,
-      timeInForce,
-    }) => {
+    async ({ symbol, side, quantity, type, limitPrice, stopPrice, timeInForce }) => {
       // Validate price requirements
       if ((type === "limit" || type === "stop_limit") && !limitPrice) {
         return {
@@ -79,9 +68,7 @@ export function registerOrderTools(server: McpServer) {
           stop_price: stopPrice,
         });
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(order, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(order, null, 2) }],
         };
       } catch (error) {
         return {
@@ -107,9 +94,7 @@ export function registerOrderTools(server: McpServer) {
       try {
         const order = await alpaca.getOrder(orderId);
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(order, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(order, null, 2) }],
         };
       } catch (error) {
         return {
@@ -127,10 +112,7 @@ export function registerOrderTools(server: McpServer) {
       title: "List Orders",
       description: "List orders by status",
       inputSchema: {
-        status: z
-          .enum(["open", "closed", "all"])
-          .default("open")
-          .describe("Order status filter"),
+        status: z.enum(["open", "closed", "all"]).default("open").describe("Order status filter"),
       },
       annotations: { readOnlyHint: true },
     },
@@ -138,9 +120,7 @@ export function registerOrderTools(server: McpServer) {
       try {
         const orders = await alpaca.getOrders(status);
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(orders, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(orders, null, 2) }],
         };
       } catch (error) {
         return {

@@ -41,10 +41,7 @@ interface BacktestResult {
 }
 
 // Fetch real historical data from Yahoo Finance
-async function fetchRealData(
-  symbol: string,
-  days: number
-): Promise<Bar[]> {
+async function fetchRealData(symbol: string, days: number): Promise<Bar[]> {
   const to = new Date();
   const from = new Date();
   from.setDate(from.getDate() - days);
@@ -57,16 +54,27 @@ async function fetchRealData(
     }
 
     return result.quotes
-      .filter((q: { open?: number; high?: number; low?: number; close?: number; volume?: number }) =>
-        q.open && q.high && q.low && q.close && q.volume)
-      .map((q: { date: Date; open: number; high: number; low: number; close: number; volume: number }) => ({
-        t: new Date(q.date).toISOString().slice(0, 10),
-        o: q.open,
-        h: q.high,
-        l: q.low,
-        c: q.close,
-        v: q.volume,
-      }));
+      .filter(
+        (q: { open?: number; high?: number; low?: number; close?: number; volume?: number }) =>
+          q.open && q.high && q.low && q.close && q.volume,
+      )
+      .map(
+        (q: {
+          date: Date;
+          open: number;
+          high: number;
+          low: number;
+          close: number;
+          volume: number;
+        }) => ({
+          t: new Date(q.date).toISOString().slice(0, 10),
+          o: q.open,
+          h: q.high,
+          l: q.low,
+          c: q.close,
+          v: q.volume,
+        }),
+      );
   } catch (error) {
     console.error(`Failed to fetch data for ${symbol}:`, error);
     return [];
@@ -276,8 +284,7 @@ class RealDataBacktester {
     // Sharpe ratio (simplified - annualized)
     const returns = trades.map((t) => t.pnlPercent);
     const meanReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
-    const variance =
-      returns.reduce((a, b) => a + Math.pow(b - meanReturn, 2), 0) / returns.length;
+    const variance = returns.reduce((a, b) => a + Math.pow(b - meanReturn, 2), 0) / returns.length;
     const stdDev = Math.sqrt(variance);
     const sharpeRatio = stdDev > 0 ? (meanReturn / stdDev) * Math.sqrt(252 / 5) : 0;
 
@@ -376,7 +383,9 @@ describe("Real Data Backtest - Yahoo Finance", () => {
       const bars = await fetchRealData(symbol, 730); // ~2 years
       if (bars.length > 0) {
         dataCache.set(symbol, bars);
-        console.log(`  ✓ ${symbol}: ${bars.length} bars (${bars[0]?.t} to ${bars[bars.length - 1]?.t})`);
+        console.log(
+          `  ✓ ${symbol}: ${bars.length} bars (${bars[0]?.t} to ${bars[bars.length - 1]?.t})`,
+        );
       } else {
         console.log(`  ✗ ${symbol}: No data available`);
       }
@@ -411,7 +420,7 @@ describe("Real Data Backtest - Yahoo Finance", () => {
 
       if (result.totalTrades > 0) {
         console.log(
-          `${symbol.padEnd(6)} | Trades: ${String(result.totalTrades).padStart(3)} | Win: ${result.winRate.toFixed(1).padStart(5)}% | Avg: ${result.avgPnlPercent.toFixed(2).padStart(6)}% | Total: ${result.totalReturn.toFixed(2).padStart(7)}%`
+          `${symbol.padEnd(6)} | Trades: ${String(result.totalTrades).padStart(3)} | Win: ${result.winRate.toFixed(1).padStart(5)}% | Avg: ${result.avgPnlPercent.toFixed(2).padStart(6)}% | Total: ${result.totalReturn.toFixed(2).padStart(7)}%`,
         );
       }
     }
@@ -419,9 +428,11 @@ describe("Real Data Backtest - Yahoo Finance", () => {
     const aggregate = aggregateResults(results);
     console.log("-".repeat(70));
     console.log(
-      `TOTAL  | Trades: ${String(aggregate.totalTrades).padStart(3)} | Win: ${aggregate.winRate.toFixed(1).padStart(5)}% | Avg: ${aggregate.avgPnlPercent.toFixed(2).padStart(6)}% | Total: ${aggregate.totalReturn.toFixed(2).padStart(7)}%`
+      `TOTAL  | Trades: ${String(aggregate.totalTrades).padStart(3)} | Win: ${aggregate.winRate.toFixed(1).padStart(5)}% | Avg: ${aggregate.avgPnlPercent.toFixed(2).padStart(6)}% | Total: ${aggregate.totalReturn.toFixed(2).padStart(7)}%`,
     );
-    console.log(`Max Drawdown: ${aggregate.maxDrawdown.toFixed(2)}% | Avg Sharpe: ${aggregate.avgSharpe.toFixed(2)}`);
+    console.log(
+      `Max Drawdown: ${aggregate.maxDrawdown.toFixed(2)}% | Avg Sharpe: ${aggregate.avgSharpe.toFixed(2)}`,
+    );
 
     expect(aggregate.totalTrades).toBeGreaterThanOrEqual(0);
   }, 60000);
@@ -442,7 +453,7 @@ describe("Real Data Backtest - Yahoo Finance", () => {
 
       if (result.totalTrades > 0) {
         console.log(
-          `${symbol.padEnd(6)} | Trades: ${String(result.totalTrades).padStart(3)} | Win: ${result.winRate.toFixed(1).padStart(5)}% | Avg: ${result.avgPnlPercent.toFixed(2).padStart(6)}% | Total: ${result.totalReturn.toFixed(2).padStart(7)}%`
+          `${symbol.padEnd(6)} | Trades: ${String(result.totalTrades).padStart(3)} | Win: ${result.winRate.toFixed(1).padStart(5)}% | Avg: ${result.avgPnlPercent.toFixed(2).padStart(6)}% | Total: ${result.totalReturn.toFixed(2).padStart(7)}%`,
         );
       }
     }
@@ -450,7 +461,7 @@ describe("Real Data Backtest - Yahoo Finance", () => {
     const aggregate = aggregateResults(results);
     console.log("-".repeat(70));
     console.log(
-      `TOTAL  | Trades: ${String(aggregate.totalTrades).padStart(3)} | Win: ${aggregate.winRate.toFixed(1).padStart(5)}% | Avg: ${aggregate.avgPnlPercent.toFixed(2).padStart(6)}% | Total: ${aggregate.totalReturn.toFixed(2).padStart(7)}%`
+      `TOTAL  | Trades: ${String(aggregate.totalTrades).padStart(3)} | Win: ${aggregate.winRate.toFixed(1).padStart(5)}% | Avg: ${aggregate.avgPnlPercent.toFixed(2).padStart(6)}% | Total: ${aggregate.totalReturn.toFixed(2).padStart(7)}%`,
     );
 
     expect(aggregate.totalTrades).toBeGreaterThanOrEqual(0);
@@ -472,7 +483,7 @@ describe("Real Data Backtest - Yahoo Finance", () => {
 
       if (result.totalTrades > 0) {
         console.log(
-          `${symbol.padEnd(6)} | Trades: ${String(result.totalTrades).padStart(3)} | Win: ${result.winRate.toFixed(1).padStart(5)}% | Avg: ${result.avgPnlPercent.toFixed(2).padStart(6)}% | Total: ${result.totalReturn.toFixed(2).padStart(7)}%`
+          `${symbol.padEnd(6)} | Trades: ${String(result.totalTrades).padStart(3)} | Win: ${result.winRate.toFixed(1).padStart(5)}% | Avg: ${result.avgPnlPercent.toFixed(2).padStart(6)}% | Total: ${result.totalReturn.toFixed(2).padStart(7)}%`,
         );
       }
     }
@@ -480,7 +491,7 @@ describe("Real Data Backtest - Yahoo Finance", () => {
     const aggregate = aggregateResults(results);
     console.log("-".repeat(70));
     console.log(
-      `TOTAL  | Trades: ${String(aggregate.totalTrades).padStart(3)} | Win: ${aggregate.winRate.toFixed(1).padStart(5)}% | Avg: ${aggregate.avgPnlPercent.toFixed(2).padStart(6)}% | Total: ${aggregate.totalReturn.toFixed(2).padStart(7)}%`
+      `TOTAL  | Trades: ${String(aggregate.totalTrades).padStart(3)} | Win: ${aggregate.winRate.toFixed(1).padStart(5)}% | Avg: ${aggregate.avgPnlPercent.toFixed(2).padStart(6)}% | Total: ${aggregate.totalReturn.toFixed(2).padStart(7)}%`,
     );
 
     expect(aggregate.totalTrades).toBeGreaterThanOrEqual(0);
@@ -498,7 +509,7 @@ describe("Real Data Backtest - Yahoo Finance", () => {
         name: "RSI < 25 (5d)",
         run: () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
-            new RealDataBacktester(symbol, bars).backtestRsiOversold(25, 5)
+            new RealDataBacktester(symbol, bars).backtestRsiOversold(25, 5),
           );
           return aggregateResults(results);
         },
@@ -507,7 +518,7 @@ describe("Real Data Backtest - Yahoo Finance", () => {
         name: "RSI < 30 (5d)",
         run: () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
-            new RealDataBacktester(symbol, bars).backtestRsiOversold(30, 5)
+            new RealDataBacktester(symbol, bars).backtestRsiOversold(30, 5),
           );
           return aggregateResults(results);
         },
@@ -516,7 +527,7 @@ describe("Real Data Backtest - Yahoo Finance", () => {
         name: "RSI < 30 (10d)",
         run: () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
-            new RealDataBacktester(symbol, bars).backtestRsiOversold(30, 10)
+            new RealDataBacktester(symbol, bars).backtestRsiOversold(30, 10),
           );
           return aggregateResults(results);
         },
@@ -525,7 +536,7 @@ describe("Real Data Backtest - Yahoo Finance", () => {
         name: "RSI < 35 (5d)",
         run: () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
-            new RealDataBacktester(symbol, bars).backtestRsiOversold(35, 5)
+            new RealDataBacktester(symbol, bars).backtestRsiOversold(35, 5),
           );
           return aggregateResults(results);
         },
@@ -534,7 +545,7 @@ describe("Real Data Backtest - Yahoo Finance", () => {
         name: "RSI > 70 (5d short)",
         run: () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
-            new RealDataBacktester(symbol, bars).backtestRsiOverbought(70, 5)
+            new RealDataBacktester(symbol, bars).backtestRsiOverbought(70, 5),
           );
           return aggregateResults(results);
         },
@@ -543,7 +554,7 @@ describe("Real Data Backtest - Yahoo Finance", () => {
         name: "RSI > 75 (5d short)",
         run: () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
-            new RealDataBacktester(symbol, bars).backtestRsiOverbought(75, 5)
+            new RealDataBacktester(symbol, bars).backtestRsiOverbought(75, 5),
           );
           return aggregateResults(results);
         },
@@ -552,7 +563,7 @@ describe("Real Data Backtest - Yahoo Finance", () => {
         name: "MA Bullish (5d)",
         run: () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
-            new RealDataBacktester(symbol, bars).backtestMaBullishAlignment(5)
+            new RealDataBacktester(symbol, bars).backtestMaBullishAlignment(5),
           );
           return aggregateResults(results);
         },
@@ -561,15 +572,33 @@ describe("Real Data Backtest - Yahoo Finance", () => {
         name: "MA Bullish (10d)",
         run: () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
-            new RealDataBacktester(symbol, bars).backtestMaBullishAlignment(10)
+            new RealDataBacktester(symbol, bars).backtestMaBullishAlignment(10),
           );
           return aggregateResults(results);
         },
       },
     ];
 
-    console.log("\n| Strategy           | Trades | Win Rate |  Avg PnL | Total Ret | Max DD | Sharpe |");
-    console.log("|" + "-".repeat(19) + "|" + "-".repeat(8) + "|" + "-".repeat(10) + "|" + "-".repeat(10) + "|" + "-".repeat(11) + "|" + "-".repeat(8) + "|" + "-".repeat(8) + "|");
+    console.log(
+      "\n| Strategy           | Trades | Win Rate |  Avg PnL | Total Ret | Max DD | Sharpe |",
+    );
+    console.log(
+      "|" +
+        "-".repeat(19) +
+        "|" +
+        "-".repeat(8) +
+        "|" +
+        "-".repeat(10) +
+        "|" +
+        "-".repeat(10) +
+        "|" +
+        "-".repeat(11) +
+        "|" +
+        "-".repeat(8) +
+        "|" +
+        "-".repeat(8) +
+        "|",
+    );
 
     const allResults: { name: string; result: AggregateResult }[] = [];
 
@@ -578,7 +607,7 @@ describe("Real Data Backtest - Yahoo Finance", () => {
       allResults.push({ name: strategy.name, result });
 
       console.log(
-        `| ${strategy.name.padEnd(17)} | ${String(result.totalTrades).padStart(6)} | ${result.winRate.toFixed(1).padStart(7)}% | ${result.avgPnlPercent.toFixed(2).padStart(7)}% | ${result.totalReturn.toFixed(1).padStart(8)}% | ${result.maxDrawdown.toFixed(1).padStart(5)}% | ${result.avgSharpe.toFixed(2).padStart(6)} |`
+        `| ${strategy.name.padEnd(17)} | ${String(result.totalTrades).padStart(6)} | ${result.winRate.toFixed(1).padStart(7)}% | ${result.avgPnlPercent.toFixed(2).padStart(7)}% | ${result.totalReturn.toFixed(1).padStart(8)}% | ${result.maxDrawdown.toFixed(1).padStart(5)}% | ${result.avgSharpe.toFixed(2).padStart(6)} |`,
       );
     }
 
@@ -591,22 +620,30 @@ describe("Real Data Backtest - Yahoo Finance", () => {
       console.log("-".repeat(80));
 
       const bestByWinRate = validResults.reduce((a, b) =>
-        a.result.winRate > b.result.winRate ? a : b
+        a.result.winRate > b.result.winRate ? a : b,
       );
       const bestByPnl = validResults.reduce((a, b) =>
-        a.result.avgPnlPercent > b.result.avgPnlPercent ? a : b
+        a.result.avgPnlPercent > b.result.avgPnlPercent ? a : b,
       );
       const bestByTotal = validResults.reduce((a, b) =>
-        a.result.totalReturn > b.result.totalReturn ? a : b
+        a.result.totalReturn > b.result.totalReturn ? a : b,
       );
       const bestBySharpe = validResults.reduce((a, b) =>
-        a.result.avgSharpe > b.result.avgSharpe ? a : b
+        a.result.avgSharpe > b.result.avgSharpe ? a : b,
       );
 
-      console.log(`📈 Best Win Rate:    ${bestByWinRate.name} (${bestByWinRate.result.winRate.toFixed(1)}%)`);
-      console.log(`💰 Best Avg PnL:     ${bestByPnl.name} (${bestByPnl.result.avgPnlPercent.toFixed(2)}% per trade)`);
-      console.log(`📊 Best Total Return: ${bestByTotal.name} (${bestByTotal.result.totalReturn.toFixed(1)}%)`);
-      console.log(`⚖️  Best Sharpe:      ${bestBySharpe.name} (${bestBySharpe.result.avgSharpe.toFixed(2)})`);
+      console.log(
+        `📈 Best Win Rate:    ${bestByWinRate.name} (${bestByWinRate.result.winRate.toFixed(1)}%)`,
+      );
+      console.log(
+        `💰 Best Avg PnL:     ${bestByPnl.name} (${bestByPnl.result.avgPnlPercent.toFixed(2)}% per trade)`,
+      );
+      console.log(
+        `📊 Best Total Return: ${bestByTotal.name} (${bestByTotal.result.totalReturn.toFixed(1)}%)`,
+      );
+      console.log(
+        `⚖️  Best Sharpe:      ${bestBySharpe.name} (${bestBySharpe.result.avgSharpe.toFixed(2)})`,
+      );
 
       // Determine if strategies are worthwhile
       console.log("\n" + "-".repeat(80));
@@ -614,22 +651,22 @@ describe("Real Data Backtest - Yahoo Finance", () => {
       console.log("-".repeat(80));
 
       const profitableStrategies = validResults.filter(
-        (r) => r.result.avgPnlPercent > 0 && r.result.winRate > 50
+        (r) => r.result.avgPnlPercent > 0 && r.result.winRate > 50,
       );
 
       if (profitableStrategies.length > 0) {
         console.log("✅ WORTHWHILE strategies found:\n");
         for (const s of profitableStrategies) {
-          console.log(`   • ${s.name}: ${s.result.winRate.toFixed(1)}% win rate, ${s.result.avgPnlPercent.toFixed(2)}% avg gain`);
+          console.log(
+            `   • ${s.name}: ${s.result.winRate.toFixed(1)}% win rate, ${s.result.avgPnlPercent.toFixed(2)}% avg gain`,
+          );
         }
       } else {
         console.log("⚠️  No clearly profitable strategies found with current parameters.");
         console.log("   Consider adjusting thresholds or adding additional filters.");
       }
 
-      const unprofitableStrategies = validResults.filter(
-        (r) => r.result.avgPnlPercent < 0
-      );
+      const unprofitableStrategies = validResults.filter((r) => r.result.avgPnlPercent < 0);
 
       if (unprofitableStrategies.length > 0) {
         console.log("\n❌ NOT WORTHWHILE (negative expected return):\n");
@@ -665,12 +702,26 @@ describe("Real Data Backtest - Yahoo Finance", () => {
       .slice(0, 20);
 
     console.log("\n| Symbol | Entry Date | Entry $ | Exit Date  | Exit $  |  PnL % |");
-    console.log("|" + "-".repeat(8) + "|" + "-".repeat(12) + "|" + "-".repeat(9) + "|" + "-".repeat(12) + "|" + "-".repeat(9) + "|" + "-".repeat(8) + "|");
+    console.log(
+      "|" +
+        "-".repeat(8) +
+        "|" +
+        "-".repeat(12) +
+        "|" +
+        "-".repeat(9) +
+        "|" +
+        "-".repeat(12) +
+        "|" +
+        "-".repeat(9) +
+        "|" +
+        "-".repeat(8) +
+        "|",
+    );
 
     for (const trade of recentTrades) {
       const result = trade.pnlPercent >= 0 ? "✅" : "❌";
       console.log(
-        `| ${trade.symbol.padEnd(6)} | ${trade.entryDate} | $${trade.entryPrice.toFixed(2).padStart(6)} | ${trade.exitDate} | $${trade.exitPrice.toFixed(2).padStart(6)} | ${trade.pnlPercent >= 0 ? "+" : ""}${trade.pnlPercent.toFixed(2).padStart(5)}% ${result}`
+        `| ${trade.symbol.padEnd(6)} | ${trade.entryDate} | $${trade.entryPrice.toFixed(2).padStart(6)} | ${trade.exitDate} | $${trade.exitPrice.toFixed(2).padStart(6)} | ${trade.pnlPercent >= 0 ? "+" : ""}${trade.pnlPercent.toFixed(2).padStart(5)}% ${result}`,
       );
     }
 

@@ -141,10 +141,7 @@ export class ScreenerService {
     return results;
   }
 
-  async getMovers(
-    direction: "gainers" | "losers",
-    limit = 10,
-  ): Promise<ScanResult[]> {
+  async getMovers(direction: "gainers" | "losers", limit = 10): Promise<ScanResult[]> {
     const quotes = await alpaca.getSnapshots(this.defaultUniverse);
     const results: ScanResult[] = [];
 

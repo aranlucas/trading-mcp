@@ -58,9 +58,7 @@ export function registerOptionsTools(server: McpServer) {
         };
 
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(result, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       } catch (error) {
         return {
@@ -85,15 +83,10 @@ export function registerOptionsTools(server: McpServer) {
     },
     async ({ symbol, expiration }) => {
       try {
-        const options = await yahoo.getOptionsForExpiration(
-          symbol.toUpperCase(),
-          expiration,
-        );
+        const options = await yahoo.getOptionsForExpiration(symbol.toUpperCase(), expiration);
 
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(options, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(options, null, 2) }],
         };
       } catch (error) {
         return {
@@ -109,16 +102,10 @@ export function registerOptionsTools(server: McpServer) {
     "get_high_iv_options",
     {
       title: "Get High IV Options",
-      description:
-        "Find options with high implied volatility (good for selling premium)",
+      description: "Find options with high implied volatility (good for selling premium)",
       inputSchema: {
         symbol: z.string().describe("Stock ticker symbol"),
-        minIV: z
-          .number()
-          .min(0)
-          .max(5)
-          .default(0.5)
-          .describe("Minimum IV threshold (0.5 = 50%)"),
+        minIV: z.number().min(0).max(5).default(0.5).describe("Minimum IV threshold (0.5 = 50%)"),
       },
       annotations: { readOnlyHint: true },
     },
@@ -195,8 +182,7 @@ export function registerOptionsTools(server: McpServer) {
     "get_options_activity",
     {
       title: "Get Unusual Options Activity",
-      description:
-        "Find options with unusually high volume relative to open interest",
+      description: "Find options with unusually high volume relative to open interest",
       inputSchema: {
         symbol: z.string().describe("Stock ticker symbol"),
       },
@@ -208,10 +194,7 @@ export function registerOptionsTools(server: McpServer) {
 
         // Find options where volume > open interest (unusual activity)
         const unusualCalls = (options.calls ?? [])
-          .filter(
-            (c: YahooOptionContract) =>
-              num(c.volume) > 0 && num(c.openInterest) > 0,
-          )
+          .filter((c: YahooOptionContract) => num(c.volume) > 0 && num(c.openInterest) > 0)
           .map((c: YahooOptionContract) => ({
             ...c,
             volOIRatio: num(c.volume) / num(c.openInterest),
@@ -234,10 +217,7 @@ export function registerOptionsTools(server: McpServer) {
           }));
 
         const unusualPuts = (options.puts ?? [])
-          .filter(
-            (p: YahooOptionContract) =>
-              num(p.volume) > 0 && num(p.openInterest) > 0,
-          )
+          .filter((p: YahooOptionContract) => num(p.volume) > 0 && num(p.openInterest) > 0)
           .map((p: YahooOptionContract) => ({
             ...p,
             volOIRatio: num(p.volume) / num(p.openInterest),
@@ -266,8 +246,7 @@ export function registerOptionsTools(server: McpServer) {
               text: JSON.stringify(
                 {
                   symbol: symbol.toUpperCase(),
-                  description:
-                    "Options where today's volume exceeds open interest",
+                  description: "Options where today's volume exceeds open interest",
                   unusualCalls,
                   unusualPuts,
                 },
@@ -291,8 +270,7 @@ export function registerOptionsTools(server: McpServer) {
     "get_options_summary",
     {
       title: "Get Options Summary",
-      description:
-        "Get put/call ratio and options activity summary for a symbol",
+      description: "Get put/call ratio and options activity summary for a symbol",
       inputSchema: {
         symbol: z.string().describe("Stock ticker symbol"),
       },
@@ -325,26 +303,21 @@ export function registerOptionsTools(server: McpServer) {
         const avgCallIV =
           calls.length > 0
             ? calls.reduce(
-                (sum: number, c: YahooOptionContract) =>
-                  sum + num(c.impliedVolatility),
+                (sum: number, c: YahooOptionContract) => sum + num(c.impliedVolatility),
                 0,
               ) / calls.length
             : 0;
         const avgPutIV =
           puts.length > 0
             ? puts.reduce(
-                (sum: number, p: YahooOptionContract) =>
-                  sum + num(p.impliedVolatility),
+                (sum: number, p: YahooOptionContract) => sum + num(p.impliedVolatility),
                 0,
               ) / puts.length
             : 0;
 
         // Find most active strikes
         const mostActiveCalls = [...calls]
-          .sort(
-            (a: YahooOptionContract, b: YahooOptionContract) =>
-              num(b.volume) - num(a.volume),
-          )
+          .sort((a: YahooOptionContract, b: YahooOptionContract) => num(b.volume) - num(a.volume))
           .slice(0, 5)
           .map((c: YahooOptionContract) => ({
             strike: c.strike,
@@ -353,10 +326,7 @@ export function registerOptionsTools(server: McpServer) {
           }));
 
         const mostActivePuts = [...puts]
-          .sort(
-            (a: YahooOptionContract, b: YahooOptionContract) =>
-              num(b.volume) - num(a.volume),
-          )
+          .sort((a: YahooOptionContract, b: YahooOptionContract) => num(b.volume) - num(a.volume))
           .slice(0, 5)
           .map((p: YahooOptionContract) => ({
             strike: p.strike,
@@ -370,13 +340,9 @@ export function registerOptionsTools(server: McpServer) {
           nearestExpiration: options.expirationDates?.[0] ?? null,
           putCallRatio: {
             byVolume:
-              totalCallVolume > 0
-                ? Math.round((totalPutVolume / totalCallVolume) * 100) / 100
-                : 0,
+              totalCallVolume > 0 ? Math.round((totalPutVolume / totalCallVolume) * 100) / 100 : 0,
             byOpenInterest:
-              totalCallOI > 0
-                ? Math.round((totalPutOI / totalCallOI) * 100) / 100
-                : 0,
+              totalCallOI > 0 ? Math.round((totalPutOI / totalCallOI) * 100) / 100 : 0,
           },
           volume: {
             calls: totalCallVolume,
@@ -399,9 +365,7 @@ export function registerOptionsTools(server: McpServer) {
         };
 
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(summary, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: JSON.stringify(summary, null, 2) }],
         };
       } catch (error) {
         return {

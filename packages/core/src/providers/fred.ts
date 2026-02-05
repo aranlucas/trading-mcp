@@ -43,10 +43,7 @@ export const fred = {
   },
 
   // Get series observations
-  async getSeries(
-    seriesId: string,
-    limit = 10,
-  ): Promise<{ date: string; value: number }[]> {
+  async getSeries(seriesId: string, limit = 10): Promise<{ date: string; value: number }[]> {
     if (!apiKey) return [];
     try {
       const url = `${FRED_BASE}/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=${limit}`;
