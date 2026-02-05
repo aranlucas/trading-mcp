@@ -5,13 +5,6 @@
 **Score:** 8.5/10
 **Status:** Production-ready infrastructure complete. Focus now on testing, documentation, and advanced features.
 
-**Guiding Principles**
-
-- Ship incremental improvements with measurable outcomes.
-- Prefer automation (tests, linting, CI) over manual checks.
-- Favor stable APIs/providers over brittle scraping.
-- Keep roadmap items scoped to a single, testable outcome when possible.
-
 ---
 
 ## Remaining Work
@@ -26,12 +19,6 @@
 - [ ] Add integration tests for provider fallback logic
 - [ ] Add API route tests with mocked responses
 - [ ] Target: 80%+ coverage
-- [ ] Add mutation testing or snapshot tests for key outputs
-
-**Definition of Done**
-
-- ✅ 80%+ coverage on `packages/core` and `packages/screener`
-- ✅ All critical paths have tests (indicator calc, provider failover, and API routes)
 
 ### 2. Add OpenAPI Documentation
 
@@ -42,13 +29,6 @@
 - [ ] Add `@hono/swagger-ui` for auto-generated docs
 - [ ] Document all endpoints with request/response examples
 - [ ] Add error code reference
-- [ ] Publish a versioned `/docs` endpoint
-- [ ] Add OpenAPI schema validation in CI to prevent drift
-
-**Definition of Done**
-
-- ✅ Swagger UI loads in dev and production
-- ✅ All routes and error responses visible in docs
 
 ### 3. Replace Finviz HTML Scraping
 
@@ -62,12 +42,6 @@
 - Tradier (free)
 - IEX Cloud (pay-per-call)
 
-**Decision Criteria**
-
-- API reliability and rate limits
-- Cost per request at expected volume
-- Compliance with ToS and long-term stability
-
 ### 4. Add Pre-commit Hooks
 
 **Priority:** Medium
@@ -77,11 +51,6 @@
 - [ ] Add Husky for git hooks
 - [ ] Add lint-staged for staged file linting
 - [ ] Run typecheck on commit
-
-**Definition of Done**
-
-- ✅ Pre-commit runs `lint` and `typecheck` for staged files only
-- ✅ Hooks are documented in README
 
 ### 5. Security Hardening
 
@@ -94,12 +63,6 @@
 - [ ] Sanitize error messages in API responses
 - [ ] Validate environment variables on startup
 
-**Definition of Done**
-
-- ✅ Security headers enabled and verified with a simple curl check
-- ✅ Secrets scanning integrated in CI
-- ✅ Startup fails fast with clear env validation errors
-
 ### 6. Monitoring & Observability
 
 **Priority:** Medium
@@ -110,11 +73,6 @@
 - [ ] Add request timing metrics
 - [ ] Add provider health monitoring
 - [ ] Set up alerts for API errors
-
-**Definition of Done**
-
-- ✅ Structured logs include request IDs and timings
-- ✅ Provider health dashboard or a periodic health report
 
 ---
 
@@ -186,17 +144,6 @@ POST /api/backtest
 - Combine daily/weekly/monthly signals
 - Trend alignment across timeframes
 - Higher timeframe confirmation
-
----
-
-## Suggested Order of Execution
-
-1. Increase Test Coverage
-2. Add OpenAPI Documentation
-3. Replace Finviz HTML Scraping
-4. Add Pre-commit Hooks
-5. Security Hardening
-6. Monitoring & Observability
 
 ---
 
