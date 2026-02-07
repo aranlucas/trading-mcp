@@ -1,52 +1,14 @@
 // Alpaca API client using official SDK
 
-import { createRequire } from "module";
 import { z } from "zod";
 import { config } from "../config.js";
 import type { Quote, Position, Portfolio, Order, MarketStatus } from "../types/index.js";
 import { AlpacaPositionSchema, AlpacaOrderSchema, AlpacaBarSchema } from "../schemas/index.js";
 import { ValidationError } from "./errors.js";
-
-type AlpacaSdk = {
-  getAccount: () => Promise<unknown>;
-  getPositions: () => Promise<unknown>;
-  createOrder: (order: unknown) => Promise<unknown>;
-  getOrder: (id: string) => Promise<unknown>;
-  cancelOrder: (id: string) => Promise<unknown>;
-  getOrders: (params?: {
-    status: unknown;
-    until: unknown;
-    after: unknown;
-    limit: unknown;
-    direction: unknown;
-    nested: unknown;
-    symbols: unknown;
-  }) => Promise<unknown>;
-  getClock: () => Promise<unknown>;
-  getBarsV2: (
-    symbol: string,
-    options: { timeframe: string; limit: number },
-  ) => AsyncIterable<unknown>;
-};
-
-type AlpacaCtor = new (config?: Record<string, unknown>) => AlpacaSdk;
-
-function loadAlpacaCtor(): AlpacaCtor {
-  // Alpaca SDK is CJS; require() avoids ESM/CJS default-export weirdness (esp. under Vite SSR).
-  const require = createRequire(import.meta.url);
-  const mod = require("@alpacahq/alpaca-trade-api") as unknown;
-  if (typeof mod === "function") return mod as AlpacaCtor;
-
-  if (typeof mod === "object" && mod !== null && "default" in mod) {
-    const def = (mod as Record<string, unknown>).default;
-    if (typeof def === "function") return def as AlpacaCtor;
-  }
-
-  throw new Error("Invalid Alpaca SDK export shape");
-}
+import Alpaca from "@alpacahq/alpaca-trade-api";
 
 // Initialize official Alpaca client
-const alpaca = new (loadAlpacaCtor())({
+const alpaca = new Alpaca.default({
   keyId: config.alpaca.apiKey,
   secretKey: config.alpaca.apiSecret,
   paper: config.alpaca.paper,
