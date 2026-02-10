@@ -89,7 +89,7 @@ class YahooMarketDataClient implements MarketDataClient {
     const results = new Map<string, Quote>();
     if (symbols.length === 0) return results;
 
-    let list: unknown[] = [];
+    let list: unknown[];
     try {
       const raw = (await yahoo.getQuotes(symbols)) as unknown;
       list = Array.isArray(raw) ? raw : [raw];

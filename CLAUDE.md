@@ -1,139 +1,91 @@
-# Claude Code Guidelines
+# CLAUDE.md
 
-## Quick Reference
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
 
 ```bash
-pnpm install            # Install dependencies
-pnpm build              # Build all packages (Turbo)
-pnpm typecheck          # Type-check without emit
-pnpm test               # Run all tests (Vitest)
-pnpm lint               # ESLint on all packages
-pnpm lint:fix           # ESLint with auto-fix
-pnpm format             # Prettier format
-pnpm format:check       # Prettier check
-pnpm dev                # Dev mode: MCP server (tsx watch)
-pnpm dev:screener       # Dev mode: REST API
+pnpm install                        # Install dependencies
+pnpm build                          # Build all packages (Turbo)
+pnpm typecheck                      # Type-check without emit
+pnpm test                           # Run all tests (Vitest via Turbo)
+pnpm --filter @trading/core test    # Run tests for a single package
+pnpm exec vitest run packages/core/src/__tests__/unified.fallback.test.ts  # Run a single test file
+pnpm lint                           # ESLint on all packages
+pnpm lint:fix                       # ESLint with auto-fix
+pnpm format                         # Prettier format
+pnpm dev                            # Dev mode: MCP server (tsx watch)
+pnpm dev:screener                   # Dev mode: REST API (tsx watch)
 ```
+
+Build, typecheck, and test tasks depend on `^build` — dependencies must build first.
 
 ## Project Overview
 
-A trading tools monorepo with three packages exposing shared market data and trading capabilities:
+A trading tools monorepo with three packages:
 
 | Package | Path | Purpose |
 |---------|------|---------|
-| `@trading/core` | `packages/core/` | Shared types, schemas, providers, and infrastructure |
-| `@trading/mcp` | `packages/mcp/` | MCP server (stdio) for AI-assisted trading |
-| `@trading/screener` | `packages/screener/` | REST API (Hono) for stock screening |
+| `@trading/core` | `packages/core/` | Shared types, Zod schemas, data providers, and infrastructure (cache, rate limiter, errors, retry, timeout) |
+| `@trading/mcp` | `packages/mcp/` | MCP server (stdio transport) for AI-assisted trading |
+| `@trading/screener` | `packages/screener/` | REST API (Hono + OpenAPI) for stock screening, deployed to Vercel via `api/` directory |
 
-## Repository Structure
+## Architecture
 
-```
-packages/
-├── core/                     # Shared platform package
-│   └── src/
-│       ├── lib/              # Infrastructure (logger, cache, rate limiter, errors, timeout, retry, alpaca)
-│       ├── providers/        # Data providers (yahoo, polygon, finnhub, fred, finviz) + unified facade
-│       ├── schemas/          # Zod validation schemas for all external APIs
-│       ├── types/            # TypeScript domain types
-│       ├── config.ts         # Configuration loader
-│       └── __tests__/        # Unit tests
-├── mcp/                      # MCP server
-│   └── src/
-│       ├── tools/            # Tool implementations (market, portfolio, orders, screener, technicals, options)
-│       ├── server.ts         # MCP server setup + tool registration
-│       ├── index.ts          # Stdio transport entry point
-│       └── __tests__/        # Tool tests
-└── screener/                 # REST API
-    └── src/
-        ├── routes/           # HTTP endpoints (quotes, screener)
-        ├── services/         # Business logic (screener, market-data)
-        ├── scripts/          # CLI utilities (telegram-screener, backtest)
-        ├── openapi/          # OpenAPI schema definitions
-        ├── app.ts            # Hono middleware and route setup
-        ├── index.ts          # HTTP server entry point
-        └── __tests__/        # Route and service tests
-```
+### Provider System (`packages/core/src/providers/index.ts`)
+
+The `unified` facade is the primary entry point for market data:
+- `Promise.any()` queries all configured providers in parallel (yahoo, finnhub, polygon, finviz)
+- First successful response wins; 2s per-provider timeout with 1 retry (exponential backoff + jitter)
+- Rolling-window metrics track error rates per provider; warns at >50% failure
+- Direct access available via `unified.providers.yahoo.*` etc.
+- `unified.healthCheck()` returns "healthy" (2+ providers), "degraded" (1), or "unhealthy" (0)
+
+### Caching & Rate Limiting
+
+- **LRU caches** (`lib/cache.ts`): Quotes 5s | Bars 1min | Market status 30s | News 5min
+- **Rate limits** (`lib/rate-limiter.ts`, Bottleneck): Polygon 5/min | Finnhub 60/min | Alpaca 200/min | Yahoo 100/min | FRED 120/min | Finviz 10/min
+
+### Error Hierarchy (`packages/core/src/lib/errors.ts`)
+
+`AppError` base with `expose` flag → `ValidationError` (400), `ProviderError` (502), `NotFoundError` (404), `TimeoutError` (504). REST routes use `toPublicError()` to sanitize responses.
+
+### MCP Tools (`packages/mcp/src/tools/`)
+
+Each tool module registers tools with: Zod `inputSchema`, JSON response wrapping with `isError` flag on failures, `readOnlyHint: true` annotation for data-fetching tools. MCP server communicates over stdio; logs go to stderr.
+
+### Screener REST API (`packages/screener/src/`)
+
+Hono routes use `@hono/zod-openapi` for automatic request validation and OpenAPI spec generation. Service layer (`services/`) uses a market data client abstraction that switches between Alpaca and Yahoo based on `SCREENER_PROVIDER` env var.
 
 ## TypeScript Rules
 
-- **Never use `any` type** - Always use proper types, `unknown`, or generics instead. ESLint enforces `@typescript-eslint/no-explicit-any: "error"`.
-- **Never disable ESLint rules** - Fix the underlying issue instead of using `eslint-disable` comments.
-- **Prefer real type fixes over escape hatches** - Avoid `unknown` casts and `// @ts-ignore`. If an interop edge case forces a cast (e.g., CJS/ESM boundary), isolate it to the smallest surface area.
-- **Unused variables** - Prefix with `_` (e.g., `_unusedParam`). The linter allows `argsIgnorePattern: "^_"`.
-- **Strict mode** is enabled, including `noUncheckedIndexedAccess`.
+- **Never use `any`** — ESLint enforces `@typescript-eslint/no-explicit-any: "error"`
+- **Never disable ESLint rules** — fix the underlying issue
+- **Strict mode** with `noUncheckedIndexedAccess` — all indexed access may be `undefined`
+- **`verbatimModuleSyntax`** — use `import type` for type-only imports
+- **Unused variables** — prefix with `_` (e.g., `_unusedParam`)
+- Target: ES2024, module: NodeNext, ESM throughout
 
 ## Code Style
 
-Enforced by Prettier (runs on pre-commit via Husky + lint-staged):
-
-- Double quotes, semicolons, trailing commas
-- 2-space indentation, 100-character line width
-- ESM modules (`"type": "module"` in package.json)
-- Target: ES2024, module resolution: NodeNext
+Enforced by Prettier (pre-commit via Husky + lint-staged):
+- Double quotes, semicolons, trailing commas, 2-space indent, 100-char width
+- Naming: PascalCase types/interfaces, camelCase functions/variables, SCREAMING_SNAKE_CASE constants
 
 ## Testing
 
-Framework: **Vitest** with v8 coverage provider.
-
-```bash
-pnpm test                           # Run all tests
-pnpm --filter @trading/core test    # Run tests for a specific package
-```
-
-- Tests live in `__tests__/` directories alongside source code
-- E2E tests in `e2e/` directory (30s timeout)
+- Framework: **Vitest** with v8 coverage
+- Tests in `__tests__/` directories; E2E tests in `e2e/` (30s timeout)
 - Use `vi.useFakeTimers()` for deterministic time-dependent tests
-- Coverage target: 80%+
-- Test and typecheck tasks depend on `^build` (dependencies must build first)
 
-## Architecture Patterns
+## Key Conventions
 
-### Provider Fallback (Parallel, First-Success)
-
-All market data flows through `packages/core/src/providers/index.ts` (the `unified` facade):
-- Providers are queried in parallel with per-request timeouts
-- First successful response wins
-- Error rate tracking alerts if >50% failures in a rolling window
-
-### Caching (LRU)
-
-Defined in `packages/core/src/lib/cache.ts`:
-- Quotes: 5s TTL | Bars: 1min | Market status: 30s | News: 5min
-
-### Rate Limiting
-
-Defined in `packages/core/src/lib/rate-limiter.ts` (Bottleneck):
-- Polygon: 5/min | Finnhub: 60/min | Alpaca: 200/min | Yahoo: 100/min | FRED: 120/min | Finviz: 10/min
-
-### Error Handling
-
-Typed error hierarchy in `packages/core/src/lib/errors.ts`:
-- `AppError` base class with `expose` flag for public/private distinction
-- Subtypes: `ValidationError` (400), `ProviderError` (502), `NotFoundError` (404), `TimeoutError` (504)
-- REST routes use `toPublicError()` to sanitize responses (never leak secrets)
-
-### MCP Tool Pattern
-
-Tools in `packages/mcp/src/tools/` follow a consistent pattern:
-- Zod `inputSchema` for parameter validation
-- JSON response wrapping with `isError` flag on failures
-- Read-only hints for market data tools
-
-### REST Route Pattern (Hono)
-
-Routes in `packages/screener/src/routes/` use:
-- `@hono/zod-openapi` for OpenAPI route definitions
-- Automatic request validation via Zod schemas
-- Standardized error responses with `code` + `error` fields
-
-## CI/CD
-
-GitHub Actions (`.github/workflows/ci.yml`) runs on push to `main` and PRs:
-1. `pnpm typecheck`
-2. `pnpm lint`
-3. `pnpm test`
-
-Security audit runs in parallel (non-blocking). Pre-commit hook runs `eslint --fix` + `prettier --write` on staged `.ts` files.
+- Internal packages use `workspace:*` (Syncpack enforces exact versions for external deps)
+- Zod schemas validate all external API responses at runtime
+- Pino for structured logging (`packages/core/src/lib/logger.ts`)
+- No import-time side effects — configuration loaded via explicit `loadConfig()` call
+- Barrel exports (`index.ts`) define public API surfaces per package
 
 ## Environment Variables
 
@@ -149,20 +101,3 @@ See `.env.example` for the full list. Key variables:
 | `FRED_API_KEY` | No | Federal Reserve economic data |
 | `SCREENER_PROVIDER` | No (default: yahoo) | `yahoo` (free) or `alpaca` |
 | `PORT` | No (default: 3000) | REST API port |
-
-## Key Conventions
-
-- **Monorepo managed by pnpm workspaces + Turbo** for build orchestration
-- **Internal packages** use `workspace:*` version specifier (enforced by Syncpack)
-- **Zod schemas** validate all external API responses at runtime
-- **Pino** for structured logging (`packages/core/src/lib/logger.ts`)
-- **No import-time side effects** where possible (configuration loaded via explicit function calls)
-- Naming: PascalCase for types/interfaces, camelCase for functions/variables, `SCREAMING_SNAKE_CASE` for constants
-- Barrel exports (`index.ts`) define public API surfaces for each package
-
-## Related Documentation
-
-- `ARCHITECTURE.md` - System design, provider strategy, and improvement roadmap
-- `IMPROVEMENTS.md` - Tracked remaining work items
-- `AGENTS.md` - Type safety guidelines for contributors
-- `README.md` - Setup instructions, API endpoints, deployment

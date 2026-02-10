@@ -41,7 +41,7 @@ function generateBarsForSmaAlignment(
 
   // Start at 100, adjust trend based on desired alignment
   let price = 100;
-  let trend = 0;
+  let trend: number;
 
   if (aboveSma20 && aboveSma50) {
     // Uptrend - price consistently above both SMAs
