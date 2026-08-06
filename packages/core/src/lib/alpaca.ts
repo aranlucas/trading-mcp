@@ -1,17 +1,50 @@
 // Alpaca API client using official SDK
 
-import { createRequire } from "module";
 import { z } from "zod";
 import { config } from "../config.js";
 import type { Quote, Position, Portfolio, Order, MarketStatus } from "../types/index.js";
 import { AlpacaPositionSchema, AlpacaOrderSchema, AlpacaBarSchema } from "../schemas/index.js";
+import { ValidationError } from "./errors.js";
+import Alpaca from "@alpacahq/alpaca-trade-api";
 
-// CJS import for Alpaca SDK (it doesn't have proper ESM exports)
-const require = createRequire(import.meta.url);
-const Alpaca = require("@alpacahq/alpaca-trade-api");
+type AlpacaClientOptions = {
+  keyId: string;
+  secretKey: string;
+  paper: boolean;
+};
+
+type AlpacaBarsV2Params = {
+  timeframe: string;
+  limit: number;
+};
+
+type AlpacaClient = {
+  getAccount(): Promise<unknown>;
+  getPositions(): Promise<unknown>;
+  getBarsV2(symbol: string, params: AlpacaBarsV2Params): AsyncIterable<unknown>;
+  createOrder(params: unknown): Promise<unknown>;
+  getOrder(orderId: string): Promise<unknown>;
+  cancelOrder(orderId: string): Promise<unknown>;
+  getOrders(params: unknown): Promise<unknown>;
+  getClock(): Promise<unknown>;
+};
+
+type AlpacaCtor = new (opts: AlpacaClientOptions) => AlpacaClient;
+
+function getAlpacaCtor(): AlpacaCtor {
+  // The SDK is published as CJS; depending on the Node/TS module interop settings,
+  // `import Alpaca from ...` can be either the ctor itself or `{ default: ctor }`.
+  const maybe = Alpaca as unknown as { default?: unknown };
+  const ctor = (maybe.default ?? Alpaca) as unknown;
+  if (typeof ctor !== "function") {
+    throw new Error("Invalid Alpaca SDK import (constructor not found)");
+  }
+  return ctor as AlpacaCtor;
+}
 
 // Initialize official Alpaca client
-const alpaca = new Alpaca({
+const AlpacaCtor = getAlpacaCtor();
+const alpaca = new AlpacaCtor({
   keyId: config.alpaca.apiKey,
   secretKey: config.alpaca.apiSecret,
   paper: config.alpaca.paper,
@@ -83,27 +116,37 @@ export async function getPortfolio(): Promise<Portfolio> {
 export async function getQuote(symbol: string): Promise<Quote> {
   const bars = alpaca.getBarsV2(symbol, {
     timeframe: "1Day",
-    limit: 1,
+    limit: 2,
   });
 
-  let lastBar: z.infer<typeof AlpacaBarSchema> | null = null;
+  const parsedBars: z.infer<typeof AlpacaBarSchema>[] = [];
   for await (const bar of bars) {
     const parsed = AlpacaBarSchema.safeParse(bar);
     if (parsed.success) {
-      lastBar = parsed.data;
+      parsedBars.push(parsed.data);
     }
   }
 
+  parsedBars.sort((a, b) => new Date(a.Timestamp).getTime() - new Date(b.Timestamp).getTime());
+  const prevBar = parsedBars.length >= 2 ? parsedBars[parsedBars.length - 2] : null;
+  const lastBar = parsedBars.length >= 1 ? parsedBars[parsedBars.length - 1] : null;
+
+  const price = lastBar?.ClosePrice ?? 0;
+  const prevClose = prevBar?.ClosePrice ?? price;
+  const change = price - prevClose;
+  const changePercent = prevClose !== 0 ? (change / prevClose) * 100 : 0;
+
   return {
     symbol,
-    price: lastBar?.ClosePrice ?? 0,
+    price,
     open: lastBar?.OpenPrice ?? 0,
     high: lastBar?.HighPrice ?? 0,
     low: lastBar?.LowPrice ?? 0,
-    close: lastBar?.ClosePrice ?? 0,
+    // Align with Yahoo snapshots: `close` is previous close.
+    close: prevClose,
     volume: lastBar?.Volume ?? 0,
-    change: 0,
-    changePercent: 0,
+    change,
+    changePercent,
     timestamp: lastBar?.Timestamp ?? new Date().toISOString(),
   };
 }
@@ -143,6 +186,37 @@ export async function getBars(
 }
 
 // Orders
+export const AlpacaOrderRequestSchema = z
+  .object({
+    symbol: z
+      .string()
+      .min(1)
+      .max(10)
+      .regex(/^[A-Z0-9.]+$/i, "Invalid symbol format"),
+    qty: z.number().finite().positive(),
+    side: z.enum(["buy", "sell"]),
+    type: z.enum(["market", "limit", "stop", "stop_limit"]),
+    time_in_force: z.enum(["day", "gtc", "ioc", "fok"]),
+    limit_price: z.number().finite().positive().optional(),
+    stop_price: z.number().finite().positive().optional(),
+  })
+  .superRefine((val, ctx) => {
+    if ((val.type === "limit" || val.type === "stop_limit") && val.limit_price === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["limit_price"],
+        message: "limit_price is required for limit and stop_limit orders",
+      });
+    }
+    if ((val.type === "stop" || val.type === "stop_limit") && val.stop_price === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["stop_price"],
+        message: "stop_price is required for stop and stop_limit orders",
+      });
+    }
+  });
+
 export async function placeOrder(params: {
   symbol: string;
   qty: number;
@@ -152,14 +226,19 @@ export async function placeOrder(params: {
   limit_price?: number;
   stop_price?: number;
 }): Promise<Order> {
+  const parsed = AlpacaOrderRequestSchema.safeParse(params);
+  if (!parsed.success) {
+    throw new ValidationError("Invalid order parameters", parsed.error.issues);
+  }
+
   const raw = await alpaca.createOrder({
-    symbol: params.symbol,
-    qty: params.qty,
-    side: params.side,
-    type: params.type,
-    time_in_force: params.time_in_force,
-    limit_price: params.limit_price,
-    stop_price: params.stop_price,
+    symbol: parsed.data.symbol,
+    qty: parsed.data.qty,
+    side: parsed.data.side,
+    type: parsed.data.type,
+    time_in_force: parsed.data.time_in_force,
+    limit_price: parsed.data.limit_price,
+    stop_price: parsed.data.stop_price,
   });
 
   const order = AlpacaOrderSchema.parse(raw);
@@ -203,7 +282,15 @@ export async function cancelOrder(orderId: string): Promise<void> {
 }
 
 export async function getOrders(status = "open"): Promise<Order[]> {
-  const raw = await alpaca.getOrders({ status });
+  const raw = await alpaca.getOrders({
+    status,
+    until: undefined,
+    after: undefined,
+    limit: undefined,
+    direction: undefined,
+    nested: undefined,
+    symbols: undefined,
+  });
   const orders = z.array(AlpacaOrderSchema).parse(raw);
   return orders.map((order) => ({
     id: order.id,

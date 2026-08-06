@@ -7,6 +7,8 @@
 
 A monorepo for trading tools, including an MCP server and a screener API.
 
+See `ARCHITECTURE.md` for system design and improvement roadmap.
+
 ## Packages
 
 | Package             | Description                                 |
@@ -18,8 +20,8 @@ A monorepo for trading tools, including an MCP server and a screener API.
 ## Setup
 
 ```bash
-npm install
-npm run build
+pnpm install
+pnpm build
 ```
 
 ## Configuration
@@ -33,6 +35,20 @@ export ALPACA_PAPER="true"  # Use paper trading (default)
 ```
 
 Get free API keys at [alpaca.markets](https://alpaca.markets)
+
+## Telegram Alerts (GitHub Actions)
+
+This repo includes a scheduled workflow that uses the screener API code to send a Telegram message (top movers, scan results, and/or signals).
+
+**Required GitHub secrets:**
+
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (optionally `TELEGRAM_MESSAGE_THREAD_ID`)
+
+**Optional (only if you run the workflow with `provider=alpaca`):**
+
+- `ALPACA_API_KEY`, `ALPACA_API_SECRET` (and optionally `ALPACA_PAPER`)
+
+Workflow file: `.github/workflows/telegram-screener.yml`
 
 ## Packages
 
@@ -49,7 +65,7 @@ Shared utilities used by other packages:
 MCP server for Claude/AI integration:
 
 ```bash
-npm run dev --workspace=@trading/mcp
+pnpm dev
 ```
 
 **Tools:**
@@ -66,12 +82,20 @@ npm run dev --workspace=@trading/mcp
 REST API for stock screening:
 
 ```bash
-npm run dev --workspace=@trading/screener
+pnpm dev:screener
 ```
+
+**Deploy (Vercel):**
+
+- Create a new Vercel project and set **Root Directory** to `packages/screener`
+- Add env vars (optional, depending on providers): `SCREENER_PROVIDER` (`yahoo` or `alpaca`), `ALPACA_API_KEY`, `ALPACA_API_SECRET`, `ALPACA_PAPER`
+- After deploy, the API is served under `/api/*` (example: `GET /api/health`)
 
 **Endpoints:**
 
-- `GET /` - Health check
+- `GET /api` - Health check
+- `GET /api/health` - Provider health check
+- `GET /api/openapi.json` - OpenAPI 3.0 spec
 - `GET /api/quotes/:symbol` - Get single quote
 - `POST /api/quotes/batch` - Get multiple quotes
 - `GET /api/quotes/:symbol/bars` - Get price history
@@ -102,13 +126,13 @@ packages/
 
 ```bash
 # Build all packages
-npm run build
+pnpm build
 
 # Dev mode for MCP
-npm run dev --workspace=@trading/mcp
+pnpm dev
 
 # Dev mode for screener
-npm run dev --workspace=@trading/screener
+pnpm dev:screener
 ```
 
 ## License
