@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Generate bars with a specific RSI tendency
+// Generate bars with a deterministic RSI tendency.
 function generateBarsForRsi(
   targetRsi: number,
   periods = 30,
@@ -8,14 +8,21 @@ function generateBarsForRsi(
   const bars = [];
   let price = 100;
 
-  // For oversold (low RSI), we need mostly down days
-  // For overbought (high RSI), we need mostly up days
-  const upDayProb = targetRsi / 100;
+  // The implementation calculates RSI from the last 14 changes. Use a fixed
+  // number of unit gains in that window so the signal boundary is predictable.
+  const rsiPeriod = 14;
+  const upDaysInRsiWindow = Math.round((targetRsi / 100) * rsiPeriod);
+  const changes = Array.from({ length: periods - 1 }, (_, index) => {
+    const rsiWindowStart = periods - 1 - rsiPeriod;
+    if (index < rsiWindowStart) return 0;
+
+    const dayInRsiWindow = index - rsiWindowStart;
+    return dayInRsiWindow < upDaysInRsiWindow ? 1 : -1;
+  });
 
   for (let i = 0; i < periods; i++) {
-    const date = new Date(2024, 0, i + 1);
-    const isUpDay = Math.random() < upDayProb;
-    const change = isUpDay ? Math.random() * 2 + 0.5 : -(Math.random() * 2 + 0.5);
+    const date = new Date(Date.UTC(2024, 0, i + 1));
+    const change = i === 0 ? 0 : changes[i - 1]!;
     price = Math.max(10, price + change);
 
     bars.push({
@@ -31,7 +38,7 @@ function generateBarsForRsi(
   return bars;
 }
 
-// Generate bars with a specific SMA alignment
+// Generate bars with a deterministic SMA alignment.
 function generateBarsForSmaAlignment(
   aboveSma20: boolean,
   aboveSma50: boolean,
@@ -55,8 +62,10 @@ function generateBarsForSmaAlignment(
   }
 
   for (let i = 0; i < periods; i++) {
-    const date = new Date(2024, 0, i + 1);
-    const change = trend + (Math.random() - 0.5);
+    const date = new Date(Date.UTC(2024, 0, i + 1));
+    // Oscillate mixed-alignment fixtures so the RSI stays neutral instead of
+    // being treated as overbought when every close is identical.
+    const change = i === 0 ? 0 : trend || (i % 2 === 0 ? 1 : -1);
     price = Math.max(10, price + change);
 
     bars.push({
@@ -152,7 +161,7 @@ const mockSnapshots = new Map([
 ]);
 
 // Mock bars for each symbol
-const mockBarsNeutral = generateBarsForSmaAlignment(true, true, 60);
+const mockBarsNeutral = generateBarsForSmaAlignment(false, true, 60);
 const mockBarsOversold = generateBarsForRsi(20, 30);
 const mockBarsOverbought = generateBarsForRsi(85, 30);
 
@@ -337,8 +346,15 @@ describe("ScreenerService", () => {
       // INTC returns oversold bars
       const signals = await screener.getSignals(["INTC"]);
 
-      // May or may not trigger based on generated data, but should process
-      expect(Array.isArray(signals)).toBe(true);
+      expect(signals).toHaveLength(1);
+      expect(signals[0]).toMatchObject({
+        symbol: "INTC",
+        type: "RSI_OVERSOLD",
+        direction: "bullish",
+        strength: expect.closeTo(0.2857, 3),
+        description: "RSI at 21.4 - oversold",
+      });
+      expect(signals[0]?.timestamp).toEqual(expect.any(String));
       expect(alpaca.getBars).toHaveBeenCalledWith("INTC", "1Day", 60);
     });
 
@@ -346,8 +362,15 @@ describe("ScreenerService", () => {
       // NVDA returns overbought bars
       const signals = await screener.getSignals(["NVDA"]);
 
-      // Should have processed the symbol
-      expect(Array.isArray(signals)).toBe(true);
+      expect(signals).toHaveLength(1);
+      expect(signals[0]).toMatchObject({
+        symbol: "NVDA",
+        type: "RSI_OVERBOUGHT",
+        direction: "bearish",
+        strength: expect.closeTo(0.5238, 3),
+        description: "RSI at 85.7 - overbought",
+      });
+      expect(signals[0]?.timestamp).toEqual(expect.any(String));
       expect(alpaca.getBars).toHaveBeenCalledWith("NVDA", "1Day", 60);
     });
 
@@ -369,8 +392,7 @@ describe("ScreenerService", () => {
 
       const signals = await screener.getSignals(["AAPL"]);
 
-      // May have MA_BULLISH_ALIGNMENT but no RSI signals
-      expect(Array.isArray(signals)).toBe(true);
+      expect(signals).toEqual([]);
     });
 
     it("should process multiple symbols", async () => {
