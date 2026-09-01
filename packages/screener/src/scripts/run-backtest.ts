@@ -1,12 +1,12 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env -S pnpm exec tsx
 /**
  * Real Data Backtest Script
  *
  * Run this script directly to backtest screener strategies on real Yahoo Finance data:
- *   npx tsx packages/screener/src/scripts/run-backtest.ts
+ *   pnpm exec tsx packages/screener/src/scripts/run-backtest.ts
  *
  * Or from the screener package:
- *   cd packages/screener && npx tsx src/scripts/run-backtest.ts
+ *   cd packages/screener && pnpm exec tsx src/scripts/run-backtest.ts
  */
 
 import { yahoo } from "@trading/core";
