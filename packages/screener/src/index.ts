@@ -1,3 +1,4 @@
+// Vercel uses the Corepack-pinned pnpm 12 toolchain for this workspace.
 /**
  * Stock Screener API
  *
