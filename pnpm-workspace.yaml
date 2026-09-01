@@ -10,3 +10,4 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - "ignore@7.0.8"
+pmOnFail: ignore
