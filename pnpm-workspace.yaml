@@ -1,3 +1,4 @@
+# Vercel runs this workspace with Corepack to honor pnpm 12.
 packages:
   - "packages/*"
 
