@@ -15,13 +15,15 @@ COPY packages/mcp/package.json ./packages/mcp/
 COPY packages/screener/package.json ./packages/screener/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+# Native optional addons are not needed by the API runtime, and pnpm's
+# standalone Alpine build cannot compile them from the bundled node-gyp.
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Copy source code
 COPY . .
 
 # Build all packages
-RUN pnpm run build
+RUN ./node_modules/.bin/turbo run build
 
 # Production image
 FROM node:24-alpine
@@ -41,7 +43,7 @@ COPY --from=builder /app/packages/screener/package.json ./packages/screener/
 COPY --from=builder /app/packages/screener/dist ./packages/screener/dist
 
 # Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 EXPOSE 3000
 
