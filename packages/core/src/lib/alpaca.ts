@@ -1,70 +1,21 @@
-// Alpaca API client using official SDK
+// Alpaca API client using official SDK (v4)
 
 import { z } from "zod";
 import { config } from "../config.js";
 import type { Quote, Position, Portfolio, Order, MarketStatus } from "../types/index.js";
-import { AlpacaPositionSchema, AlpacaOrderSchema, AlpacaBarSchema } from "../schemas/index.js";
 import { ValidationError } from "./errors.js";
-import Alpaca from "@alpacahq/alpaca-trade-api";
+import { Alpaca } from "@alpacahq/alpaca-trade-api";
 
-type AlpacaClientOptions = {
-  keyId: string;
-  secretKey: string;
-  paper: boolean;
-};
-
-type AlpacaBarsV2Params = {
-  timeframe: string;
-  limit: number;
-};
-
-type AlpacaClient = {
-  getAccount(): Promise<unknown>;
-  getPositions(): Promise<unknown>;
-  getBarsV2(symbol: string, params: AlpacaBarsV2Params): AsyncIterable<unknown>;
-  createOrder(params: unknown): Promise<unknown>;
-  getOrder(orderId: string): Promise<unknown>;
-  cancelOrder(orderId: string): Promise<unknown>;
-  getOrders(params: unknown): Promise<unknown>;
-  getClock(): Promise<unknown>;
-};
-
-type AlpacaCtor = new (opts: AlpacaClientOptions) => AlpacaClient;
-
-function getAlpacaCtor(): AlpacaCtor {
-  // The SDK is published as CJS; depending on the Node/TS module interop settings,
-  // `import Alpaca from ...` can be either the ctor itself or `{ default: ctor }`.
-  const maybe = Alpaca as unknown as { default?: unknown };
-  const ctor = (maybe.default ?? Alpaca) as unknown;
-  if (typeof ctor !== "function") {
-    throw new Error("Invalid Alpaca SDK import (constructor not found)");
-  }
-  return ctor as AlpacaCtor;
+// Initialize official Alpaca client lazily (v4 throws if creds missing at construction).
+// In tests and local dev without keys we still need the module to import (e.g. order schema tests).
+let _alpaca: Alpaca | null = null;
+function getAlpaca(): Alpaca {
+  if (_alpaca) return _alpaca;
+  const keyId = config.alpaca.apiKey || "test-key-id";
+  const secret = config.alpaca.apiSecret || "test-secret";
+  _alpaca = new Alpaca({ keyId, secret, paper: config.alpaca.paper });
+  return _alpaca;
 }
-
-// Initialize official Alpaca client
-const AlpacaCtor = getAlpacaCtor();
-const alpaca = new AlpacaCtor({
-  keyId: config.alpaca.apiKey,
-  secretKey: config.alpaca.apiSecret,
-  paper: config.alpaca.paper,
-});
-
-// Schema for account response
-const AlpacaAccountSchema = z.object({
-  id: z.string(),
-  status: z.string(),
-  equity: z.string(),
-  cash: z.string(),
-  buying_power: z.string(),
-});
-
-// Schema for clock response
-const AlpacaClockSchema = z.object({
-  is_open: z.boolean(),
-  next_open: z.string(),
-  next_close: z.string(),
-});
 
 // Account & Portfolio
 export async function getAccount(): Promise<{
@@ -74,28 +25,31 @@ export async function getAccount(): Promise<{
   cash: string;
   buying_power: string;
 }> {
-  const raw = await alpaca.getAccount();
-  const account = AlpacaAccountSchema.parse(raw);
+  const raw = await getAlpaca().trading.account.getAccount();
   return {
-    id: account.id,
-    status: account.status,
-    equity: account.equity,
-    cash: account.cash,
-    buying_power: account.buying_power,
+    id: String(raw.id ?? ""),
+    status: String(raw.status ?? ""),
+    equity: String(raw.equity ?? "0"),
+    cash: String(raw.cash ?? "0"),
+    buying_power: String(raw.buyingPower ?? "0"),
   };
 }
 
 export async function getPositions(): Promise<Position[]> {
-  const raw = await alpaca.getPositions();
-  const positions = z.array(AlpacaPositionSchema).parse(raw);
+  const positions = await getAlpaca().trading.positions.getAllOpenPositions();
   return positions.map((p) => ({
-    symbol: p.symbol,
-    quantity: parseFloat(p.qty),
-    avgCost: parseFloat(p.avg_entry_price),
-    currentPrice: parseFloat(p.current_price),
-    marketValue: parseFloat(p.market_value),
-    unrealizedPL: parseFloat(p.unrealized_pl),
-    unrealizedPLPercent: parseFloat(p.unrealized_plpc) * 100,
+    symbol: String(p.symbol),
+    quantity: parseFloat(String(p.qty ?? "0")),
+    avgCost: parseFloat(String((p as unknown as { avgEntryPrice?: string }).avgEntryPrice ?? "0")),
+    currentPrice: parseFloat(
+      String((p as unknown as { currentPrice?: string }).currentPrice ?? "0"),
+    ),
+    marketValue: parseFloat(String((p as unknown as { marketValue?: string }).marketValue ?? "0")),
+    unrealizedPL: parseFloat(
+      String((p as unknown as { unrealizedPl?: string }).unrealizedPl ?? "0"),
+    ),
+    unrealizedPLPercent:
+      parseFloat(String((p as unknown as { unrealizedPlpc?: string }).unrealizedPlpc ?? "0")) * 100,
   }));
 }
 
@@ -112,42 +66,36 @@ export async function getPortfolio(): Promise<Portfolio> {
   };
 }
 
-// Market Data
+// Market Data — uses v4 MarketDataClient facades
 export async function getQuote(symbol: string): Promise<Quote> {
-  const bars = alpaca.getBarsV2(symbol, {
-    timeframe: "1Day",
+  const bars = await getAlpaca().marketData.getStockBarsFor(symbol, {
+    timeframe: "1Day" as unknown as never,
     limit: 2,
   });
 
-  const parsedBars: z.infer<typeof AlpacaBarSchema>[] = [];
-  for await (const bar of bars) {
-    const parsed = AlpacaBarSchema.safeParse(bar);
-    if (parsed.success) {
-      parsedBars.push(parsed.data);
-    }
-  }
+  const sorted = [...bars].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  );
+  const prevBar = sorted.length >= 2 ? sorted[sorted.length - 2] : null;
+  const lastBar = sorted.length >= 1 ? sorted[sorted.length - 1] : null;
 
-  parsedBars.sort((a, b) => new Date(a.Timestamp).getTime() - new Date(b.Timestamp).getTime());
-  const prevBar = parsedBars.length >= 2 ? parsedBars[parsedBars.length - 2] : null;
-  const lastBar = parsedBars.length >= 1 ? parsedBars[parsedBars.length - 1] : null;
-
-  const price = lastBar?.ClosePrice ?? 0;
-  const prevClose = prevBar?.ClosePrice ?? price;
+  const price = lastBar?.close ?? 0;
+  const prevClose = prevBar?.close ?? price;
   const change = price - prevClose;
   const changePercent = prevClose !== 0 ? (change / prevClose) * 100 : 0;
 
   return {
     symbol,
     price,
-    open: lastBar?.OpenPrice ?? 0,
-    high: lastBar?.HighPrice ?? 0,
-    low: lastBar?.LowPrice ?? 0,
+    open: lastBar?.open ?? 0,
+    high: lastBar?.high ?? 0,
+    low: lastBar?.low ?? 0,
     // Align with Yahoo snapshots: `close` is previous close.
     close: prevClose,
-    volume: lastBar?.Volume ?? 0,
+    volume: lastBar?.volume ?? 0,
     change,
     changePercent,
-    timestamp: lastBar?.Timestamp ?? new Date().toISOString(),
+    timestamp: lastBar ? new Date(lastBar.timestamp).toISOString() : new Date().toISOString(),
   };
 }
 
@@ -156,33 +104,19 @@ export async function getBars(
   timeframe = "1Day",
   limit = 100,
 ): Promise<{ t: string; o: number; h: number; l: number; c: number; v: number }[]> {
-  const bars = alpaca.getBarsV2(symbol, {
-    timeframe,
+  const bars = await getAlpaca().marketData.getStockBarsFor(symbol, {
+    timeframe: timeframe as unknown as never,
     limit,
   });
 
-  const result: {
-    t: string;
-    o: number;
-    h: number;
-    l: number;
-    c: number;
-    v: number;
-  }[] = [];
-  for await (const bar of bars) {
-    const parsed = AlpacaBarSchema.safeParse(bar);
-    if (parsed.success) {
-      result.push({
-        t: parsed.data.Timestamp,
-        o: parsed.data.OpenPrice,
-        h: parsed.data.HighPrice,
-        l: parsed.data.LowPrice,
-        c: parsed.data.ClosePrice,
-        v: parsed.data.Volume,
-      });
-    }
-  }
-  return result;
+  return bars.map((b) => ({
+    t: new Date(b.timestamp).toISOString(),
+    o: b.open,
+    h: b.high,
+    l: b.low,
+    c: b.close,
+    v: b.volume,
+  }));
 }
 
 // Orders
@@ -231,91 +165,96 @@ export async function placeOrder(params: {
     throw new ValidationError("Invalid order parameters", parsed.error.issues);
   }
 
-  const raw = await alpaca.createOrder({
+  // Map to v4 submit shape; use generic submit for all order types
+  const raw = await getAlpaca().trading.orders.submit({
     symbol: parsed.data.symbol,
-    qty: parsed.data.qty,
+    qty: String(parsed.data.qty),
     side: parsed.data.side,
     type: parsed.data.type,
-    time_in_force: parsed.data.time_in_force,
-    limit_price: parsed.data.limit_price,
-    stop_price: parsed.data.stop_price,
-  });
+    timeInForce: parsed.data.time_in_force,
+    limitPrice: parsed.data.limit_price !== undefined ? String(parsed.data.limit_price) : undefined,
+    stopPrice: parsed.data.stop_price !== undefined ? String(parsed.data.stop_price) : undefined,
+  } as unknown as never);
 
-  const order = AlpacaOrderSchema.parse(raw);
+  const o = raw as unknown as Record<string, unknown>;
   return {
-    id: order.id,
-    symbol: order.symbol,
-    side: order.side as "buy" | "sell",
-    type: order.type as "market" | "limit" | "stop" | "stop_limit",
-    quantity: parseFloat(order.qty),
-    filledQuantity: parseFloat(order.filled_qty ?? "0"),
-    limitPrice: order.limit_price ? parseFloat(order.limit_price) : undefined,
-    stopPrice: order.stop_price ? parseFloat(order.stop_price) : undefined,
-    status: order.status as Order["status"],
-    timeInForce: order.time_in_force as Order["timeInForce"],
-    createdAt: order.created_at,
-    filledAt: order.filled_at,
+    id: String(o["id"] ?? ""),
+    symbol: String(o["symbol"] ?? parsed.data.symbol),
+    side: String(o["side"] ?? parsed.data.side) as "buy" | "sell",
+    type: String(o["type"] ?? parsed.data.type) as "market" | "limit" | "stop" | "stop_limit",
+    quantity: parseFloat(String(o["qty"] ?? String(parsed.data.qty))),
+    filledQuantity: parseFloat(String((o["filledQty"] ?? o["filled_qty"] ?? "0") as string)),
+    limitPrice:
+      (o["limitPrice"] ?? o["limit_price"])
+        ? parseFloat(String(o["limitPrice"] ?? o["limit_price"]))
+        : undefined,
+    stopPrice:
+      (o["stopPrice"] ?? o["stop_price"])
+        ? parseFloat(String(o["stopPrice"] ?? o["stop_price"]))
+        : undefined,
+    status: String(o["status"] ?? "new") as Order["status"],
+    timeInForce: String(
+      o["timeInForce"] ?? o["time_in_force"] ?? parsed.data.time_in_force,
+    ) as Order["timeInForce"],
+    createdAt: String(o["createdAt"] ?? o["created_at"] ?? new Date().toISOString()),
+    filledAt:
+      (o["filledAt"] ?? o["filled_at"]) ? String(o["filledAt"] ?? o["filled_at"]) : undefined,
+  };
+}
+
+function mapOrder(raw: unknown): Order {
+  const o = raw as unknown as Record<string, unknown>;
+  return {
+    id: String(o["id"] ?? ""),
+    symbol: String(o["symbol"] ?? ""),
+    side: String(o["side"] ?? "buy") as "buy" | "sell",
+    type: String(o["type"] ?? o["orderType"] ?? "market") as
+      | "market"
+      | "limit"
+      | "stop"
+      | "stop_limit",
+    quantity: parseFloat(String(o["qty"] ?? "0")),
+    filledQuantity: parseFloat(String((o["filledQty"] ?? o["filled_qty"] ?? "0") as string)),
+    limitPrice:
+      (o["limitPrice"] ?? o["limit_price"])
+        ? parseFloat(String(o["limitPrice"] ?? o["limit_price"]))
+        : undefined,
+    stopPrice:
+      (o["stopPrice"] ?? o["stop_price"])
+        ? parseFloat(String(o["stopPrice"] ?? o["stop_price"]))
+        : undefined,
+    status: String(o["status"] ?? "new") as Order["status"],
+    timeInForce: String(o["timeInForce"] ?? o["time_in_force"] ?? "day") as Order["timeInForce"],
+    createdAt: String(o["createdAt"] ?? o["created_at"] ?? new Date().toISOString()),
+    filledAt:
+      (o["filledAt"] ?? o["filled_at"]) ? String(o["filledAt"] ?? o["filled_at"]) : undefined,
   };
 }
 
 export async function getOrder(orderId: string): Promise<Order> {
-  const raw = await alpaca.getOrder(orderId);
-  const order = AlpacaOrderSchema.parse(raw);
-  return {
-    id: order.id,
-    symbol: order.symbol,
-    side: order.side as "buy" | "sell",
-    type: order.type as "market" | "limit" | "stop" | "stop_limit",
-    quantity: parseFloat(order.qty),
-    filledQuantity: parseFloat(order.filled_qty ?? "0"),
-    limitPrice: order.limit_price ? parseFloat(order.limit_price) : undefined,
-    stopPrice: order.stop_price ? parseFloat(order.stop_price) : undefined,
-    status: order.status as Order["status"],
-    timeInForce: order.time_in_force as Order["timeInForce"],
-    createdAt: order.created_at,
-    filledAt: order.filled_at,
-  };
+  const raw = await getAlpaca().trading.orders.getOrderByOrderID({ orderId });
+  return mapOrder(raw);
 }
 
 export async function cancelOrder(orderId: string): Promise<void> {
-  await alpaca.cancelOrder(orderId);
+  await getAlpaca().trading.orders.deleteOrderByOrderID({ orderId });
 }
 
 export async function getOrders(status = "open"): Promise<Order[]> {
-  const raw = await alpaca.getOrders({
-    status,
-    until: undefined,
-    after: undefined,
-    limit: undefined,
-    direction: undefined,
-    nested: undefined,
-    symbols: undefined,
+  const raw = await getAlpaca().trading.orders.getAllOrders({
+    status: status as never,
   });
-  const orders = z.array(AlpacaOrderSchema).parse(raw);
-  return orders.map((order) => ({
-    id: order.id,
-    symbol: order.symbol,
-    side: order.side as "buy" | "sell",
-    type: order.type as "market" | "limit" | "stop" | "stop_limit",
-    quantity: parseFloat(order.qty),
-    filledQuantity: parseFloat(order.filled_qty ?? "0"),
-    limitPrice: order.limit_price ? parseFloat(order.limit_price) : undefined,
-    stopPrice: order.stop_price ? parseFloat(order.stop_price) : undefined,
-    status: order.status as Order["status"],
-    timeInForce: order.time_in_force as Order["timeInForce"],
-    createdAt: order.created_at,
-    filledAt: order.filled_at,
-  }));
+  return (raw as unknown[]).map(mapOrder);
 }
 
 // Market Status
 export async function getMarketClock(): Promise<MarketStatus> {
-  const raw = await alpaca.getClock();
-  const clock = AlpacaClockSchema.parse(raw);
+  const raw = await getAlpaca().trading.clock.legacyClock();
+  const r = raw as unknown as Record<string, unknown>;
   return {
-    isOpen: clock.is_open,
-    nextOpen: clock.next_open,
-    nextClose: clock.next_close,
+    isOpen: Boolean(r["isOpen"] ?? r["is_open"] ?? false),
+    nextOpen: String(r["nextOpen"] ?? r["next_open"] ?? ""),
+    nextClose: String(r["nextClose"] ?? r["next_close"] ?? ""),
   };
 }
 
@@ -338,5 +277,5 @@ export async function getSnapshots(symbols: string[]): Promise<Map<string, Quote
   return results;
 }
 
-// Export the raw client for advanced usage
-export { alpaca as client };
+// Export the raw client for advanced usage (breaking change: now a getter)
+export const client = getAlpaca();
