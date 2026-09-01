@@ -1,7 +1,10 @@
 FROM node:24-alpine AS builder
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@9 --activate
+# Install pnpm without Corepack or npm
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME/bin:$PATH
+ENV ENV=/etc/profile.d/pnpm.sh
+RUN touch "$ENV" && wget -qO- https://get.pnpm.io/install.sh | env PNPM_VERSION=12.2.1 SHELL=/bin/sh ENV="$ENV" sh -
 
 WORKDIR /app
 
@@ -23,7 +26,10 @@ RUN pnpm run build
 # Production image
 FROM node:24-alpine
 
-RUN corepack enable && corepack prepare pnpm@9 --activate
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME/bin:$PATH
+ENV ENV=/etc/profile.d/pnpm.sh
+RUN touch "$ENV" && wget -qO- https://get.pnpm.io/install.sh | env PNPM_VERSION=12.2.1 SHELL=/bin/sh ENV="$ENV" sh -
 
 WORKDIR /app
 
