@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Trading tools monorepo - MCP server, screener API, and shared utilities",
-  "packageManager": "pnpm@10.29.2",
+  "packageManager": "pnpm@12.2.1",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --filter=@trading/mcp",
@@ -12,10 +12,10 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "lint": "eslint packages/*/src",
-    "lint:fix": "eslint packages/*/src --fix",
-    "format": "prettier --write \"packages/*/src/**/*.ts\"",
-    "format:check": "prettier --check \"packages/*/src/**/*.ts\"",
+    "lint": "oxlint packages/*/src",
+    "lint:fix": "oxlint packages/*/src --fix",
+    "format": "oxfmt packages/*/src",
+    "format:check": "oxfmt --check packages/*/src",
     "secretlint": "git ls-files -z | xargs -0 secretlint",
     "syncpack:list": "syncpack list-mismatches",
     "syncpack:fix": "syncpack fix-mismatches",
@@ -23,28 +23,26 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@secretlint/secretlint-rule-preset-recommend": "^11.3.1",
-    "@vitest/coverage-v8": "^4.0.18",
-    "eslint": "^10.0.0",
+    "@secretlint/secretlint-rule-preset-recommend": "^13.0.5",
+    "@vitest/coverage-v8": "^4.1.11",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
-    "prettier": "^3.8.1",
-    "secretlint": "^11.3.1",
-    "syncpack": "^13.0.4",
-    "tsx": "^4.21.0",
-    "turbo": "^2.8.3",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.55.0",
-    "vitest": "^4.0.18"
+    "lint-staged": "^17.4.1",
+    "oxfmt": "^0.65.0",
+    "oxlint": "^1.80.0",
+    "secretlint": "^13.0.5",
+    "syncpack": "^15.3.3",
+    "tsx": "^4.23.13",
+    "turbo": "^2.10.12",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
   },
   "engines": {
     "node": ">=22.0.0"
   },
   "lint-staged": {
     "packages/*/src/**/*.ts": [
-      "eslint --fix",
-      "prettier --write"
+      "oxlint --fix",
+      "oxfmt"
     ]
   }
 }
