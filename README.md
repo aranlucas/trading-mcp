@@ -23,3 +23,6 @@ pnpm dev:screener
 ```
 
 The screener API serves `/api/health`, `/api/openapi.json`, quote routes, and screening routes. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for deeper design notes.
+## Deployment
+
+Vercel uses Corepack to honor the pinned `pnpm@12.2.1` toolchain.

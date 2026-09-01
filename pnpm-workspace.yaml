@@ -1,3 +1,4 @@
+# Vercel runs this workspace with Corepack to honor pnpm 12.
 packages:
   - "packages/*"
 
@@ -6,4 +7,7 @@ allowBuilds:
   es5-ext: true
   esbuild: true
   utf-8-validate: true
+
+minimumReleaseAgeExclude:
+  - "ignore@7.0.8"
 pmOnFail: ignore
