@@ -1,2 +1,5 @@
 packages:
   - "packages/*"
+
+minimumReleaseAgeExclude:
+  - "ignore@7.0.8"
