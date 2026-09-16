@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "corepack pnpm --config.minimum-release-age=0 --filter @trading/core build && corepack pnpm --config.minimum-release-age=0 --filter @trading/screener build",
-  "installCommand": "corepack pnpm install --frozen-lockfile --config.minimum-release-age=0",
+  "buildCommand": "pnpm --filter @trading/core build && pnpm --filter @trading/screener build",
+  "installCommand": "pnpm install --frozen-lockfile",
   "outputDirectory": ".",
   "framework": null,
   "functions": {
