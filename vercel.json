@@ -2,8 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "framework": null,
-  "installCommand": "corepack pnpm install --frozen-lockfile",
-  "buildCommand": "corepack pnpm --filter @trading/core build && corepack pnpm --filter @trading/screener build",
+  "buildCommand": "pnpm --filter @trading/core build && pnpm --filter @trading/screener build",
   "functions": {
     "api/index.ts": {
       "maxDuration": 30
@@ -11,8 +10,5 @@
     "api/[...path].ts": {
       "maxDuration": 30
     }
-  },
-  "env": {
-    "ENABLE_EXPERIMENTAL_COREPACK": "1"
   }
 }
