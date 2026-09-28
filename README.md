@@ -12,6 +12,10 @@ Alpaca trading client.
 > the screener API to compare symbols, and inspect portfolio state with paper
 > trading enabled. The same shared core keeps the clients consistent.
 
+<p align="center">
+  <img src="docs/images/readme-overview.svg" alt="Trading MCP clients converging on a shared core before paper trading research" width="100%" />
+</p>
+
 This is engineering infrastructure and research tooling, not investment
 advice. Market data can be delayed or unavailable, and order tools can reach a
 real brokerage account when configured. Keep paper trading enabled until an

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Trading MCP shared-core overview</title>
+  <desc id="desc">MCP and Hono clients share a TypeScript core that normalizes provider adapters, validation, caching, retries, rate limits, and Alpaca access, with paper trading first.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081717"/>
+      <stop offset="1" stop-color="#102e2a"/>
+    </linearGradient>
+    <linearGradient id="lime" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#a4e66f"/>
+      <stop offset="1" stop-color="#d4f48b"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#020b0a" flood-opacity=".4"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="900" rx="42" fill="url(#bg)"/>
+  <circle cx="1460" cy="130" r="240" fill="#a4e66f" opacity=".08"/>
+  <circle cx="90" cy="805" r="240" fill="#66d6c9" opacity=".07"/>
+  <text x="100" y="112" fill="#a4e66f" font-family="Inter,Segoe UI,sans-serif" font-size="24" font-weight="700" letter-spacing="4">TRADING MCP</text>
+  <text x="100" y="195" fill="#f2fff3" font-family="Inter,Segoe UI,sans-serif" font-size="64" font-weight="800">Market signals for</text>
+  <text x="100" y="266" fill="#f2fff3" font-family="Inter,Segoe UI,sans-serif" font-size="64" font-weight="800">your tools, paper mode first.</text>
+  <text x="100" y="325" fill="#afd0bf" font-family="Inter,Segoe UI,sans-serif" font-size="28">TypeScript monorepo · MCP stdio · Hono REST · shared core</text>
+
+  <path d="M395 540H505" stroke="#a4e66f" stroke-width="5" stroke-linecap="round"/>
+  <path d="m493 526 20 14-20 14" fill="none" stroke="#a4e66f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1015 540H1110" stroke="#a4e66f" stroke-width="5" stroke-linecap="round"/>
+  <path d="m1098 526 20 14-20 14" fill="none" stroke="#a4e66f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <g filter="url(#shadow)">
+    <rect x="100" y="405" width="295" height="270" rx="26" fill="#14332f" stroke="#2d5b51" stroke-width="2"/>
+    <rect x="510" y="405" width="505" height="270" rx="26" fill="#14332f" stroke="#2d5b51" stroke-width="2"/>
+    <rect x="1120" y="405" width="380" height="270" rx="26" fill="#1e4538" stroke="#a4e66f" stroke-width="2"/>
+  </g>
+  <text x="136" y="457" fill="#66d6c9" font-family="Inter,Segoe UI,sans-serif" font-size="21" font-weight="800" letter-spacing="2">CLIENTS</text>
+  <text x="136" y="515" fill="#f2fff3" font-family="Inter,Segoe UI,sans-serif" font-size="31" font-weight="700">Two front doors</text>
+  <text x="136" y="565" fill="#afd0bf" font-family="Inter,Segoe UI,sans-serif" font-size="23">MCP stdio for assistants</text>
+  <text x="136" y="599" fill="#afd0bf" font-family="Inter,Segoe UI,sans-serif" font-size="23">Hono REST for screeners</text>
+  <text x="136" y="641" fill="#a4e66f" font-family="ui-monospace,Menlo,monospace" font-size="19">@trading/mcp · @trading/screener</text>
+
+  <text x="546" y="457" fill="#66d6c9" font-family="Inter,Segoe UI,sans-serif" font-size="21" font-weight="800" letter-spacing="2">SHARED CORE</text>
+  <text x="546" y="515" fill="#f2fff3" font-family="Inter,Segoe UI,sans-serif" font-size="31" font-weight="700">One place for the hard parts</text>
+  <text x="546" y="565" fill="#afd0bf" font-family="Inter,Segoe UI,sans-serif" font-size="23">Types · adapters · validation · cache</text>
+  <text x="546" y="599" fill="#afd0bf" font-family="Inter,Segoe UI,sans-serif" font-size="23">retries · limits · Alpaca client</text>
+  <text x="546" y="641" fill="#a4e66f" font-family="ui-monospace,Menlo,monospace" font-size="19">@trading/core</text>
+
+  <text x="1156" y="457" fill="#d4f48b" font-family="Inter,Segoe UI,sans-serif" font-size="21" font-weight="800" letter-spacing="2">RESEARCH LOOP</text>
+  <text x="1156" y="515" fill="#f2fff3" font-family="Inter,Segoe UI,sans-serif" font-size="31" font-weight="700">Signals before orders</text>
+  <text x="1156" y="565" fill="#d7f1de" font-family="Inter,Segoe UI,sans-serif" font-size="23">Quotes, technicals, screening,</text>
+  <text x="1156" y="599" fill="#d7f1de" font-family="Inter,Segoe UI,sans-serif" font-size="23">portfolio, and paper trading.</text>
+  <rect x="1156" y="620" width="228" height="36" rx="18" fill="#a4e66f" opacity=".18"/>
+  <text x="1176" y="645" fill="#d4f48b" font-family="ui-monospace,Menlo,monospace" font-size="19">PAPER MODE FIRST</text>
+
+  <text x="100" y="790" fill="#8db6a5" font-family="Inter,Segoe UI,sans-serif" font-size="22">Research tooling with an explicit boundary: market data is not investment advice.</text>
+  <circle cx="1430" cy="785" r="9" fill="#a4e66f"/>
+  <circle cx="1462" cy="785" r="9" fill="#66d6c9"/>
+  <circle cx="1494" cy="785" r="9" fill="#f2fff3" opacity=".8"/>
+</svg>
