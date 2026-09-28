@@ -1,10 +1,16 @@
-# Trading Monorepo
+# Trading MCP · Market signals for your tools, paper mode first
+
+[![CI](https://github.com/aranlucas/trading-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/aranlucas/trading-mcp/actions/workflows/ci.yml)
 
 `trading-mcp` is a TypeScript workspace that exposes market and trading
 capabilities through two clients: an MCP stdio server for AI assistants and a
 Hono REST API for quotes, screening, and signals. A shared core normalizes
 types, provider adapters, validation, caching, retries, rate limiting, and the
 Alpaca trading client.
+
+> **A safe research loop:** ask the MCP server for a quote or technicals, use
+> the screener API to compare symbols, and inspect portfolio state with paper
+> trading enabled. The same shared core keeps the clients consistent.
 
 This is engineering infrastructure and research tooling, not investment
 advice. Market data can be delayed or unavailable, and order tools can reach a
