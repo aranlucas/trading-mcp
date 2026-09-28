@@ -35,7 +35,8 @@
   <text x="136" y="515" fill="#f2fff3" font-family="Inter,Segoe UI,sans-serif" font-size="31" font-weight="700">Two front doors</text>
   <text x="136" y="565" fill="#afd0bf" font-family="Inter,Segoe UI,sans-serif" font-size="23">MCP stdio for assistants</text>
   <text x="136" y="599" fill="#afd0bf" font-family="Inter,Segoe UI,sans-serif" font-size="23">Hono REST for screeners</text>
-  <text x="136" y="641" fill="#a4e66f" font-family="ui-monospace,Menlo,monospace" font-size="19">@trading/mcp · @trading/screener</text>
+  <text x="136" y="628" fill="#a4e66f" font-family="ui-monospace,Menlo,monospace" font-size="19">@trading/mcp</text>
+  <text x="136" y="653" fill="#a4e66f" font-family="ui-monospace,Menlo,monospace" font-size="19">@trading/screener</text>
 
   <text x="546" y="457" fill="#66d6c9" font-family="Inter,Segoe UI,sans-serif" font-size="21" font-weight="800" letter-spacing="2">SHARED CORE</text>
   <text x="546" y="515" fill="#f2fff3" font-family="Inter,Segoe UI,sans-serif" font-size="31" font-weight="700">One place for the hard parts</text>
