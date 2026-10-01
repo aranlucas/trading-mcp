@@ -34,7 +34,6 @@
   },
   "dependencies": {
     "@alpacahq/alpaca-trade-api": "^4.0.1",
-    "@polygon.io/client-js": "^8.2.0",
     "bottleneck": "^2.19.5",
     "finnhub": "^2.0.15",
     "lru-cache": "^11.5.2",
