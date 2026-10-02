@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, test } from "vitest";
 
 function normalizeBaseUrl(raw: string): URL {
-  const withProtocol = raw.startsWith("http://") || raw.startsWith("https://") ? raw : `https://${raw}`;
+  const withProtocol =
+    raw.startsWith("http://") || raw.startsWith("https://") ? raw : `https://${raw}`;
   const url = new URL(withProtocol);
   url.pathname = "";
   url.search = "";
@@ -47,8 +48,13 @@ async function waitForDeployment(baseUrl: URL, timeoutMs: number) {
 }
 
 const rawBaseUrl = process.env.VERCEL_DEPLOY_URL ?? process.env.INTEGRATION_BASE_URL;
-const suite = rawBaseUrl ? describe : describe.skip;
-const baseUrl = rawBaseUrl ? normalizeBaseUrl(rawBaseUrl) : null;
+const enabled = process.env.RUN_DEPLOYMENT_E2E === "1";
+if (enabled && !rawBaseUrl) {
+  throw new Error("Deployment E2E requires VERCEL_DEPLOY_URL or INTEGRATION_BASE_URL");
+}
+const suite = enabled ? describe : describe.skip;
+// An inherited deployment URL alone must not enable requests or even URL parsing.
+const baseUrl = enabled && rawBaseUrl ? normalizeBaseUrl(rawBaseUrl) : null;
 
 suite("Vercel Screener deployment", () => {
   beforeAll(async () => {
@@ -106,6 +112,8 @@ suite("Vercel Screener deployment", () => {
 
     // Yahoo may rate-limit or intermittently fail in CI; validate the contract instead of flaking.
     expect(status).toBeGreaterThanOrEqual(400);
-    expect(json).toEqual(expect.objectContaining({ error: expect.any(String), code: expect.any(String) }));
+    expect(json).toEqual(
+      expect.objectContaining({ error: expect.any(String), code: expect.any(String) }),
+    );
   });
 });

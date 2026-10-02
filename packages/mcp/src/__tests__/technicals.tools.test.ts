@@ -16,7 +16,8 @@ const alpacaMock = vi.hoisted(() => ({
   getBars: vi.fn(),
 }));
 
-vi.mock("@trading/core", () => ({
+vi.mock("@trading/core", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@trading/core")>()),
   alpaca: alpacaMock,
 }));
 
@@ -56,10 +57,14 @@ describe("Technical MCP tools", () => {
     const result = await tool!.handler({ symbol: "aapl" });
 
     const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
-    const indicators = JSON.parse(content) as { symbol: string; sma200: number; rsi14: number };
+    const indicators = JSON.parse(content) as {
+      symbol: string;
+      sma200: number | null;
+      rsi14: number;
+    };
 
     expect(indicators.symbol).toBe("AAPL");
-    expect(indicators.sma200).toBe(0);
+    expect(indicators.sma200).toBeNull();
     expect(typeof indicators.rsi14).toBe("number");
   });
 
@@ -105,5 +110,35 @@ describe("Technical MCP tools", () => {
     expect(result).toHaveProperty("isError", true);
     const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
     expect(content).toContain("Not enough data for signals");
+  });
+
+  it.each([20, 25, 26, 33, 34, 49])(
+    "does not invent SMA50 alignment with %i bars",
+    async (length) => {
+      alpacaMock.getBars.mockResolvedValueOnce(
+        barsFromCloses(Array.from({ length }, (_, i) => 100 + i)),
+      );
+      const result = await registeredTools.get("get_signals")!.handler({ symbol: "AAPL" });
+      const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
+      const signals = JSON.parse(content) as Array<{ type: string }>;
+      expect(signals.some((s) => s.type.startsWith("MA_"))).toBe(false);
+      if (length < 34) expect(signals.some((s) => s.type.startsWith("MACD_"))).toBe(false);
+    },
+  );
+
+  it("does not call flat history overbought", async () => {
+    alpacaMock.getBars.mockResolvedValueOnce(barsFromCloses(Array(50).fill(100)));
+    const result = await registeredTools.get("get_signals")!.handler({ symbol: "AAPL" });
+    const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
+    expect(JSON.parse(content)).toEqual([]);
+  });
+
+  it("reports unavailable SMA50 and MACD as null, not measured values", async () => {
+    alpacaMock.getBars.mockResolvedValueOnce(
+      barsFromCloses(Array.from({ length: 26 }, (_, i) => 100 + i)),
+    );
+    const result = await registeredTools.get("get_technicals")!.handler({ symbol: "AAPL" });
+    const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
+    expect(JSON.parse(content)).toMatchObject({ sma50: null, sma200: null, macd: null });
   });
 });

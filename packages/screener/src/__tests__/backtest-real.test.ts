@@ -369,7 +369,10 @@ const STOCK_UNIVERSE = [
   "INTC",
 ];
 
-describe("Real Data Backtest - Yahoo Finance", () => {
+// These tests contact Yahoo. Credentials or CI mode are not permission to run them.
+const liveSuite = process.env.RUN_REAL_PROVIDER_TESTS === "1" ? describe : describe.skip;
+
+liveSuite("Real Data Backtest - Yahoo Finance", () => {
   // Cache for historical data
   const dataCache = new Map<string, Bar[]>();
 

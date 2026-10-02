@@ -2,85 +2,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { alpaca, type TechnicalIndicators, type Signal } from "@trading/core";
-
-// Simple moving average
-function sma(data: number[], period: number): number {
-  if (data.length < period) return 0;
-  const slice = data.slice(-period);
-  return slice.reduce((a, b) => a + b, 0) / period;
-}
-
-// Exponential moving average
-function ema(data: number[], period: number): number {
-  if (data.length < period) return 0;
-  const k = 2 / (period + 1);
-  let emaValue = sma(data.slice(0, period), period);
-  for (let i = period; i < data.length; i++) {
-    const value = data[i];
-    if (value !== undefined) {
-      emaValue = value * k + emaValue * (1 - k);
-    }
-  }
-  return emaValue;
-}
-
-// RSI calculation
-function rsi(data: number[], period = 14): number {
-  if (data.length < period + 1) return 50;
-
-  const changes: number[] = [];
-  for (let i = 1; i < data.length; i++) {
-    const curr = data[i];
-    const prev = data[i - 1];
-    if (curr !== undefined && prev !== undefined) {
-      changes.push(curr - prev);
-    }
-  }
-
-  const gains = changes.map((c) => (c > 0 ? c : 0));
-  const losses = changes.map((c) => (c < 0 ? -c : 0));
-
-  const avgGain = sma(gains.slice(-period), period);
-  const avgLoss = sma(losses.slice(-period), period);
-
-  if (avgLoss === 0) return 100;
-  const rs = avgGain / avgLoss;
-  return 100 - 100 / (1 + rs);
-}
-
-// MACD calculation
-function macd(data: number[]): {
-  value: number;
-  signal: number;
-  histogram: number;
-} {
-  const ema12 = ema(data, 12);
-  const ema26 = ema(data, 26);
-  const macdValue = ema12 - ema26;
-  const signal = macdValue * 0.9;
-  return {
-    value: macdValue,
-    signal,
-    histogram: macdValue - signal,
-  };
-}
-
-// Bollinger Bands
-function bollingerBands(
-  data: number[],
-  period = 20,
-): { upper: number; middle: number; lower: number } {
-  const middle = sma(data, period);
-  const slice = data.slice(-period);
-  const variance = slice.reduce((sum, val) => sum + Math.pow(val - middle, 2), 0) / period;
-  const stdDev = Math.sqrt(variance);
-  return {
-    upper: middle + 2 * stdDev,
-    middle,
-    lower: middle - 2 * stdDev,
-  };
-}
+import { analyzeHistory, alpaca, type TechnicalIndicators, type Signal } from "@trading/core";
 
 export function registerTechnicalTools(server: McpServer) {
   // Get technical indicators
@@ -115,14 +37,7 @@ export function registerTechnicalTools(server: McpServer) {
         const indicators: TechnicalIndicators = {
           symbol: symbol.toUpperCase(),
           timestamp: new Date().toISOString(),
-          rsi14: rsi(closes, 14),
-          macd: macd(closes),
-          sma20: sma(closes, 20),
-          sma50: sma(closes, 50),
-          sma200: closes.length >= 200 ? sma(closes, 200) : 0,
-          ema12: ema(closes, 12),
-          ema26: ema(closes, 26),
-          bollingerBands: bollingerBands(closes, 20),
+          ...analyzeHistory(closes),
         };
 
         return {
@@ -173,8 +88,9 @@ export function registerTechnicalTools(server: McpServer) {
         }
 
         // RSI signals
-        const rsiValue = rsi(closes, 14);
-        if (rsiValue < 30) {
+        const analysis = analyzeHistory(closes);
+        const rsiValue = analysis.rsi14;
+        if (rsiValue !== null && rsiValue < 30) {
           signals.push({
             symbol: symbol.toUpperCase(),
             type: "RSI_OVERSOLD",
@@ -183,7 +99,7 @@ export function registerTechnicalTools(server: McpServer) {
             timestamp: new Date().toISOString(),
             description: `RSI at ${rsiValue.toFixed(2)} indicates oversold conditions`,
           });
-        } else if (rsiValue > 70) {
+        } else if (rsiValue !== null && rsiValue > 70) {
           signals.push({
             symbol: symbol.toUpperCase(),
             type: "RSI_OVERBOUGHT",
@@ -195,9 +111,14 @@ export function registerTechnicalTools(server: McpServer) {
         }
 
         // Moving average crossover
-        const sma20Val = sma(closes, 20);
-        const sma50Val = sma(closes, 50);
-        if (currentPrice > sma20Val && sma20Val > sma50Val) {
+        const sma20Val = analysis.sma20;
+        const sma50Val = analysis.sma50;
+        if (
+          sma20Val !== null &&
+          sma50Val !== null &&
+          currentPrice > sma20Val &&
+          sma20Val > sma50Val
+        ) {
           signals.push({
             symbol: symbol.toUpperCase(),
             type: "MA_BULLISH",
@@ -206,7 +127,12 @@ export function registerTechnicalTools(server: McpServer) {
             timestamp: new Date().toISOString(),
             description: "Price above SMA20, SMA20 above SMA50 (bullish alignment)",
           });
-        } else if (currentPrice < sma20Val && sma20Val < sma50Val) {
+        } else if (
+          sma20Val !== null &&
+          sma50Val !== null &&
+          currentPrice < sma20Val &&
+          sma20Val < sma50Val
+        ) {
           signals.push({
             symbol: symbol.toUpperCase(),
             type: "MA_BEARISH",
@@ -218,8 +144,8 @@ export function registerTechnicalTools(server: McpServer) {
         }
 
         // Bollinger Band signals
-        const bb = bollingerBands(closes, 20);
-        if (currentPrice < bb.lower) {
+        const bb = analysis.bollingerBands;
+        if (bb !== null && currentPrice < bb.lower) {
           signals.push({
             symbol: symbol.toUpperCase(),
             type: "BB_LOWER",
@@ -228,7 +154,7 @@ export function registerTechnicalTools(server: McpServer) {
             timestamp: new Date().toISOString(),
             description: "Price below lower Bollinger Band (potential bounce)",
           });
-        } else if (currentPrice > bb.upper) {
+        } else if (bb !== null && currentPrice > bb.upper) {
           signals.push({
             symbol: symbol.toUpperCase(),
             type: "BB_UPPER",
@@ -240,10 +166,12 @@ export function registerTechnicalTools(server: McpServer) {
         }
 
         // MACD momentum signal
-        const macdData = macd(closes);
+        const macdData = analysis.macd;
         const macdStrength =
-          Math.min(1, Math.abs(macdData.histogram) / (Math.abs(macdData.value) || 1)) || 0.3;
-        if (macdData.histogram > 0 && macdData.value > 0) {
+          macdData === null
+            ? 0
+            : Math.min(1, Math.abs(macdData.histogram) / (Math.abs(macdData.value) || 1)) || 0.3;
+        if (macdData !== null && macdData.histogram > 0 && macdData.value > 0) {
           signals.push({
             symbol: symbol.toUpperCase(),
             type: "MACD_BULLISH",
@@ -252,7 +180,7 @@ export function registerTechnicalTools(server: McpServer) {
             timestamp: new Date().toISOString(),
             description: "MACD histogram above zero (bullish momentum)",
           });
-        } else if (macdData.histogram < 0 && macdData.value < 0) {
+        } else if (macdData !== null && macdData.histogram < 0 && macdData.value < 0) {
           signals.push({
             symbol: symbol.toUpperCase(),
             type: "MACD_BEARISH",

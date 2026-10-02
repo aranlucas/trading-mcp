@@ -11,7 +11,7 @@
     "dev:screener": "turbo run dev --filter=@trading/screener",
     "clean": "turbo run clean && rm -rf node_modules",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
+    "test": "turbo run build && pnpm run test:gates && vitest run --maxWorkers=2",
     "lint": "oxlint packages/*/src",
     "lint:fix": "oxlint packages/*/src --fix",
     "format": "oxfmt packages/*/src",
@@ -20,7 +20,10 @@
     "syncpack:list": "syncpack list-mismatches",
     "syncpack:fix": "syncpack fix-mismatches",
     "syncpack:lint": "syncpack lint",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:gates": "node scripts/check-offline-test-gates.mjs",
+    "test:providers": "pnpm --filter @trading/core build && RUN_REAL_PROVIDER_TESTS=1 vitest run --project screener packages/screener/src/__tests__/backtest-real.test.ts",
+    "test:deployment": "RUN_DEPLOYMENT_E2E=1 vitest run --config vitest.vercel.config.ts"
   },
   "devDependencies": {
     "@secretlint/secretlint-rule-preset-recommend": "^13.0.5",

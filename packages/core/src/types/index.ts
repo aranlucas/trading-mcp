@@ -81,22 +81,22 @@ export interface OptionContract {
 export interface TechnicalIndicators {
   symbol: string;
   timestamp: string;
-  rsi14: number;
+  rsi14: number | null;
   macd: {
     value: number;
     signal: number;
     histogram: number;
-  };
-  sma20: number;
-  sma50: number;
-  sma200: number;
-  ema12: number;
-  ema26: number;
+  } | null;
+  sma20: number | null;
+  sma50: number | null;
+  sma200: number | null;
+  ema12: number | null;
+  ema26: number | null;
   bollingerBands: {
     upper: number;
     middle: number;
     lower: number;
-  };
+  } | null;
 }
 
 export interface Signal {

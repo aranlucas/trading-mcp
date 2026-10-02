@@ -47,6 +47,22 @@ pnpm dev:screener
 
 The screener API serves `/api/health`, `/api/openapi.json`, quote routes, and screening routes. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for deeper design notes.
 
+### Technical analysis availability
+
+MCP technicals and REST screening share `analyzeHistory` in `@trading/core`.
+Unavailable indicators are `null`, never a synthetic zero: RSI14 needs 15
+closes, SMA/EMA and Bollinger Bands need their period, and MACD(12,26,9) needs
+34 closes to seed its nine-observation signal EMA. RSI retains the simple
+trailing-14-change calculation; flat history returns a neutral 50.
+
+`get_technicals` still requires 26 closes, so its SMA50, SMA200, and MACD can
+be `null`. Consumers should check availability before comparing values.
+Signals never use an unavailable indicator. Screening includes a symbol only
+when every requested predicate can be evaluated and passes, including zero
+numeric thresholds. Quote-only scans do not require history. Yahoo screening
+requests allow calendar headroom and return up to the requested number of
+ordered daily observations; newly listed or suspended symbols can return fewer.
+
 ## Configuration
 
 Copy `.env.example` into your local environment. Alpaca credentials are needed
@@ -104,9 +120,29 @@ pnpm lint
 pnpm secretlint
 ```
 
-Provider integration tests may require credentials or are skipped when they are
-absent. Keep API secrets in the environment and inspect the paper/live mode
-before exercising any order tool.
+`pnpm test` builds the workspace, verifies that live-test gates stay disabled,
+then runs the complete offline suite, including MCP tools and fixture-based
+backtests. Live Yahoo backtests and deployment E2E are skipped by default.
+Credentials, CI mode, or a deployment URL alone do not enable them.
+`pnpm test:gates` checks both files with flags unset, `0`, and `true`; it blocks
+HTTP requests even if a gate regresses.
+
+Only run these separate commands when you intentionally want external requests:
+
+```bash
+pnpm test:providers
+VERCEL_DEPLOY_URL=https://your-preview.vercel.app pnpm test:deployment
+```
+
+`test:providers` opts into live Yahoo historical-data requests with
+`RUN_REAL_PROVIDER_TESTS=1`. `test:deployment` opts into read-only requests to the
+specified HTTPS Vercel preview with `RUN_DEPLOYMENT_E2E=1`; the URL is required.
+These exact `1` flags also apply when invoking Vitest directly or running an
+individual package. Do not set them in default CI. The original live test cases
+are retained. Offline tests still cover provider mocks, order validation,
+technical analysis, and captured historical fixtures without credentials.
+Keep API secrets in the environment and inspect the paper/live mode before
+exercising any order tool.
 
 ## Status
 
