@@ -137,7 +137,10 @@ class YahooMarketDataClient implements MarketDataClient {
     symbol: string,
     limit: number,
   ): Promise<Array<{ t: string; o: number; h: number; l: number; c: number; v: number }>> {
-    const days = Math.min(Math.max(limit, 1), 3650);
+    if (!Number.isInteger(limit) || limit < 1) return [];
+    // `limit` counts observations, not calendar days. Allow for weekends and
+    // holidays; newly listed/suspended symbols can still return fewer bars.
+    const days = Math.min(Math.ceil((limit * 7) / 5) + 14, 3650);
     const period1 = new Date();
     period1.setDate(period1.getDate() - days);
 
@@ -164,7 +167,7 @@ class YahooMarketDataClient implements MarketDataClient {
       });
     }
 
-    return bars;
+    return bars.sort((a, b) => a.t.localeCompare(b.t)).slice(-limit);
   }
 }
 

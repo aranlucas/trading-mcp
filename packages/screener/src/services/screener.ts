@@ -1,4 +1,4 @@
-import type { Signal } from "@trading/core";
+import { analyzeHistory, type Signal } from "@trading/core";
 import { getMarketDataClient } from "./market-data.js";
 
 export interface ScanCriteria {
@@ -21,37 +21,6 @@ export interface ScanResult {
   rsi?: number;
   aboveSma20?: boolean;
   aboveSma50?: boolean;
-}
-
-// Simple RSI calculation
-function calculateRsi(closes: number[], period = 14): number {
-  if (closes.length < period + 1) return 50;
-
-  const changes: number[] = [];
-  for (let i = 1; i < closes.length; i++) {
-    const curr = closes[i];
-    const prev = closes[i - 1];
-    if (curr !== undefined && prev !== undefined) {
-      changes.push(curr - prev);
-    }
-  }
-
-  const gains = changes.slice(-period).map((c) => (c > 0 ? c : 0));
-  const losses = changes.slice(-period).map((c) => (c < 0 ? -c : 0));
-
-  const avgGain = gains.reduce((a, b) => a + b, 0) / period;
-  const avgLoss = losses.reduce((a, b) => a + b, 0) / period;
-
-  if (avgLoss === 0) return 100;
-  const rs = avgGain / avgLoss;
-  return 100 - 100 / (1 + rs);
-}
-
-// Simple SMA
-function sma(data: number[], period: number): number {
-  if (data.length < period) return 0;
-  const slice = data.slice(-period);
-  return slice.reduce((a, b) => a + b, 0) / period;
 }
 
 export class ScreenerService {
@@ -90,9 +59,9 @@ export class ScreenerService {
 
     for (const [symbol, quote] of quotes) {
       // Apply price filters
-      if (criteria.minPrice && quote.price < criteria.minPrice) continue;
-      if (criteria.maxPrice && quote.price > criteria.maxPrice) continue;
-      if (criteria.minVolume && quote.volume < criteria.minVolume) continue;
+      if (criteria.minPrice !== undefined && quote.price < criteria.minPrice) continue;
+      if (criteria.maxPrice !== undefined && quote.price > criteria.maxPrice) continue;
+      if (criteria.minVolume !== undefined && quote.volume < criteria.minVolume) continue;
 
       let rsi: number | undefined;
       let aboveSma20: boolean | undefined;
@@ -109,20 +78,18 @@ export class ScreenerService {
           const bars = await this.marketData.getBars(symbol, 60);
           const closes = bars.map((b) => b.c);
 
-          if (closes.length >= 20) {
-            rsi = calculateRsi(closes, 14);
-            const sma20 = sma(closes, 20);
-            const sma50 = closes.length >= 50 ? sma(closes, 50) : undefined;
+          const analysis = analyzeHistory(closes);
+          rsi = analysis.rsi14 ?? undefined;
+          aboveSma20 = analysis.sma20 === null ? undefined : quote.price > analysis.sma20;
+          aboveSma50 = analysis.sma50 === null ? undefined : quote.price > analysis.sma50;
 
-            aboveSma20 = quote.price > sma20;
-            aboveSma50 = sma50 ? quote.price > sma50 : undefined;
-
-            // Apply RSI filters
-            if (criteria.minRsi && rsi < criteria.minRsi) continue;
-            if (criteria.maxRsi && rsi > criteria.maxRsi) continue;
-            if (criteria.aboveSma20 && !aboveSma20) continue;
-            if (criteria.aboveSma50 && !aboveSma50) continue;
-          }
+          // Every requested predicate must be available and true.
+          if (criteria.minRsi !== undefined && (rsi === undefined || rsi < criteria.minRsi))
+            continue;
+          if (criteria.maxRsi !== undefined && (rsi === undefined || rsi > criteria.maxRsi))
+            continue;
+          if (criteria.aboveSma20 && aboveSma20 !== true) continue;
+          if (criteria.aboveSma50 && aboveSma50 !== true) continue;
         } catch {
           // Skip symbol if we can't get technicals
           continue;
@@ -186,12 +153,10 @@ export class ScreenerService {
         if (closes.length < 20) continue;
 
         const currentPrice = closes[closes.length - 1] ?? 0;
-        const rsi = calculateRsi(closes, 14);
-        const sma20 = sma(closes, 20);
-        const sma50 = closes.length >= 50 ? sma(closes, 50) : undefined;
+        const { rsi14: rsi, sma20, sma50 } = analyzeHistory(closes);
 
         // RSI signals
-        if (rsi < 30) {
+        if (rsi !== null && rsi < 30) {
           signals.push({
             symbol,
             type: "RSI_OVERSOLD",
@@ -200,7 +165,7 @@ export class ScreenerService {
             timestamp: new Date().toISOString(),
             description: `RSI at ${rsi.toFixed(1)} - oversold`,
           });
-        } else if (rsi > 70) {
+        } else if (rsi !== null && rsi > 70) {
           signals.push({
             symbol,
             type: "RSI_OVERBOUGHT",
@@ -212,7 +177,7 @@ export class ScreenerService {
         }
 
         // MA signals
-        if (sma50 && currentPrice > sma20 && sma20 > sma50) {
+        if (sma20 !== null && sma50 !== null && currentPrice > sma20 && sma20 > sma50) {
           signals.push({
             symbol,
             type: "MA_BULLISH_ALIGNMENT",

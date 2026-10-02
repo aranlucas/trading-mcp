@@ -47,6 +47,22 @@ pnpm dev:screener
 
 The screener API serves `/api/health`, `/api/openapi.json`, quote routes, and screening routes. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for deeper design notes.
 
+### Technical analysis availability
+
+MCP technicals and REST screening share `analyzeHistory` in `@trading/core`.
+Unavailable indicators are `null`, never a synthetic zero: RSI14 needs 15
+closes, SMA/EMA and Bollinger Bands need their period, and MACD(12,26,9) needs
+34 closes to seed its nine-observation signal EMA. RSI retains the simple
+trailing-14-change calculation; flat history returns a neutral 50.
+
+`get_technicals` still requires 26 closes, so its SMA50, SMA200, and MACD can
+be `null`. Consumers should check availability before comparing values.
+Signals never use an unavailable indicator. Screening includes a symbol only
+when every requested predicate can be evaluated and passes, including zero
+numeric thresholds. Quote-only scans do not require history. Yahoo screening
+requests allow calendar headroom and return up to the requested number of
+ordered daily observations; newly listed or suspended symbols can return fewer.
+
 ## Configuration
 
 Copy `.env.example` into your local environment. Alpaca credentials are needed

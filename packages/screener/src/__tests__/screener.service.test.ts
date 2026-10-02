@@ -166,7 +166,8 @@ const mockBarsOversold = generateBarsForRsi(20, 30);
 const mockBarsOverbought = generateBarsForRsi(85, 30);
 
 // Mock the @trading/core module
-vi.mock("@trading/core", () => ({
+vi.mock("@trading/core", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@trading/core")>()),
   alpaca: {
     getSnapshots: vi.fn().mockImplementation(async (symbols: string[]) => {
       const result = new Map();
@@ -196,8 +197,51 @@ import { alpaca } from "@trading/core";
 describe("ScreenerService", () => {
   let screener: ScreenerService;
 
+  it.each([0, 10, 14, 15, 19, 20, 49, 50])(
+    "requires enough observations for every requested predicate (%i bars)",
+    async (length) => {
+      vi.mocked(alpaca.getBars).mockResolvedValue(generateBarsForSmaAlignment(true, true, length));
+      for (const [criteria, required] of [
+        [{ minRsi: 0 }, 15],
+        [{ maxRsi: 100 }, 15],
+        [{ aboveSma20: true }, 20],
+        [{ aboveSma50: true }, 50],
+        [{ minRsi: 0, aboveSma50: true }, 50],
+      ] as const) {
+        const results = await screener.scan({ symbols: ["AAPL"], ...criteria });
+        expect(results, JSON.stringify(criteria)).toHaveLength(length >= required ? 1 : 0);
+      }
+    },
+  );
+
+  it("honors zero maximum RSI and price thresholds", async () => {
+    vi.mocked(alpaca.getBars).mockResolvedValue(generateBarsForSmaAlignment(true, true));
+    expect(await screener.scan({ symbols: ["AAPL"], maxRsi: 0 })).toEqual([]);
+    expect(await screener.scan({ symbols: ["AAPL"], maxPrice: 0 })).toEqual([]);
+    vi.mocked(alpaca.getBars).mockResolvedValue(generateBarsForSmaAlignment(false, false));
+    expect(await screener.scan({ symbols: ["AAPL"], maxRsi: 0 })).toHaveLength(1);
+  });
+
+  it("still permits quote-only scans without price history", async () => {
+    vi.mocked(alpaca.getBars).mockResolvedValue([]);
+    expect(await screener.scan({ symbols: ["AAPL"] })).toHaveLength(1);
+    expect(alpaca.getBars).not.toHaveBeenCalled();
+  });
+
+  it("treats a measured zero SMA as available", async () => {
+    vi.mocked(alpaca.getBars).mockResolvedValue(
+      generateBarsForSmaAlignment(true, true).map((bar) => ({ ...bar, c: 0 })),
+    );
+    expect(await screener.scan({ symbols: ["AAPL"], aboveSma50: true })).toHaveLength(1);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(alpaca.getBars).mockImplementation(async (symbol: string) => {
+      if (symbol === "INTC") return mockBarsOversold;
+      if (symbol === "NVDA") return mockBarsOverbought;
+      return mockBarsNeutral;
+    });
     process.env.SCREENER_PROVIDER = "alpaca";
     screener = new ScreenerService();
   });
@@ -401,69 +445,5 @@ describe("ScreenerService", () => {
 
       expect(alpaca.getBars).toHaveBeenCalledTimes(symbols.length);
     });
-  });
-});
-
-describe("RSI Calculation", () => {
-  // Test the RSI calculation logic
-  it("should calculate RSI correctly for uptrend", () => {
-    // With 14 consecutive up days, RSI should be high (approaching 100)
-    const closes = Array.from({ length: 20 }, (_, i) => 100 + i);
-
-    // Manual RSI calculation
-    const changes = [];
-    for (let i = 1; i < closes.length; i++) {
-      changes.push(closes[i]! - closes[i - 1]!);
-    }
-
-    const gains = changes.slice(-14).map((c) => (c > 0 ? c : 0));
-    const losses = changes.slice(-14).map((c) => (c < 0 ? -c : 0));
-
-    const avgGain = gains.reduce((a, b) => a + b, 0) / 14;
-    const avgLoss = losses.reduce((a, b) => a + b, 0) / 14;
-
-    // All gains, no losses - RSI should be 100
-    expect(avgGain).toBeGreaterThan(0);
-    expect(avgLoss).toBe(0);
-  });
-
-  it("should calculate RSI correctly for downtrend", () => {
-    // With 14 consecutive down days, RSI should be low (approaching 0)
-    const closes = Array.from({ length: 20 }, (_, i) => 100 - i);
-
-    const changes = [];
-    for (let i = 1; i < closes.length; i++) {
-      changes.push(closes[i]! - closes[i - 1]!);
-    }
-
-    const gains = changes.slice(-14).map((c) => (c > 0 ? c : 0));
-    const losses = changes.slice(-14).map((c) => (c < 0 ? -c : 0));
-
-    const avgGain = gains.reduce((a, b) => a + b, 0) / 14;
-    const avgLoss = losses.reduce((a, b) => a + b, 0) / 14;
-
-    // All losses, no gains
-    expect(avgGain).toBe(0);
-    expect(avgLoss).toBeGreaterThan(0);
-  });
-});
-
-describe("SMA Calculation", () => {
-  it("should calculate SMA correctly", () => {
-    const data = [10, 20, 30, 40, 50];
-    const period = 5;
-
-    const smaValue = data.slice(-period).reduce((a, b) => a + b, 0) / period;
-
-    expect(smaValue).toBe(30); // (10+20+30+40+50)/5 = 30
-  });
-
-  it("should use only last N values for SMA", () => {
-    const data = [5, 10, 20, 30, 40, 50];
-    const period = 5;
-
-    const smaValue = data.slice(-period).reduce((a, b) => a + b, 0) / period;
-
-    expect(smaValue).toBe(30); // (10+20+30+40+50)/5 = 30, ignoring first 5
   });
 });

@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerAllTools } from "../tools/index.js";
 
-vi.mock("@trading/core", () => ({
+vi.mock("@trading/core", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@trading/core")>()),
   alpaca: {
     getQuote: vi.fn().mockResolvedValue({
       symbol: "AAPL",
