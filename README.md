@@ -120,9 +120,29 @@ pnpm lint
 pnpm secretlint
 ```
 
-Provider integration tests may require credentials or are skipped when they are
-absent. Keep API secrets in the environment and inspect the paper/live mode
-before exercising any order tool.
+`pnpm test` builds the workspace, verifies that live-test gates stay disabled,
+then runs the complete offline suite, including MCP tools and fixture-based
+backtests. Live Yahoo backtests and deployment E2E are skipped by default.
+Credentials, CI mode, or a deployment URL alone do not enable them.
+`pnpm test:gates` checks both files with flags unset, `0`, and `true`; it blocks
+HTTP requests even if a gate regresses.
+
+Only run these separate commands when you intentionally want external requests:
+
+```bash
+pnpm test:providers
+VERCEL_DEPLOY_URL=https://your-preview.vercel.app pnpm test:deployment
+```
+
+`test:providers` opts into live Yahoo historical-data requests with
+`RUN_REAL_PROVIDER_TESTS=1`. `test:deployment` opts into read-only requests to the
+specified HTTPS Vercel preview with `RUN_DEPLOYMENT_E2E=1`; the URL is required.
+These exact `1` flags also apply when invoking Vitest directly or running an
+individual package. Do not set them in default CI. The original live test cases
+are retained. Offline tests still cover provider mocks, order validation,
+technical analysis, and captured historical fixtures without credentials.
+Keep API secrets in the environment and inspect the paper/live mode before
+exercising any order tool.
 
 ## Status
 
