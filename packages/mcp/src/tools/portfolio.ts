@@ -4,7 +4,16 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { alpaca } from "@trading/core";
 
-export function registerPortfolioTools(server: McpServer) {
+export type PortfolioDependencies = {
+  alpaca: Pick<typeof alpaca, "getAccount" | "getPortfolio" | "getPositions">;
+};
+
+export function registerPortfolioTools(
+  server: McpServer,
+  dependencies: PortfolioDependencies = { alpaca },
+) {
+  const { alpaca } = dependencies;
+
   // Get account info
   server.registerTool(
     "get_account",
@@ -17,6 +26,7 @@ export function registerPortfolioTools(server: McpServer) {
     async () => {
       try {
         const account = await alpaca.getAccount();
+
         return {
           content: [{ type: "text" as const, text: JSON.stringify(account, null, 2) }],
         };
@@ -41,6 +51,7 @@ export function registerPortfolioTools(server: McpServer) {
     async () => {
       try {
         const portfolio = await alpaca.getPortfolio();
+
         return {
           content: [{ type: "text" as const, text: JSON.stringify(portfolio, null, 2) }],
         };
@@ -67,9 +78,11 @@ export function registerPortfolioTools(server: McpServer) {
     async ({ symbol }) => {
       try {
         let positions = await alpaca.getPositions();
+
         if (symbol) {
           positions = positions.filter((p) => p.symbol.toUpperCase() === symbol.toUpperCase());
         }
+
         return {
           content: [{ type: "text" as const, text: JSON.stringify(positions, null, 2) }],
         };

@@ -4,7 +4,16 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { alpaca } from "@trading/core";
 
-export function registerMarketTools(server: McpServer) {
+export type MarketDependencies = {
+  alpaca: Pick<typeof alpaca, "getBars" | "getMarketClock" | "getQuote">;
+};
+
+export function registerMarketTools(
+  server: McpServer,
+  dependencies: MarketDependencies = { alpaca },
+) {
+  const { alpaca } = dependencies;
+
   // Get stock quote
   server.registerTool(
     "get_quote",
@@ -19,6 +28,7 @@ export function registerMarketTools(server: McpServer) {
     async ({ symbol }) => {
       try {
         const quote = await alpaca.getQuote(symbol.toUpperCase());
+
         return {
           content: [{ type: "text" as const, text: JSON.stringify(quote, null, 2) }],
         };
@@ -50,6 +60,7 @@ export function registerMarketTools(server: McpServer) {
     async ({ symbol, timeframe, limit }) => {
       try {
         const bars = await alpaca.getBars(symbol.toUpperCase(), timeframe, limit);
+
         return {
           content: [{ type: "text" as const, text: JSON.stringify(bars, null, 2) }],
         };
@@ -74,6 +85,7 @@ export function registerMarketTools(server: McpServer) {
     async () => {
       try {
         const status = await alpaca.getMarketClock();
+
         return {
           content: [{ type: "text" as const, text: JSON.stringify(status, null, 2) }],
         };

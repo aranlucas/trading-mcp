@@ -1,9 +1,13 @@
 // Unified data providers
 
 export { yahoo } from "./yahoo.js";
+
 export { polygon } from "./polygon.js";
+
 export { finnhubProvider as finnhub } from "./finnhub.js";
+
 export { fred, INDICATORS } from "./fred.js";
+
 export { finviz } from "./finviz.js";
 
 import { yahoo } from "./yahoo.js";
@@ -16,6 +20,7 @@ import { ProviderError } from "../lib/errors.js";
 import { providerLogger } from "../lib/logger.js";
 import { createProviderMetrics } from "../lib/provider-metrics.js";
 import { withRetry } from "../lib/retry.js";
+import type { FinnhubRecommendation, FinnhubEarning } from "../schemas/index.js";
 import type { Quote } from "../types/index.js";
 import type { NewsItem, SentimentData } from "../types/index.js";
 
@@ -36,7 +41,7 @@ const DEFAULT_UNIFIED_OPTIONS: UnifiedOptions = {
 type QuoteGetter = (symbol: string) => Promise<Quote>;
 
 export function createUnified(options?: Partial<UnifiedOptions>) {
-  const opt: UnifiedOptions = { ...DEFAULT_UNIFIED_OPTIONS, ...(options ?? {}) };
+  const opt: UnifiedOptions = { ...DEFAULT_UNIFIED_OPTIONS, ...options };
   const metrics = createProviderMetrics({ windowMs: opt.metricsWindowMs });
 
   const quoteProviders: Array<{ name: string; get: QuoteGetter }> = [
@@ -47,7 +52,9 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
             name: "finnhub",
             get: async (symbol: string): Promise<Quote> => {
               const q = await finnhub.getQuote(symbol);
+
               if (!q) throw new Error("No quote");
+
               return q;
             },
           },
@@ -59,7 +66,9 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
             name: "polygon",
             get: async (symbol: string): Promise<Quote> => {
               const q = await polygon.getPreviousClose(symbol);
+
               if (!q) throw new Error("No quote");
+
               return q;
             },
           },
@@ -69,7 +78,9 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       name: "finviz",
       get: async (symbol: string): Promise<Quote> => {
         const q = await finviz.getQuote(symbol);
+
         if (!q) throw new Error("No quote");
+
         return q;
       },
     },
@@ -81,41 +92,47 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
     async getQuote(symbol: string) {
       const wrapped = quoteProviders.map(({ name, get }) => {
         const startedAt = Date.now();
-        return withRetry(() => withTimeout(get(symbol), opt.quoteTimeoutMs), {
-          retries: opt.quoteRetries,
-          minDelayMs: opt.quoteRetryMinDelayMs,
-        })
-          .then((quote) => {
-            metrics.recordSuccess({
-              provider: name,
-              operation: "getQuote",
-              latencyMs: Date.now() - startedAt,
-            });
-            return quote;
+
+        return (
+          withRetry(() => withTimeout(get(symbol), opt.quoteTimeoutMs), {
+            retries: opt.quoteRetries,
+            minDelayMs: opt.quoteRetryMinDelayMs,
           })
-          .catch((err: unknown) => {
-            metrics.recordFailure({
-              provider: name,
-              operation: "getQuote",
-              latencyMs: Date.now() - startedAt,
-              err,
-            });
+            .then((quote) => {
+              metrics.recordSuccess({
+                provider: name,
+                operation: "getQuote",
+                latencyMs: Date.now() - startedAt,
+              });
 
-            const snap = metrics.snapshot();
-            const providerSnap = snap.providers[name]?.getQuote;
-            if (
-              providerSnap &&
-              providerSnap.rolling.total >= 5 &&
-              providerSnap.rolling.errorRate >= 0.5
-            ) {
-              providerLogger.warn(
-                { provider: name, operation: "getQuote", rolling: providerSnap.rolling },
-                "Provider error rate elevated",
-              );
-            }
+              return quote;
+            })
+            // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Promise rejection boundary sends arbitrary values to the validated error normalizer.
+            .catch((err: unknown) => {
+              metrics.recordFailure({
+                provider: name,
+                operation: "getQuote",
+                latencyMs: Date.now() - startedAt,
+                err,
+              });
 
-            throw new ProviderError({ provider: name, operation: "getQuote", cause: err });
-          });
+              const snap = metrics.snapshot();
+              const providerSnap = snap.providers[name]?.getQuote;
+
+              if (
+                providerSnap &&
+                providerSnap.rolling.total >= 5 &&
+                providerSnap.rolling.errorRate >= 0.5
+              ) {
+                providerLogger.warn(
+                  { provider: name, operation: "getQuote", rolling: providerSnap.rolling },
+                  "Provider error rate elevated",
+                );
+              }
+
+              throw new ProviderError({ provider: name, operation: "getQuote", cause: err });
+            })
+        );
       });
 
       try {
@@ -176,7 +193,7 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
         return await yahoo.getQuotes(symbols);
       } catch {
         // Fallback to individual requests
-        const results: unknown[] = [];
+        const results: Quote[] = [];
         await Promise.all(
           symbols.map(async (s) => {
             try {
@@ -187,6 +204,7 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
             }
           }),
         );
+
         return results;
       }
     },
@@ -203,6 +221,7 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
         // Try Polygon
         const fromStr = from.toISOString().slice(0, 10);
         const toStr = to.toISOString().slice(0, 10);
+
         return await polygon.getAggregates(symbol, 1, "day", fromStr, toStr);
       }
     },
@@ -215,6 +234,7 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       if (symbol) {
         try {
           const yahooResult = await yahoo.getNews(symbol);
+
           if (yahooResult && "news" in yahooResult && Array.isArray(yahooResult.news)) {
             for (const item of yahooResult.news) {
               allNews.push({
@@ -262,9 +282,11 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
 
       // Dedupe by headline
       const seen = new Set<string>();
+
       return allNews.filter((n) => {
         if (seen.has(n.headline)) return false;
         seen.add(n.headline);
+
         return true;
       });
     },
@@ -280,6 +302,7 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       try {
         // Try Polygon first
         const pgMovers = await polygon.getGainersLosers(direction);
+
         if (pgMovers.length > 0) {
           return pgMovers.map((m) => ({
             ticker: m.ticker,
@@ -295,6 +318,7 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       try {
         const fvMovers =
           direction === "gainers" ? await finviz.getGainers() : await finviz.getLosers();
+
         return fvMovers.map((m) => ({
           ticker: m.symbol,
           todaysChangePerc: m.changePercent,
@@ -329,7 +353,7 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
     },
 
     // Get recommendations/ratings
-    async getRecommendations(symbol: string): Promise<unknown[]> {
+    async getRecommendations(symbol: string): Promise<FinnhubRecommendation[]> {
       try {
         return await finnhub.getRecommendations(symbol);
       } catch {
@@ -338,9 +362,10 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
     },
 
     // Get earnings calendar
-    async getEarningsCalendar(days = 7): Promise<unknown[]> {
+    async getEarningsCalendar(days = 7): Promise<FinnhubEarning[]> {
       const from = new Date().toISOString().slice(0, 10);
       const to = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
       try {
         return await finnhub.getEarningsCalendar(from, to);
       } catch {
@@ -363,10 +388,12 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       const testSymbol = "AAPL";
       const healthCheckTimeoutMs = 3000;
 
-      const check = async (fn: () => Promise<unknown>): Promise<ProviderHealth> => {
+      const check = async (fn: () => Promise<void>): Promise<ProviderHealth> => {
         const start = Date.now();
+
         try {
           await withTimeout(fn(), healthCheckTimeoutMs);
+
           return { healthy: true, latencyMs: Date.now() - start };
         } catch (err) {
           return {
@@ -379,17 +406,27 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
 
       const [yahooHealth, polygonHealth, finnhubHealth, fredHealth, finvizHealth] =
         await Promise.all([
-          check(() => yahoo.getQuote(testSymbol)),
+          check(async () => {
+            await yahoo.getQuote(testSymbol);
+          }),
           polygon.isConfigured()
-            ? check(() => polygon.getPreviousClose(testSymbol))
+            ? check(async () => {
+                await polygon.getPreviousClose(testSymbol);
+              })
             : Promise.resolve({ healthy: false, error: "Not configured" } satisfies ProviderHealth),
           finnhub.isConfigured()
-            ? check(() => finnhub.getQuote(testSymbol))
+            ? check(async () => {
+                await finnhub.getQuote(testSymbol);
+              })
             : Promise.resolve({ healthy: false, error: "Not configured" } satisfies ProviderHealth),
           fred.isConfigured()
-            ? check(() => fred.getSeries("SP500", 1))
+            ? check(async () => {
+                await fred.getSeries("SP500", 1);
+              })
             : Promise.resolve({ healthy: false, error: "Not configured" } satisfies ProviderHealth),
-          check(() => finviz.getQuote(testSymbol)),
+          check(async () => {
+            await finviz.getQuote(testSymbol);
+          }),
         ]);
 
       const providers = {

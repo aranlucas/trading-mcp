@@ -82,7 +82,7 @@ export function validateEnv(): Env {
 /**
  * Get provider configuration status
  */
-export function getProviderConfigStatus(): Record<string, boolean> {
+export function getProviderConfigStatus() {
   return {
     alpaca: Boolean(process.env.ALPACA_API_KEY && process.env.ALPACA_API_SECRET),
     polygon: Boolean(process.env.POLYGON_API_KEY),

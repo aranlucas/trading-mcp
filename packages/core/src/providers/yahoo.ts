@@ -19,25 +19,7 @@ export const yahoo = {
 
   // Get real-time quote normalized into the core `Quote` shape
   async getQuoteNormalized(symbol: string): Promise<Quote> {
-    const raw = await yahooFinance.quote(symbol);
-    const parsed = YahooQuoteSchema.safeParse(raw);
-    if (!parsed.success) {
-      throw new Error("Invalid Yahoo quote response");
-    }
-
-    const q = parsed.data;
-    return {
-      symbol: (q.symbol ?? symbol).toUpperCase(),
-      price: q.regularMarketPrice ?? 0,
-      open: q.regularMarketOpen ?? 0,
-      high: q.regularMarketDayHigh ?? 0,
-      low: q.regularMarketDayLow ?? 0,
-      close: q.regularMarketPreviousClose ?? q.regularMarketPrice ?? 0,
-      volume: q.regularMarketVolume ?? 0,
-      change: q.regularMarketChange ?? 0,
-      changePercent: q.regularMarketChangePercent ?? 0,
-      timestamp: new Date().toISOString(),
-    };
+    return normalizeYahooQuote(await yahooFinance.quote(symbol), symbol);
   },
 
   // Get multiple quotes (returns raw yahoofinance result)
@@ -60,6 +42,7 @@ export const yahoo = {
     // Flatten options array into calls/puts for easier access
     const calls = result.options?.flatMap((o) => o.calls ?? []) ?? [];
     const puts = result.options?.flatMap((o) => o.puts ?? []) ?? [];
+
     return {
       expirationDates: result.expirationDates,
       calls,
@@ -80,6 +63,7 @@ export const yahoo = {
   // Get trending tickers - returns quotes array
   async getTrending(count = 10) {
     const result = await yahooFinance.trendingSymbols("US", { count });
+
     return result.quotes ?? [];
   },
 
@@ -95,6 +79,7 @@ export const yahoo = {
     if (symbol) {
       return await yahooFinance.search(symbol, { newsCount: 10 });
     }
+
     // If no symbol provided, return empty array (SDK has no global news method)
     return [];
   },
@@ -103,8 +88,10 @@ export const yahoo = {
   async getMovers(type: "gainers" | "losers" | "most_actives") {
     try {
       if (type === "losers") return yahooFinance.dailyLosers();
+
       // SDK doesn't expose a `mostActive()` method in types; fall back to dailyGainers
       if (type === "most_actives") return yahooFinance.dailyGainers();
+
       return await yahooFinance.dailyGainers();
     } catch {
       return [];
@@ -125,3 +112,27 @@ export const yahoo = {
     }
   },
 };
+
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- Untrusted Yahoo payload boundary; the schema establishes the quote contract before any field access.
+export function normalizeYahooQuote(raw: unknown, symbol: string): Quote {
+  const parsed = YahooQuoteSchema.safeParse(raw);
+
+  if (!parsed.success) {
+    throw new Error("Invalid Yahoo quote response");
+  }
+
+  const q = parsed.data;
+
+  return {
+    symbol: (q.symbol ?? symbol).toUpperCase(),
+    price: q.regularMarketPrice ?? 0,
+    open: q.regularMarketOpen ?? 0,
+    high: q.regularMarketDayHigh ?? 0,
+    low: q.regularMarketDayLow ?? 0,
+    close: q.regularMarketPreviousClose ?? q.regularMarketPrice ?? 0,
+    volume: q.regularMarketVolume ?? 0,
+    change: q.regularMarketChange ?? 0,
+    changePercent: q.regularMarketChangePercent ?? 0,
+    timestamp: new Date().toISOString(),
+  };
+}

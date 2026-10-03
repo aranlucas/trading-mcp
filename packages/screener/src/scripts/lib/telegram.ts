@@ -1,9 +1,27 @@
-type TelegramSendMessageResponse =
-  | { ok: true; result: unknown }
-  | { ok: false; error_code?: number; description?: string };
+import { z } from "zod";
+
+const TelegramSendMessageResponseSchema = z.discriminatedUnion("ok", [
+  z.object({
+    ok: z.literal(true),
+    result: z.object({ message_id: z.number() }).catchall(z.json()),
+  }),
+  z.object({
+    ok: z.literal(false),
+    error_code: z.number().optional(),
+    description: z.string().optional(),
+  }),
+]);
+
+type TelegramPayload = {
+  chat_id: string;
+  text: string;
+  disable_web_page_preview: boolean;
+  message_thread_id?: number;
+};
 
 function chunkText(text: string, maxLen: number): string[] {
   const normalized = text.replace(/\r\n/g, "\n");
+
   if (normalized.length <= maxLen) return [normalized];
 
   const chunks: string[] = [];
@@ -20,6 +38,7 @@ function chunkText(text: string, maxLen: number): string[] {
   }
 
   if (remaining.length > 0) chunks.push(remaining);
+
   return chunks;
 }
 
@@ -34,7 +53,7 @@ export async function sendTelegramText(opts: {
   const chunks = chunkText(opts.text, 4000);
 
   for (const chunk of chunks) {
-    const payload: Record<string, string | number | boolean> = {
+    const payload: TelegramPayload = {
       chat_id: opts.chatId,
       text: chunk,
       disable_web_page_preview: opts.disableWebPreview ?? true,
@@ -42,9 +61,11 @@ export async function sendTelegramText(opts: {
 
     if (opts.messageThreadId && opts.messageThreadId.trim().length > 0) {
       const n = Number(opts.messageThreadId);
+
       if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
         throw new Error(`Invalid TELEGRAM_MESSAGE_THREAD_ID: "${opts.messageThreadId}"`);
       }
+
       payload.message_thread_id = n;
     }
 
@@ -54,12 +75,15 @@ export async function sendTelegramText(opts: {
       body: JSON.stringify(payload),
     });
 
-    const data = (await res.json().catch(() => null)) as TelegramSendMessageResponse | null;
+    const parsed = TelegramSendMessageResponseSchema.safeParse(await res.json().catch(() => null));
+    const data = parsed.success ? parsed.data : null;
+
     if (!res.ok || !data || data.ok !== true) {
       const details =
         data && "ok" in data && data.ok === false
           ? `${data.error_code ?? "?"} ${data.description ?? "Unknown error"}`
           : `HTTP ${res.status}`;
+
       throw new Error(`Telegram sendMessage failed: ${details}`);
     }
   }

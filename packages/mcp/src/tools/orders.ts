@@ -4,7 +4,16 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { alpaca } from "@trading/core";
 
-export function registerOrderTools(server: McpServer) {
+export type OrderDependencies = {
+  alpaca: Pick<typeof alpaca, "cancelOrder" | "getOrder" | "getOrders" | "placeOrder">;
+};
+
+export function registerOrderTools(
+  server: McpServer,
+  dependencies: OrderDependencies = { alpaca },
+) {
+  const { alpaca } = dependencies;
+
   // Place order
   server.registerTool(
     "place_order",
@@ -45,6 +54,7 @@ export function registerOrderTools(server: McpServer) {
           isError: true,
         };
       }
+
       if ((type === "stop" || type === "stop_limit") && !stopPrice) {
         return {
           content: [
@@ -67,6 +77,7 @@ export function registerOrderTools(server: McpServer) {
           limit_price: limitPrice,
           stop_price: stopPrice,
         });
+
         return {
           content: [{ type: "text" as const, text: JSON.stringify(order, null, 2) }],
         };
@@ -93,6 +104,7 @@ export function registerOrderTools(server: McpServer) {
     async ({ orderId }) => {
       try {
         const order = await alpaca.getOrder(orderId);
+
         return {
           content: [{ type: "text" as const, text: JSON.stringify(order, null, 2) }],
         };
@@ -119,6 +131,7 @@ export function registerOrderTools(server: McpServer) {
     async ({ status }) => {
       try {
         const orders = await alpaca.getOrders(status);
+
         return {
           content: [{ type: "text" as const, text: JSON.stringify(orders, null, 2) }],
         };
@@ -144,6 +157,7 @@ export function registerOrderTools(server: McpServer) {
     async ({ orderId }) => {
       try {
         await alpaca.cancelOrder(orderId);
+
         return {
           content: [
             {

@@ -11,10 +11,17 @@ function rejectNetwork(): never {
 }
 
 globalThis.fetch = rejectNetwork;
+
 http.request = rejectNetwork;
+
 http.get = rejectNetwork;
+
 https.request = rejectNetwork;
+
 https.get = rejectNetwork;
+
 net.Socket.prototype.connect = rejectNetwork;
+
 tls.connect = rejectNetwork;
+
 syncBuiltinESMExports();

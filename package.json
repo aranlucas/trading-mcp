@@ -2,18 +2,17 @@
   "name": "trading-monorepo",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "description": "Trading tools monorepo - MCP server, screener API, and shared utilities",
-  "packageManager": "pnpm@12.4.2",
+  "type": "module",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --filter=@trading/mcp",
     "dev:screener": "turbo run dev --filter=@trading/screener",
     "clean": "turbo run clean && rm -rf node_modules",
-    "typecheck": "turbo run typecheck",
+    "typecheck": "turbo run typecheck && tsc -p tsconfig.tests.json",
     "test": "turbo run build && pnpm run test:gates && vitest run --maxWorkers=2",
-    "lint": "oxlint packages/*/src",
-    "lint:fix": "oxlint packages/*/src --fix",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
     "format": "oxfmt packages/*/src",
     "format:check": "oxfmt --check packages/*/src",
     "secretlint": "git ls-files -z | xargs -0 secretlint",
@@ -23,29 +22,33 @@
     "prepare": "husky",
     "test:gates": "node scripts/check-offline-test-gates.mjs",
     "test:providers": "pnpm --filter @trading/core build && RUN_REAL_PROVIDER_TESTS=1 vitest run --project screener packages/screener/src/__tests__/backtest-real.test.ts",
-    "test:deployment": "RUN_DEPLOYMENT_E2E=1 vitest run --config vitest.vercel.config.ts"
+    "test:deployment": "RUN_DEPLOYMENT_E2E=1 vitest run --config vitest.vercel.config.ts",
+    "lint:plugin": "node tools/oxlint/verify-anti-slop.mjs"
   },
   "devDependencies": {
+    "@oxlint/plugins": "1.80.0",
     "@secretlint/secretlint-rule-preset-recommend": "^13.0.5",
     "@vitest/coverage-v8": "^4.1.11",
     "husky": "^9.1.7",
     "lint-staged": "^17.4.1",
     "oxfmt": "^0.65.0",
-    "oxlint": "^1.80.0",
+    "oxlint": "1.80.0",
     "secretlint": "^13.0.5",
     "syncpack": "^15.3.3",
     "tsx": "^4.23.13",
     "turbo": "^2.10.12",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.11"
-  },
-  "engines": {
-    "node": ">=22.0.0"
+    "vitest": "^4.1.11",
+    "zod": "^4.5.4"
   },
   "lint-staged": {
     "packages/*/src/**/*.ts": [
       "oxlint --fix",
       "oxfmt"
     ]
-  }
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "pnpm@12.4.2"
 }

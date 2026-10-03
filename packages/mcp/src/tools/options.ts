@@ -9,7 +9,16 @@ function num(value: number | undefined): number {
   return value ?? 0;
 }
 
-export function registerOptionsTools(server: McpServer) {
+export type OptionsDependencies = {
+  yahoo: Pick<typeof yahoo, "getOptions" | "getOptionsForExpiration">;
+};
+
+export function registerOptionsTools(
+  server: McpServer,
+  dependencies: OptionsDependencies = { yahoo },
+) {
+  const { yahoo } = dependencies;
+
   // Get options chain
   server.registerTool(
     "get_options_chain",
@@ -287,14 +296,17 @@ export function registerOptionsTools(server: McpServer) {
           (sum: number, c: YahooOptionContract) => sum + num(c.volume),
           0,
         );
+
         const totalPutVolume = puts.reduce(
           (sum: number, p: YahooOptionContract) => sum + num(p.volume),
           0,
         );
+
         const totalCallOI = calls.reduce(
           (sum: number, c: YahooOptionContract) => sum + num(c.openInterest),
           0,
         );
+
         const totalPutOI = puts.reduce(
           (sum: number, p: YahooOptionContract) => sum + num(p.openInterest),
           0,
@@ -307,6 +319,7 @@ export function registerOptionsTools(server: McpServer) {
                 0,
               ) / calls.length
             : 0;
+
         const avgPutIV =
           puts.length > 0
             ? puts.reduce(

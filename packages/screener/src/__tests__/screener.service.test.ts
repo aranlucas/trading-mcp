@@ -1,3 +1,4 @@
+import type { Quote } from "@trading/core";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Generate bars with a deterministic RSI tendency.
@@ -12,11 +13,14 @@ function generateBarsForRsi(
   // number of unit gains in that window so the signal boundary is predictable.
   const rsiPeriod = 14;
   const upDaysInRsiWindow = Math.round((targetRsi / 100) * rsiPeriod);
+
   const changes = Array.from({ length: periods - 1 }, (_, index) => {
     const rsiWindowStart = periods - 1 - rsiPeriod;
+
     if (index < rsiWindowStart) return 0;
 
     const dayInRsiWindow = index - rsiWindowStart;
+
     return dayInRsiWindow < upDaysInRsiWindow ? 1 : -1;
   });
 
@@ -162,37 +166,38 @@ const mockSnapshots = new Map([
 
 // Mock bars for each symbol
 const mockBarsNeutral = generateBarsForSmaAlignment(false, true, 60);
+
 const mockBarsOversold = generateBarsForRsi(20, 30);
+
 const mockBarsOverbought = generateBarsForRsi(85, 30);
 
-// Mock the @trading/core module
-vi.mock("@trading/core", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@trading/core")>()),
-  alpaca: {
-    getSnapshots: vi.fn().mockImplementation(async (symbols: string[]) => {
-      const result = new Map();
-      for (const symbol of symbols) {
-        if (mockSnapshots.has(symbol)) {
-          result.set(symbol, mockSnapshots.get(symbol));
-        }
+// Inject the exact market-data contract, without replacing the core module.
+const alpaca = {
+  getSnapshots: vi.fn().mockImplementation(async (symbols: string[]) => {
+    const result = new Map<string, Quote>();
+
+    for (const symbol of symbols) {
+      const snapshot = mockSnapshots.get(symbol);
+
+      if (snapshot) {
+        result.set(symbol, snapshot);
       }
-      return result;
-    }),
-    getBars: vi.fn().mockImplementation(async (symbol: string) => {
-      // Return different bars based on symbol to test different signals
-      if (symbol === "INTC") return mockBarsOversold;
-      if (symbol === "NVDA") return mockBarsOverbought;
-      return mockBarsNeutral;
-    }),
-  },
-  yahoo: {
-    getQuotes: vi.fn().mockResolvedValue([]),
-    getHistory: vi.fn().mockResolvedValue({ quotes: [] }),
-  },
-}));
+    }
+
+    return result;
+  }),
+  getBars: vi.fn().mockImplementation(async (symbol: string) => {
+    // Return different bars based on symbol to test different signals
+    if (symbol === "INTC") return mockBarsOversold;
+
+    if (symbol === "NVDA") return mockBarsOverbought;
+
+    return mockBarsNeutral;
+  }),
+} satisfies MarketDataClient;
 
 import { ScreenerService, type ScanCriteria } from "../services/screener.js";
-import { alpaca } from "@trading/core";
+import type { MarketDataClient } from "../services/market-data.js";
 
 describe("ScreenerService", () => {
   let screener: ScreenerService;
@@ -201,6 +206,7 @@ describe("ScreenerService", () => {
     "requires enough observations for every requested predicate (%i bars)",
     async (length) => {
       vi.mocked(alpaca.getBars).mockResolvedValue(generateBarsForSmaAlignment(true, true, length));
+
       for (const [criteria, required] of [
         [{ minRsi: 0 }, 15],
         [{ maxRsi: 100 }, 15],
@@ -239,11 +245,13 @@ describe("ScreenerService", () => {
     vi.clearAllMocks();
     vi.mocked(alpaca.getBars).mockImplementation(async (symbol: string) => {
       if (symbol === "INTC") return mockBarsOversold;
+
       if (symbol === "NVDA") return mockBarsOverbought;
+
       return mockBarsNeutral;
     });
     process.env.SCREENER_PROVIDER = "alpaca";
-    screener = new ScreenerService();
+    screener = new ScreenerService(alpaca);
   });
 
   describe("scan", () => {
@@ -329,7 +337,7 @@ describe("ScreenerService", () => {
       await screener.scan(criteria);
 
       // Should have called getBars to calculate RSI
-      expect(alpaca.getBars).toHaveBeenCalledWith("AAPL", "1Day", 60);
+      expect(alpaca.getBars).toHaveBeenCalledWith("AAPL", 60);
     });
 
     it("should filter by SMA20 alignment", async () => {
@@ -351,6 +359,7 @@ describe("ScreenerService", () => {
 
       expect(movers.length).toBeLessThanOrEqual(5);
       expect(movers.every((m) => m.changePercent > 0)).toBe(true);
+
       // Should be sorted descending by changePercent
       for (let i = 1; i < movers.length; i++) {
         expect(movers[i - 1]!.changePercent).toBeGreaterThanOrEqual(movers[i]!.changePercent);
@@ -362,6 +371,7 @@ describe("ScreenerService", () => {
 
       expect(movers.length).toBeLessThanOrEqual(5);
       expect(movers.every((m) => m.changePercent < 0)).toBe(true);
+
       // Should be sorted ascending by changePercent (most negative first)
       for (let i = 1; i < movers.length; i++) {
         expect(movers[i - 1]!.changePercent).toBeLessThanOrEqual(movers[i]!.changePercent);
@@ -399,7 +409,7 @@ describe("ScreenerService", () => {
         description: "RSI at 21.4 - oversold",
       });
       expect(signals[0]?.timestamp).toEqual(expect.any(String));
-      expect(alpaca.getBars).toHaveBeenCalledWith("INTC", "1Day", 60);
+      expect(alpaca.getBars).toHaveBeenCalledWith("INTC", 60);
     });
 
     it("should generate RSI_OVERBOUGHT signal when RSI > 70", async () => {
@@ -415,7 +425,7 @@ describe("ScreenerService", () => {
         description: "RSI at 85.7 - overbought",
       });
       expect(signals[0]?.timestamp).toEqual(expect.any(String));
-      expect(alpaca.getBars).toHaveBeenCalledWith("NVDA", "1Day", 60);
+      expect(alpaca.getBars).toHaveBeenCalledWith("NVDA", 60);
     });
 
     it("should include timestamp and description in signals", async () => {

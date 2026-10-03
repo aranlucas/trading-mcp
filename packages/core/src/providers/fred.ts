@@ -1,12 +1,15 @@
 // FRED (Federal Reserve Economic Data) provider - FREE, no API key needed for basic
 
 import {
+  type FredSeries,
+  type FredRelease,
   FredObservationsResponseSchema,
   FredSeriesResponseSchema,
   FredReleasesResponseSchema,
 } from "../schemas/index.js";
 
 const FRED_BASE = "https://api.stlouisfed.org/fred";
+
 const apiKey = process.env.FRED_API_KEY || "";
 
 export interface EconomicSeries {
@@ -45,12 +48,14 @@ export const fred = {
   // Get series observations
   async getSeries(seriesId: string, limit = 10): Promise<{ date: string; value: number }[]> {
     if (!apiKey) return [];
+
     try {
       const url = `${FRED_BASE}/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=${limit}`;
       const response = await fetch(url);
       const raw = await response.json();
 
       const result = FredObservationsResponseSchema.safeParse(raw);
+
       if (!result.success) return [];
 
       return (result.data.observations ?? []).map((o) => ({
@@ -63,18 +68,21 @@ export const fred = {
   },
 
   // Get series info
-  async getSeriesInfo(seriesId: string): Promise<unknown> {
+  async getSeriesInfo(seriesId: string): Promise<FredSeries | null> {
     if (!apiKey) return null;
+
     try {
       const url = `${FRED_BASE}/series?series_id=${seriesId}&api_key=${apiKey}&file_type=json`;
       const response = await fetch(url);
       const raw = await response.json();
 
       const result = FredSeriesResponseSchema.safeParse(raw);
+
       if (!result.success) return null;
 
       const series = result.data.seriess;
-      return Array.isArray(series) && series.length > 0 ? series[0] : null;
+
+      return series?.[0] ?? null;
     } catch {
       return null;
     }
@@ -83,6 +91,7 @@ export const fred = {
   // Get latest value for a series
   async getLatest(seriesId: string): Promise<EconomicSeries | null> {
     if (!apiKey) return null;
+
     try {
       const [obs, info] = await Promise.all([
         this.getSeries(seriesId, 1),
@@ -91,14 +100,12 @@ export const fred = {
 
       if (!obs[0] || !info) return null;
 
-      // Info is unknown, need to safely access properties
-      const infoObj = info as Record<string, unknown>;
       return {
         id: seriesId,
-        title: typeof infoObj.title === "string" ? infoObj.title : seriesId,
+        title: info.title ?? seriesId,
         value: obs[0].value,
         date: obs[0].date,
-        units: typeof infoObj.units === "string" ? infoObj.units : "",
+        units: info.units ?? "",
       };
     } catch {
       return null;
@@ -108,27 +115,33 @@ export const fred = {
   // Get macro snapshot (multiple indicators at once)
   async getMacroSnapshot(): Promise<Map<string, EconomicSeries>> {
     const results = new Map<string, EconomicSeries>();
+
     if (!apiKey) return results;
 
-    const keys = Object.keys(INDICATORS) as (keyof typeof INDICATORS)[];
-    const promises = keys.map(async (key) => {
-      const data = await this.getLatest(INDICATORS[key]);
+    const entries = Object.entries(INDICATORS);
+
+    const promises = entries.map(async ([key, seriesId]) => {
+      const data = await this.getLatest(seriesId);
+
       if (data) results.set(key, data);
     });
 
     await Promise.allSettled(promises);
+
     return results;
   },
 
   // Search for series
-  async search(query: string, limit = 20): Promise<unknown[]> {
+  async search(query: string, limit = 20): Promise<FredSeries[]> {
     if (!apiKey) return [];
+
     try {
       const url = `${FRED_BASE}/series/search?search_text=${encodeURIComponent(query)}&api_key=${apiKey}&file_type=json&limit=${limit}`;
       const response = await fetch(url);
       const raw = await response.json();
 
       const result = FredSeriesResponseSchema.safeParse(raw);
+
       return result.success ? (result.data.seriess ?? []) : [];
     } catch {
       return [];
@@ -136,14 +149,16 @@ export const fred = {
   },
 
   // Get releases (economic calendar)
-  async getReleases(limit = 20): Promise<unknown[]> {
+  async getReleases(limit = 20): Promise<FredRelease[]> {
     if (!apiKey) return [];
+
     try {
       const url = `${FRED_BASE}/releases?api_key=${apiKey}&file_type=json&limit=${limit}`;
       const response = await fetch(url);
       const raw = await response.json();
 
       const result = FredReleasesResponseSchema.safeParse(raw);
+
       return result.success ? (result.data.releases ?? []) : [];
     } catch {
       return [];

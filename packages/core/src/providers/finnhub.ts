@@ -1,6 +1,22 @@
 import { z } from "zod";
 import type { Quote, NewsItem, Signal } from "../types/index.js";
 import {
+  FinnhubCompanyProfileSchema,
+  type FinnhubCompanyProfile,
+  FinnhubNewsSentimentSchema,
+  type FinnhubNewsSentiment,
+  FinnhubRecommendationSchema,
+  type FinnhubRecommendation,
+  FinnhubPriceTargetSchema,
+  type FinnhubPriceTarget,
+  FinnhubBasicFinancialsSchema,
+  type FinnhubBasicFinancials,
+  FinnhubSupportResistanceSchema,
+  type FinnhubSupportResistance,
+  FinnhubSocialSentimentSchema,
+  type FinnhubSocialSentiment,
+  type FinnhubEarning,
+  type FinnhubInsiderTransaction,
   FinnhubQuoteSchema,
   FinnhubNewsArticleSchema,
   FinnhubPatternResponseSchema,
@@ -14,13 +30,22 @@ const apiKey = process.env.FINNHUB_API_KEY || "";
 // Configure clientb
 const client = new finnhub.DefaultApi(apiKey);
 
-// Promisify callback-based API
-function promisify<T>(fn: (callback: (err: Error | null, data?: T) => void) => void): Promise<T> {
+// Finnhub has no TypeScript response contract. Validate at the callback boundary.
+function promisify<T>(
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Untrusted SDK callback data is parsed by the supplied endpoint schema before resolution.
+  fn: (callback: (err: Error | null, data?: unknown) => void) => void,
+  schema: z.ZodType<T>,
+): Promise<T> {
   return new Promise((resolve, reject) => {
     fn((err, data) => {
       if (err) reject(err);
       else if (data === undefined) reject(new Error("Finnhub callback returned no data"));
-      else resolve(data);
+      else {
+        const parsed = schema.safeParse(data);
+
+        if (parsed.success) resolve(parsed.data);
+        else reject(parsed.error);
+      }
     });
   });
 }
@@ -35,9 +60,11 @@ export const finnhubProvider = {
   // Get quote
   async getQuote(symbol: string): Promise<Quote | null> {
     if (!apiKey) return null;
+
     try {
-      const raw = await promisify<unknown>((cb) => client.quote(symbol, cb));
+      const raw = await promisify((cb) => client.quote(symbol, cb), FinnhubQuoteSchema);
       const data = FinnhubQuoteSchema.parse(raw);
+
       return {
         symbol,
         price: data.c ?? 0,
@@ -56,10 +83,14 @@ export const finnhubProvider = {
   },
 
   // Get company profile
-  async getCompanyProfile(symbol: string): Promise<unknown> {
+  async getCompanyProfile(symbol: string): Promise<FinnhubCompanyProfile | null> {
     if (!apiKey) return null;
+
     try {
-      return await promisify<unknown>((cb) => client.companyProfile2({ symbol }, cb));
+      return await promisify(
+        (cb) => client.companyProfile2({ symbol }, cb),
+        FinnhubCompanyProfileSchema,
+      );
     } catch {
       return null;
     }
@@ -68,9 +99,15 @@ export const finnhubProvider = {
   // Get company news
   async getNews(symbol: string, from: string, to: string): Promise<NewsItem[]> {
     if (!apiKey) return [];
+
     try {
-      const raw = await promisify<unknown[]>((cb) => client.companyNews(symbol, from, to, cb));
+      const raw = await promisify(
+        (cb) => client.companyNews(symbol, from, to, cb),
+        z.array(FinnhubNewsArticleSchema),
+      );
+
       const articles = z.array(FinnhubNewsArticleSchema).safeParse(raw);
+
       if (!articles.success) return [];
 
       return articles.data.map((n) => ({
@@ -91,9 +128,15 @@ export const finnhubProvider = {
   // Get market news (general)
   async getMarketNews(category = "general"): Promise<NewsItem[]> {
     if (!apiKey) return [];
+
     try {
-      const raw = await promisify<unknown[]>((cb) => client.marketNews(category, {}, cb));
+      const raw = await promisify(
+        (cb) => client.marketNews(category, {}, cb),
+        z.array(FinnhubNewsArticleSchema),
+      );
+
       const articles = z.array(FinnhubNewsArticleSchema).safeParse(raw);
+
       if (!articles.success) return [];
 
       return articles.data.map((n) => ({
@@ -110,20 +153,26 @@ export const finnhubProvider = {
   },
 
   // Get news sentiment
-  async getNewsSentiment(symbol: string): Promise<unknown> {
+  async getNewsSentiment(symbol: string): Promise<FinnhubNewsSentiment | null> {
     if (!apiKey) return null;
+
     try {
-      return await promisify<unknown>((cb) => client.newsSentiment(symbol, cb));
+      return await promisify((cb) => client.newsSentiment(symbol, cb), FinnhubNewsSentimentSchema);
     } catch {
       return null;
     }
   },
 
   // Get recommendation trends
-  async getRecommendations(symbol: string): Promise<unknown[]> {
+  async getRecommendations(symbol: string): Promise<FinnhubRecommendation[]> {
     if (!apiKey) return [];
+
     try {
-      const raw = await promisify<unknown[]>((cb) => client.recommendationTrends(symbol, cb));
+      const raw = await promisify(
+        (cb) => client.recommendationTrends(symbol, cb),
+        z.array(FinnhubRecommendationSchema),
+      );
+
       return raw ?? [];
     } catch {
       return [];
@@ -131,21 +180,28 @@ export const finnhubProvider = {
   },
 
   // Get price target
-  async getPriceTarget(symbol: string): Promise<unknown> {
+  async getPriceTarget(symbol: string): Promise<FinnhubPriceTarget | null> {
     if (!apiKey) return null;
+
     try {
-      return await promisify<unknown>((cb) => client.priceTarget(symbol, cb));
+      return await promisify((cb) => client.priceTarget(symbol, cb), FinnhubPriceTargetSchema);
     } catch {
       return null;
     }
   },
 
   // Get earnings calendar
-  async getEarningsCalendar(from: string, to: string): Promise<unknown[]> {
+  async getEarningsCalendar(from: string, to: string): Promise<FinnhubEarning[]> {
     if (!apiKey) return [];
+
     try {
-      const raw = await promisify<unknown>((cb) => client.earningsCalendar({ from, to }, cb));
+      const raw = await promisify(
+        (cb) => client.earningsCalendar({ from, to }, cb),
+        FinnhubEarningsResponseSchema,
+      );
+
       const result = FinnhubEarningsResponseSchema.safeParse(raw);
+
       return result.success ? (result.data.earningsCalendar ?? []) : [];
     } catch {
       return [];
@@ -153,11 +209,17 @@ export const finnhubProvider = {
   },
 
   // Get insider transactions
-  async getInsiderTransactions(symbol: string): Promise<unknown[]> {
+  async getInsiderTransactions(symbol: string): Promise<FinnhubInsiderTransaction[]> {
     if (!apiKey) return [];
+
     try {
-      const raw = await promisify<unknown>((cb) => client.insiderTransactions(symbol, {}, cb));
+      const raw = await promisify(
+        (cb) => client.insiderTransactions(symbol, {}, cb),
+        FinnhubInsiderResponseSchema,
+      );
+
       const result = FinnhubInsiderResponseSchema.safeParse(raw);
+
       return result.success ? (result.data.data ?? []) : [];
     } catch {
       return [];
@@ -167,8 +229,10 @@ export const finnhubProvider = {
   // Get peers (similar companies)
   async getPeers(symbol: string): Promise<string[]> {
     if (!apiKey) return [];
+
     try {
-      const raw = await promisify<string[]>((cb) => client.companyPeers(symbol, cb));
+      const raw = await promisify((cb) => client.companyPeers(symbol, cb), z.array(z.string()));
+
       return z.array(z.string()).parse(raw);
     } catch {
       return [];
@@ -176,10 +240,14 @@ export const finnhubProvider = {
   },
 
   // Get basic financials
-  async getBasicFinancials(symbol: string): Promise<unknown> {
+  async getBasicFinancials(symbol: string): Promise<FinnhubBasicFinancials | null> {
     if (!apiKey) return null;
+
     try {
-      return await promisify<unknown>((cb) => client.companyBasicFinancials(symbol, "all", cb));
+      return await promisify(
+        (cb) => client.companyBasicFinancials(symbol, "all", cb),
+        FinnhubBasicFinancialsSchema,
+      );
     } catch {
       return null;
     }
@@ -188,11 +256,15 @@ export const finnhubProvider = {
   // Get pattern recognition (technical)
   async getPatternRecognition(symbol: string, resolution: string): Promise<Signal[]> {
     if (!apiKey) return [];
+
     try {
-      const raw = await promisify<unknown>((cb) =>
-        client.patternRecognition(symbol, resolution, cb),
+      const raw = await promisify(
+        (cb) => client.patternRecognition(symbol, resolution, cb),
+        FinnhubPatternResponseSchema,
       );
+
       const result = FinnhubPatternResponseSchema.safeParse(raw);
+
       if (!result.success) return [];
 
       return (result.data.points ?? []).map((p) => ({
@@ -209,20 +281,31 @@ export const finnhubProvider = {
   },
 
   // Get support/resistance levels
-  async getSupportResistance(symbol: string, resolution: string): Promise<unknown> {
+  async getSupportResistance(
+    symbol: string,
+    resolution: string,
+  ): Promise<FinnhubSupportResistance | null> {
     if (!apiKey) return null;
+
     try {
-      return await promisify<unknown>((cb) => client.supportResistance(symbol, resolution, cb));
+      return await promisify(
+        (cb) => client.supportResistance(symbol, resolution, cb),
+        FinnhubSupportResistanceSchema,
+      );
     } catch {
       return null;
     }
   },
 
   // Get social sentiment
-  async getSocialSentiment(symbol: string): Promise<unknown> {
+  async getSocialSentiment(symbol: string): Promise<FinnhubSocialSentiment | null> {
     if (!apiKey) return null;
+
     try {
-      return await promisify<unknown>((cb) => client.socialSentiment(symbol, {}, cb));
+      return await promisify(
+        (cb) => client.socialSentiment(symbol, {}, cb),
+        FinnhubSocialSentimentSchema,
+      );
     } catch {
       return null;
     }

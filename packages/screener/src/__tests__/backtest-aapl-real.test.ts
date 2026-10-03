@@ -282,6 +282,7 @@ function calculateRsi(closes: number[], period = 14): number {
   if (closes.length < period + 1) return 50;
 
   const changes: number[] = [];
+
   for (let i = 1; i < closes.length; i++) {
     changes.push(closes[i]! - closes[i - 1]!);
   }
@@ -294,6 +295,7 @@ function calculateRsi(closes: number[], period = 14): number {
 
   if (avgLoss === 0) return 100;
   const rs = avgGain / avgLoss;
+
   return 100 - 100 / (1 + rs);
 }
 
@@ -301,6 +303,7 @@ function calculateRsi(closes: number[], period = 14): number {
 function sma(data: number[], period: number): number {
   if (data.length < period) return 0;
   const slice = data.slice(-period);
+
   return slice.reduce((a, b) => a + b, 0) / period;
 }
 
@@ -448,10 +451,12 @@ describe("AAPL Real Data Backtest", () => {
 
     const rsi25_5d = analyzeResults(backtestRsiOversold(AAPL_DATA, "AAPL", 25, 5), "RSI < 25 (5d)");
     const rsi30_5d = analyzeResults(backtestRsiOversold(AAPL_DATA, "AAPL", 30, 5), "RSI < 30 (5d)");
+
     const rsi30_10d = analyzeResults(
       backtestRsiOversold(AAPL_DATA, "AAPL", 30, 10),
       "RSI < 30 (10d)",
     );
+
     const rsi35_5d = analyzeResults(backtestRsiOversold(AAPL_DATA, "AAPL", 35, 5), "RSI < 35 (5d)");
 
     console.log("\n| Strategy       | Trades | Win Rate |  Avg PnL | Total Ret |");
@@ -475,10 +480,12 @@ describe("AAPL Real Data Backtest", () => {
       backtestRsiOverbought(AAPL_DATA, "AAPL", 70, 5),
       "RSI > 70 (5d)",
     );
+
     const rsi75_5d = analyzeResults(
       backtestRsiOverbought(AAPL_DATA, "AAPL", 75, 5),
       "RSI > 75 (5d)",
     );
+
     const rsi80_5d = analyzeResults(
       backtestRsiOverbought(AAPL_DATA, "AAPL", 80, 5),
       "RSI > 80 (5d)",
@@ -586,6 +593,7 @@ describe("AAPL Real Data Backtest", () => {
 
     if (profitable.length > 0) {
       console.log("\n✅ WORTHWHILE STRATEGIES:");
+
       for (const s of profitable.sort((a, b) => b.avgPnl - a.avgPnl)) {
         console.log(
           `   • ${s.name}: ${s.winRate.toFixed(0)}% win rate, +${s.avgPnl.toFixed(2)}% avg per trade`,
@@ -595,6 +603,7 @@ describe("AAPL Real Data Backtest", () => {
 
     if (unprofitable.length > 0) {
       console.log("\n❌ NOT WORTHWHILE:");
+
       for (const s of unprofitable) {
         console.log(`   • ${s.name}: ${s.avgPnl.toFixed(2)}% avg per trade`);
       }

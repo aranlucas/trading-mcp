@@ -1,3 +1,5 @@
+import type { FinnhubNewsSentiment, FinnhubSocialSentiment } from "../schemas/index.js";
+
 // Common types for trading MCP
 
 export interface Quote {
@@ -43,13 +45,14 @@ export interface Order {
   id: string;
   symbol: string;
   side: "buy" | "sell";
-  type: "market" | "limit" | "stop" | "stop_limit";
+  // Response values are broker-owned; request schemas constrain submitted orders.
+  type: string;
   quantity: number;
   filledQuantity: number;
   limitPrice?: number;
   stopPrice?: number;
-  status: "pending" | "open" | "filled" | "cancelled" | "rejected";
-  timeInForce: "day" | "gtc" | "ioc" | "fok";
+  status: string;
+  timeInForce: string;
   createdAt: string;
   filledAt?: string;
 }
@@ -116,7 +119,7 @@ export interface NewsItem {
   source: string;
   url: string;
   publishedAt: string;
-  sentiment?: "positive" | "negative" | "neutral";
+  sentiment?: string;
 }
 
 export interface MarketStatus {
@@ -140,8 +143,8 @@ export interface MacroSnapshot {
 
 // Sentiment types
 export interface SentimentData {
-  finnhub?: unknown;
-  social?: unknown;
+  finnhub?: FinnhubNewsSentiment | null;
+  social?: FinnhubSocialSentiment | null;
 }
 
 // Re-export schema-inferred types for provider-specific data

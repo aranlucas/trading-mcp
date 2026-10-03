@@ -4,19 +4,23 @@ export type HistoryIndicators = Omit<TechnicalIndicators, "symbol" | "timestamp"
 
 function sma(closes: readonly number[], period: number): number | null {
   if (closes.length < period) return null;
+
   return closes.slice(-period).reduce((sum, close) => sum + close, 0) / period;
 }
 
 function emaSeries(closes: readonly number[], period: number): number[] {
   const seed = sma(closes.slice(0, period), period);
+
   if (seed === null) return [];
   const values = [seed];
   let value = seed;
   const weight = 2 / (period + 1);
+
   for (const close of closes.slice(period)) {
     value = close * weight + value * (1 - weight);
     values.push(value);
   }
+
   return values;
 }
 
@@ -25,13 +29,17 @@ function rsi(closes: readonly number[]): number | null {
   if (closes.length < 15) return null;
   let gains = 0;
   let losses = 0;
+
   for (let i = closes.length - 14; i < closes.length; i++) {
     const change = closes[i]! - closes[i - 1]!;
     gains += Math.max(0, change);
     losses += Math.max(0, -change);
   }
+
   if (gains === 0 && losses === 0) return 50;
+
   if (losses === 0) return 100;
+
   return 100 - 100 / (1 + gains / losses);
 }
 
@@ -51,6 +59,7 @@ export function analyzeHistory(closes: readonly number[]): HistoryIndicators {
   const macdValue = macdValues.at(-1);
   const signal = emaSeries(macdValues, 9).at(-1);
   const middle = sma(closes, 20);
+
   const deviation =
     middle === null
       ? null

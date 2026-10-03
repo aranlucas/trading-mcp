@@ -10,6 +10,7 @@ describe("AlpacaOrderRequestSchema", () => {
       type: "limit",
       time_in_force: "day",
     });
+
     expect(parsed.success).toBe(false);
   });
 
@@ -21,6 +22,7 @@ describe("AlpacaOrderRequestSchema", () => {
       type: "stop",
       time_in_force: "day",
     });
+
     expect(parsed.success).toBe(false);
   });
 
@@ -34,6 +36,7 @@ describe("AlpacaOrderRequestSchema", () => {
       limit_price: 100,
       stop_price: 101,
     });
+
     expect(parsed.success).toBe(true);
   });
 });

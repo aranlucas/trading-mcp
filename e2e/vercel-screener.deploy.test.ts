@@ -1,46 +1,56 @@
+import { z } from "zod";
 import { beforeAll, describe, expect, test } from "vitest";
 
 function normalizeBaseUrl(raw: string): URL {
   const withProtocol =
     raw.startsWith("http://") || raw.startsWith("https://") ? raw : `https://${raw}`;
+
   const url = new URL(withProtocol);
   url.pathname = "";
   url.search = "";
   url.hash = "";
+
   return url;
 }
 
 async function fetchJson(
   url: URL,
   init?: RequestInit,
-): Promise<{ status: number; json: unknown; contentType: string | null }> {
+): Promise<{
+  status: number;
+  json: z.infer<ReturnType<typeof z.json>>;
+  contentType: string | null;
+}> {
   const res = await fetch(url, {
     ...init,
     headers: {
       accept: "application/json",
       "user-agent": "trading-mcp vercel integration tests",
-      ...(init?.headers ?? {}),
+      ...init?.headers,
     },
   });
 
   const contentType = res.headers.get("content-type");
-  const json = (await res.json()) as unknown;
+  const json = z.json().parse(await res.json());
+
   return { status: res.status, json, contentType };
 }
 
 async function waitForDeployment(baseUrl: URL, timeoutMs: number) {
   const deadline = Date.now() + timeoutMs;
   const apiUrl = new URL("/api", baseUrl);
-  let lastError: unknown = undefined;
+  let lastError = "No response";
 
   while (Date.now() < deadline) {
     try {
       const { status } = await fetchJson(apiUrl);
+
       if (status >= 200 && status < 300) return;
-      lastError = new Error(`Unexpected status: ${status}`);
+      lastError = `Unexpected status: ${status}`;
     } catch (err) {
-      lastError = err;
+      lastError = String(err);
     }
+
     await new Promise((r) => setTimeout(r, 1500));
   }
 
@@ -48,11 +58,15 @@ async function waitForDeployment(baseUrl: URL, timeoutMs: number) {
 }
 
 const rawBaseUrl = process.env.VERCEL_DEPLOY_URL ?? process.env.INTEGRATION_BASE_URL;
+
 const enabled = process.env.RUN_DEPLOYMENT_E2E === "1";
+
 if (enabled && !rawBaseUrl) {
   throw new Error("Deployment E2E requires VERCEL_DEPLOY_URL or INTEGRATION_BASE_URL");
 }
+
 const suite = enabled ? describe : describe.skip;
+
 // An inherited deployment URL alone must not enable requests or even URL parsing.
 const baseUrl = enabled && rawBaseUrl ? normalizeBaseUrl(rawBaseUrl) : null;
 
@@ -105,8 +119,10 @@ suite("Vercel Screener deployment", () => {
     const { status, json, contentType } = await fetchJson(new URL("/api/quotes/AAPL", baseUrl!));
 
     expect(contentType ?? "").toMatch(/application\/json/i);
+
     if (status === 200) {
       expect(json).toEqual(expect.objectContaining({ symbol: "AAPL" }));
+
       return;
     }
 

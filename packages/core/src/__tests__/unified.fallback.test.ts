@@ -31,6 +31,7 @@ describe("unified.getQuote fallback", () => {
       .spyOn(yahoo, "getQuoteNormalized")
       .mockImplementation(async (symbol: string) => {
         await sleep(500);
+
         return {
           symbol,
           price: 111,
@@ -47,6 +48,7 @@ describe("unified.getQuote fallback", () => {
 
     const finvizSpy = vi.spyOn(finviz, "getQuote").mockImplementation(async (symbol: string) => {
       await sleep(10);
+
       return {
         symbol,
         price: 222,
@@ -97,6 +99,7 @@ describe("unified.getQuote fallback", () => {
       })
       .mockImplementationOnce(async (symbol: string) => {
         await sleep(1);
+
         return {
           symbol,
           price: 333,
@@ -139,7 +142,9 @@ describe("unified.getQuote fallback", () => {
       throw new Error("expected unified.getQuote to throw");
     } catch (err) {
       expect(err).toBeInstanceOf(ProviderError);
-      const pe = err as ProviderError;
+
+      if (!(err instanceof ProviderError)) throw err;
+      const pe = err;
       expect(pe.provider).toBe("unified");
       expect(pe.operation).toBe("getQuote");
       expect(pe.cause).toBeInstanceOf(AggregateError);
@@ -166,6 +171,7 @@ describe("unified.getQuote fallback", () => {
     });
     vi.spyOn(finviz, "getQuote").mockImplementation(async () => {
       await new Promise<void>(() => {});
+
       return null;
     });
 
