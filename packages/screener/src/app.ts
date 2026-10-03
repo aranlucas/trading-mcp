@@ -9,10 +9,12 @@ export const app = new OpenAPIHono().basePath("/api");
 
 // Middleware
 app.use("*", secureHeaders());
+
 app.use("*", cors());
 
 app.onError((err, c) => {
   const pub = toPublicError(err);
+
   return c.json({ error: pub.message, code: pub.code }, pub.status);
 });
 
@@ -86,11 +88,13 @@ const healthRoute = createRoute({
 app.openapi(healthRoute, async (c) => {
   const health = await unified.healthCheck();
   const statusCode = health.status === "unhealthy" ? 503 : 200;
+
   return c.json(health, statusCode);
 });
 
 // Routes
 app.route("/screener", screenerRoutes);
+
 app.route("/quotes", quotesRoutes);
 
 app.doc("/openapi.json", {

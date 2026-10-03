@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getMarketDataClient } from "../services/market-data.js";
-import { yahoo } from "@trading/core";
+import type { YahooMarketDataSource } from "../services/market-data.js";
 
-vi.mock("@trading/core", () => ({
-  alpaca: {},
-  yahoo: { getHistory: vi.fn() },
-}));
+const yahoo = {
+  getHistory: vi.fn<YahooMarketDataSource["getHistory"]>(),
+  getQuotes: vi.fn<YahooMarketDataSource["getQuotes"]>(),
+  getQuote: vi.fn<YahooMarketDataSource["getQuote"]>(),
+};
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -23,8 +24,8 @@ describe("Yahoo market data history", () => {
         date: new Date(Date.UTC(2026, 0, 70 - i)),
         close: 70 - i,
       })),
-    } as unknown as Awaited<ReturnType<typeof yahoo.getHistory>>);
-    const { client } = getMarketDataClient();
+    });
+    const { client } = getMarketDataClient(yahoo);
     const bars = await client.getBars("AAPL", 50);
     expect(bars).toHaveLength(50);
     expect(bars[0]?.c).toBe(21);
@@ -37,7 +38,7 @@ describe("Yahoo market data history", () => {
   it("does not turn a request for no observations into a provider call", async () => {
     vi.stubEnv("SCREENER_PROVIDER", "yahoo");
     vi.mocked(yahoo.getHistory).mockClear();
-    expect(await getMarketDataClient().client.getBars("AAPL", 0)).toEqual([]);
+    expect(await getMarketDataClient(yahoo).client.getBars("AAPL", 0)).toEqual([]);
     expect(yahoo.getHistory).not.toHaveBeenCalled();
   });
 });

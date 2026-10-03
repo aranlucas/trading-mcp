@@ -4,7 +4,16 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { analyzeHistory, alpaca, type TechnicalIndicators, type Signal } from "@trading/core";
 
-export function registerTechnicalTools(server: McpServer) {
+export type TechnicalDependencies = {
+  alpaca: Pick<typeof alpaca, "getBars">;
+};
+
+export function registerTechnicalTools(
+  server: McpServer,
+  dependencies: TechnicalDependencies = { alpaca },
+) {
+  const { alpaca } = dependencies;
+
   // Get technical indicators
   server.registerTool(
     "get_technicals",
@@ -90,6 +99,7 @@ export function registerTechnicalTools(server: McpServer) {
         // RSI signals
         const analysis = analyzeHistory(closes);
         const rsiValue = analysis.rsi14;
+
         if (rsiValue !== null && rsiValue < 30) {
           signals.push({
             symbol: symbol.toUpperCase(),
@@ -113,6 +123,7 @@ export function registerTechnicalTools(server: McpServer) {
         // Moving average crossover
         const sma20Val = analysis.sma20;
         const sma50Val = analysis.sma50;
+
         if (
           sma20Val !== null &&
           sma50Val !== null &&
@@ -145,6 +156,7 @@ export function registerTechnicalTools(server: McpServer) {
 
         // Bollinger Band signals
         const bb = analysis.bollingerBands;
+
         if (bb !== null && currentPrice < bb.lower) {
           signals.push({
             symbol: symbol.toUpperCase(),
@@ -167,10 +179,12 @@ export function registerTechnicalTools(server: McpServer) {
 
         // MACD momentum signal
         const macdData = analysis.macd;
+
         const macdStrength =
           macdData === null
             ? 0
             : Math.min(1, Math.abs(macdData.histogram) / (Math.abs(macdData.value) || 1)) || 0.3;
+
         if (macdData !== null && macdData.histogram > 0 && macdData.value > 0) {
           signals.push({
             symbol: symbol.toUpperCase(),

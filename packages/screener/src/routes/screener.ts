@@ -3,6 +3,7 @@ import { ScreenerService } from "../services/screener.js";
 import { publicErrorResponses } from "../openapi/error-responses.js";
 
 export const screenerRoutes = new OpenAPIHono();
+
 const screener = new ScreenerService();
 
 // Validation schemas
@@ -65,6 +66,7 @@ screenerRoutes.openapi(scanRoute, async (c) => {
   const criteria = c.req.valid("json");
 
   const results = await screener.scan(criteria);
+
   return c.json({ results }, 200);
 });
 
@@ -94,6 +96,7 @@ screenerRoutes.openapi(moversRoute, async (c) => {
   const { limit } = c.req.valid("query");
 
   const movers = await screener.getMovers(direction, limit);
+
   return c.json({ movers }, 200);
 });
 
@@ -127,5 +130,6 @@ screenerRoutes.openapi(signalsRoute, async (c) => {
   const { symbols } = c.req.valid("json");
 
   const signals = await screener.getSignals(symbols);
+
   return c.json({ signals }, 200);
 });

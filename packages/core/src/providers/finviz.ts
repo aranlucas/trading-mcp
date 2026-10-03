@@ -14,19 +14,24 @@ const FINVIZ_BASE = "https://finviz.com";
 function parseValue(str: string | undefined): number {
   if (!str || str === "-") return 0;
   str = str.replace(/,/g, "").replace(/%/g, "");
-  const multipliers: Record<string, number> = {
-    K: 1e3,
-    M: 1e6,
-    B: 1e9,
-    T: 1e12,
-  };
+
+  const multipliers = new Map([
+    ["K", 1e3],
+    ["M", 1e6],
+    ["B", 1e9],
+    ["T", 1e12],
+  ]);
+
   const match = str.match(/^(-?[\d.]+)([KMBT])?$/i);
+
   if (match?.[1]) {
     const num = parseFloat(match[1]);
     const suffix = match[2];
-    const mult = suffix ? (multipliers[suffix.toUpperCase()] ?? 1) : 1;
+    const mult = suffix ? (multipliers.get(suffix.toUpperCase()) ?? 1) : 1;
+
     return num * mult;
   }
+
   return parseFloat(str) || 0;
 }
 
@@ -39,6 +44,7 @@ export const finviz = {
       const response = await fetch(`${FINVIZ_BASE}/quote.ashx?t=${symbol}`, {
         headers: { "User-Agent": "Mozilla/5.0" },
       });
+
       const html = await response.text();
 
       // Extract price and change from snapshot table
@@ -78,7 +84,9 @@ export const finviz = {
       if (validatedFilters.signal) {
         params.set("s", validatedFilters.signal);
       }
+
       const filterStr = this.buildFilterString(validatedFilters);
+
       if (filterStr) {
         params.set("f", filterStr);
       }
@@ -88,23 +96,28 @@ export const finviz = {
           "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
         },
       });
+
       const html = await response.text();
 
       // Extract screener results from table rows
       const results: FinvizScreenerResult[] = [];
+
       const rowMatches = [
         ...html.matchAll(/<tr[^>]*class="[^"]*-row[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi),
       ];
 
       for (const rowMatch of rowMatches) {
         const row = rowMatch[1];
+
         if (!row) continue;
 
         // Extract ticker from href or tab-link
         const tickerMatch =
           row.match(/href="quote\.ashx\?t=([A-Za-z0-9.-]+)/i) ??
           row.match(/class="tab-link">([A-Za-z0-9.-]+)</i);
+
         const ticker = tickerMatch?.[1];
+
         if (!ticker) continue;
 
         const symbol = ticker.toUpperCase();
@@ -147,6 +160,7 @@ export const finviz = {
       return results.slice(0, 50);
     } catch (e) {
       console.error("Finviz screen error:", e);
+
       return [];
     }
   },
@@ -156,19 +170,22 @@ export const finviz = {
     const parts: string[] = [];
 
     if (filters.marketCap) {
-      const caps: Record<string, string> = {
+      const caps = {
         small: "cap_smallover",
         mid: "cap_midover",
         large: "cap_largeover",
         mega: "cap_mega",
       };
+
       const capFilter = caps[filters.marketCap];
+
       if (capFilter) parts.push(capFilter);
     }
 
     // Don't include signal in filter string anymore (use 's' param instead)
 
     if (filters.change === "up") parts.push("ta_change_u");
+
     if (filters.change === "down") parts.push("ta_change_d");
 
     return parts.join(",");
@@ -177,12 +194,14 @@ export const finviz = {
   // Get top gainers
   async getGainers(limit = 20): Promise<FinvizScreenerResult[]> {
     const results = await this.screen({ signal: "ta_topgainers" });
+
     return results.slice(0, limit);
   },
 
   // Get top losers
   async getLosers(limit = 20): Promise<FinvizScreenerResult[]> {
     const results = await this.screen({ signal: "ta_toplosers" });
+
     return results.slice(0, limit);
   },
 
@@ -219,10 +238,12 @@ export const finviz = {
   // Get signals for a stock
   async getSignals(symbol: string): Promise<Signal[]> {
     const signals: Signal[] = [];
+
     try {
       const response = await fetch(`${FINVIZ_BASE}/quote.ashx?t=${symbol}`, {
         headers: { "User-Agent": "Mozilla/5.0" },
       });
+
       const html = await response.text();
 
       // Check for pattern signals in the page
@@ -236,6 +257,7 @@ export const finviz = {
           description: "RSI indicates oversold conditions",
         });
       }
+
       if (html.includes("Overbought")) {
         signals.push({
           symbol,
@@ -249,6 +271,7 @@ export const finviz = {
     } catch {
       // Silently fail
     }
+
     return signals;
   },
 };

@@ -20,7 +20,28 @@ interface ScreenerResult {
   source: string;
 }
 
-export function registerScreenerTools(server: McpServer) {
+export type ScreenerDependencies = {
+  polygon: Pick<typeof polygon, "getGainersLosers" | "isConfigured">;
+  yahoo: Pick<typeof yahoo, "getTrending" | "search">;
+  finviz: Pick<
+    typeof finviz,
+    | "getGainers"
+    | "getLosers"
+    | "getMostVolatile"
+    | "getNewHighs"
+    | "getNewLows"
+    | "getOverbought"
+    | "getOversold"
+    | "getUnusualVolume"
+  >;
+};
+
+export function registerScreenerTools(
+  server: McpServer,
+  dependencies: ScreenerDependencies = { yahoo, finviz, polygon },
+) {
+  const { yahoo, finviz, polygon } = dependencies;
+
   // Get top gainers
   server.registerTool(
     "get_gainers",
@@ -39,6 +60,7 @@ export function registerScreenerTools(server: McpServer) {
         // Try Polygon first (better data)
         if (polygon.isConfigured()) {
           const pgGainers = await polygon.getGainersLosers("gainers");
+
           if (pgGainers.length > 0) {
             results.push(
               ...pgGainers.slice(0, limit).map((t: PolygonTickerSnapshot) => ({
@@ -97,6 +119,7 @@ export function registerScreenerTools(server: McpServer) {
         // Try Polygon first
         if (polygon.isConfigured()) {
           const pgLosers = await polygon.getGainersLosers("losers");
+
           if (pgLosers.length > 0) {
             results.push(
               ...pgLosers.slice(0, limit).map((t: PolygonTickerSnapshot) => ({
@@ -151,6 +174,7 @@ export function registerScreenerTools(server: McpServer) {
     async ({ limit }) => {
       try {
         const results = await finviz.getOversold();
+
         return {
           content: [
             {
@@ -189,6 +213,7 @@ export function registerScreenerTools(server: McpServer) {
     async ({ limit }) => {
       try {
         const results = await finviz.getOverbought();
+
         return {
           content: [
             {
@@ -227,6 +252,7 @@ export function registerScreenerTools(server: McpServer) {
     async ({ limit }) => {
       try {
         const results = await finviz.getUnusualVolume();
+
         return {
           content: [
             {
@@ -265,6 +291,7 @@ export function registerScreenerTools(server: McpServer) {
     async ({ limit }) => {
       try {
         const results = await finviz.getNewHighs();
+
         return {
           content: [
             {
@@ -303,6 +330,7 @@ export function registerScreenerTools(server: McpServer) {
     async ({ limit }) => {
       try {
         const results = await finviz.getNewLows();
+
         return {
           content: [
             {
@@ -341,6 +369,7 @@ export function registerScreenerTools(server: McpServer) {
     async ({ limit }) => {
       try {
         const results = await finviz.getMostVolatile();
+
         return {
           content: [
             {
@@ -379,6 +408,7 @@ export function registerScreenerTools(server: McpServer) {
     async ({ limit }) => {
       try {
         const results = await yahoo.getTrending(limit);
+
         return {
           content: [
             {
@@ -417,6 +447,7 @@ export function registerScreenerTools(server: McpServer) {
     async ({ query }) => {
       try {
         const results = await yahoo.search(query);
+
         return {
           content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }],
         };

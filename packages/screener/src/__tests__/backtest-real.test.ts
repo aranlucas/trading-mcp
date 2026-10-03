@@ -53,30 +53,25 @@ async function fetchRealData(symbol: string, days: number): Promise<Bar[]> {
       return [];
     }
 
-    return result.quotes
-      .filter(
-        (q: { open?: number; high?: number; low?: number; close?: number; volume?: number }) =>
-          q.open && q.high && q.low && q.close && q.volume,
-      )
-      .map(
-        (q: {
-          date: Date;
-          open: number;
-          high: number;
-          low: number;
-          close: number;
-          volume: number;
-        }) => ({
-          t: new Date(q.date).toISOString().slice(0, 10),
-          o: q.open,
-          h: q.high,
-          l: q.low,
-          c: q.close,
-          v: q.volume,
-        }),
-      );
+    const bars: Bar[] = [];
+
+    for (const q of result.quotes) {
+      // Keep this opt-in harness's existing truthy-field selection semantics.
+      if (!q.open || !q.high || !q.low || !q.close || !q.volume) continue;
+      bars.push({
+        t: new Date(q.date).toISOString().slice(0, 10),
+        o: q.open,
+        h: q.high,
+        l: q.low,
+        c: q.close,
+        v: q.volume,
+      });
+    }
+
+    return bars;
   } catch (error) {
     console.error(`Failed to fetch data for ${symbol}:`, error);
+
     return [];
   }
 }
@@ -86,6 +81,7 @@ function calculateRsi(closes: number[], period = 14): number {
   if (closes.length < period + 1) return 50;
 
   const changes: number[] = [];
+
   for (let i = 1; i < closes.length; i++) {
     changes.push(closes[i]! - closes[i - 1]!);
   }
@@ -98,6 +94,7 @@ function calculateRsi(closes: number[], period = 14): number {
 
   if (avgLoss === 0) return 100;
   const rs = avgGain / avgLoss;
+
   return 100 - 100 / (1 + rs);
 }
 
@@ -105,6 +102,7 @@ function calculateRsi(closes: number[], period = 14): number {
 function sma(data: number[], period: number): number {
   if (data.length < period) return 0;
   const slice = data.slice(-period);
+
   return slice.reduce((a, b) => a + b, 0) / period;
 }
 
@@ -276,8 +274,10 @@ class RealDataBacktester {
 
     for (const trade of trades) {
       cumulative += trade.pnlPercent;
+
       if (cumulative > peak) peak = cumulative;
       const drawdown = peak - cumulative;
+
       if (drawdown > maxDrawdown) maxDrawdown = drawdown;
     }
 
@@ -384,6 +384,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
 
     for (const symbol of STOCK_UNIVERSE) {
       const bars = await fetchRealData(symbol, 730); // ~2 years
+
       if (bars.length > 0) {
         dataCache.set(symbol, bars);
         console.log(
@@ -399,11 +400,14 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
 
   it("should fetch real historical data", async () => {
     await ensureDataLoaded();
+
     // Skip if no network access (e.g., CI environment)
     if (dataCache.size === 0) {
       console.log("⚠️  No network access - skipping real data tests");
+
       return;
     }
+
     expect(dataCache.size).toBeGreaterThan(0);
   }, 60000);
 
@@ -514,6 +518,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
             new RealDataBacktester(symbol, bars).backtestRsiOversold(25, 5),
           );
+
           return aggregateResults(results);
         },
       },
@@ -523,6 +528,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
             new RealDataBacktester(symbol, bars).backtestRsiOversold(30, 5),
           );
+
           return aggregateResults(results);
         },
       },
@@ -532,6 +538,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
             new RealDataBacktester(symbol, bars).backtestRsiOversold(30, 10),
           );
+
           return aggregateResults(results);
         },
       },
@@ -541,6 +548,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
             new RealDataBacktester(symbol, bars).backtestRsiOversold(35, 5),
           );
+
           return aggregateResults(results);
         },
       },
@@ -550,6 +558,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
             new RealDataBacktester(symbol, bars).backtestRsiOverbought(70, 5),
           );
+
           return aggregateResults(results);
         },
       },
@@ -559,6 +568,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
             new RealDataBacktester(symbol, bars).backtestRsiOverbought(75, 5),
           );
+
           return aggregateResults(results);
         },
       },
@@ -568,6 +578,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
             new RealDataBacktester(symbol, bars).backtestMaBullishAlignment(5),
           );
+
           return aggregateResults(results);
         },
       },
@@ -577,6 +588,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
           const results = Array.from(dataCache).map(([symbol, bars]) =>
             new RealDataBacktester(symbol, bars).backtestMaBullishAlignment(10),
           );
+
           return aggregateResults(results);
         },
       },
@@ -625,12 +637,15 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
       const bestByWinRate = validResults.reduce((a, b) =>
         a.result.winRate > b.result.winRate ? a : b,
       );
+
       const bestByPnl = validResults.reduce((a, b) =>
         a.result.avgPnlPercent > b.result.avgPnlPercent ? a : b,
       );
+
       const bestByTotal = validResults.reduce((a, b) =>
         a.result.totalReturn > b.result.totalReturn ? a : b,
       );
+
       const bestBySharpe = validResults.reduce((a, b) =>
         a.result.avgSharpe > b.result.avgSharpe ? a : b,
       );
@@ -659,6 +674,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
 
       if (profitableStrategies.length > 0) {
         console.log("✅ WORTHWHILE strategies found:\n");
+
         for (const s of profitableStrategies) {
           console.log(
             `   • ${s.name}: ${s.result.winRate.toFixed(1)}% win rate, ${s.result.avgPnlPercent.toFixed(2)}% avg gain`,
@@ -673,6 +689,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
 
       if (unprofitableStrategies.length > 0) {
         console.log("\n❌ NOT WORTHWHILE (negative expected return):\n");
+
         for (const s of unprofitableStrategies) {
           console.log(`   • ${s.name}: ${s.result.avgPnlPercent.toFixed(2)}% avg loss`);
         }

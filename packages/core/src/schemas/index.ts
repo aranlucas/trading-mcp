@@ -139,8 +139,44 @@ export const PolygonSnapshotResponseSchema = z.object({
   ticker: PolygonTickerSnapshotSchema.optional(),
 });
 
+// Provider extensions are JSON, retained for forward compatibility rather than stripped.
+export const PolygonTickerDetailsSchema = z
+  .object({
+    ticker: z.string().nullish(),
+    name: z.string().nullish(),
+    market: z.string().nullish(),
+    locale: z.string().nullish(),
+    active: z.boolean().nullish(),
+    market_cap: z.number().nullish(),
+  })
+  .catchall(z.json());
+
+export const PolygonSplitSchema = z
+  .object({
+    ticker: z.string().nullish(),
+    execution_date: z.string().nullish(),
+    split_from: z.number().nullish(),
+    split_to: z.number().nullish(),
+  })
+  .catchall(z.json());
+
+export const PolygonDividendSchema = z
+  .object({
+    ticker: z.string().nullish(),
+    ex_dividend_date: z.string().nullish(),
+    cash_amount: z.number().nullish(),
+    currency: z.string().nullish(),
+  })
+  .catchall(z.json());
+
+export const PolygonRelatedCompanySchema = z
+  .object({
+    ticker: z.string().nullish(),
+  })
+  .catchall(z.json());
+
 export const PolygonTickerDetailsResponseSchema = z.object({
-  results: z.unknown().optional(),
+  results: PolygonTickerDetailsSchema.optional(),
 });
 
 export const PolygonMarketStatusResponseSchema = z.object({
@@ -149,15 +185,15 @@ export const PolygonMarketStatusResponseSchema = z.object({
 });
 
 export const PolygonSplitsResponseSchema = z.object({
-  results: z.array(z.unknown()).optional(),
+  results: z.array(PolygonSplitSchema).optional(),
 });
 
 export const PolygonDividendsResponseSchema = z.object({
-  results: z.array(z.unknown()).optional(),
+  results: z.array(PolygonDividendSchema).optional(),
 });
 
 export const PolygonRelatedResponseSchema = z.object({
-  results: z.array(z.unknown()).optional(),
+  results: z.array(PolygonRelatedCompanySchema).optional(),
 });
 
 // ============================================
@@ -192,12 +228,135 @@ export const FinnhubPatternResponseSchema = z.object({
   points: z.array(FinnhubPatternSchema).optional(),
 });
 
+// Contract: https://github.com/Finnhub-Stock-API/finnhub-go/blob/master/api/openapi.yaml
+// Known optional fields permit null for unavailable observations; extension JSON is retained.
+export const FinnhubCompanyProfileSchema = z
+  .object({
+    ticker: z.string().nullish(),
+    name: z.string().nullish(),
+    country: z.string().nullish(),
+    currency: z.string().nullish(),
+    exchange: z.string().nullish(),
+    ipo: z.string().nullish(),
+    marketCapitalization: z.number().nullish(),
+    shareOutstanding: z.number().nullish(),
+  })
+  .catchall(z.json());
+
+export const FinnhubNewsSentimentSchema = z
+  .object({
+    symbol: z.string().nullish(),
+    companyNewsScore: z.number().nullish(),
+    sectorAverageBullishPercent: z.number().nullish(),
+    sectorAverageNewsScore: z.number().nullish(),
+    sentiment: z
+      .object({ bearishPercent: z.number().nullish(), bullishPercent: z.number().nullish() })
+      .catchall(z.json())
+      .nullish(),
+    buzz: z
+      .object({
+        articlesInLastWeek: z.number().nullish(),
+        buzz: z.number().nullish(),
+        weeklyAverage: z.number().nullish(),
+      })
+      .catchall(z.json())
+      .nullish(),
+  })
+  .catchall(z.json());
+
+export const FinnhubRecommendationSchema = z
+  .object({
+    symbol: z.string().nullish(),
+    period: z.string().nullish(),
+    buy: z.number().nullish(),
+    hold: z.number().nullish(),
+    sell: z.number().nullish(),
+    strongBuy: z.number().nullish(),
+    strongSell: z.number().nullish(),
+  })
+  .catchall(z.json());
+
+export const FinnhubPriceTargetSchema = z
+  .object({
+    symbol: z.string().nullish(),
+    lastUpdated: z.string().nullish(),
+    targetHigh: z.number().nullish(),
+    targetLow: z.number().nullish(),
+    targetMean: z.number().nullish(),
+    targetMedian: z.number().nullish(),
+  })
+  .catchall(z.json());
+
+export const FinnhubEarningSchema = z
+  .object({
+    symbol: z.string().nullish(),
+    date: z.string().nullish(),
+    epsActual: z.number().nullish(),
+    epsEstimate: z.number().nullish(),
+    revenueActual: z.number().nullish(),
+    revenueEstimate: z.number().nullish(),
+    hour: z.string().nullish(),
+    quarter: z.number().nullish(),
+    year: z.number().nullish(),
+  })
+  .catchall(z.json());
+
+export const FinnhubInsiderTransactionSchema = z
+  .object({
+    name: z.string().nullish(),
+    symbol: z.string().nullish(),
+    share: z.number().nullish(),
+    change: z.number().nullish(),
+    transactionPrice: z.number().nullish(),
+    transactionDate: z.string().nullish(),
+    filingDate: z.string().nullish(),
+    transactionCode: z.string().nullish(),
+  })
+  .catchall(z.json());
+
+export const FinnhubBasicFinancialsSchema = z
+  .object({
+    symbol: z.string().nullish(),
+    metricType: z.string().nullish(),
+    // Finnhub's OpenAPI defines these metric dictionaries as open objects.
+    metric: z.record(z.string(), z.json()).nullish(),
+    series: z.record(z.string(), z.json()).nullish(),
+  })
+  .catchall(z.json());
+
+export const FinnhubSupportResistanceSchema = z
+  .object({
+    levels: z.array(z.number()).nullish(),
+  })
+  .catchall(z.json());
+
+const FinnhubSocialPointSchema = z
+  .object({
+    atTime: z.string().nullish(),
+    mention: z.number().nullish(),
+    positiveMention: z.number().nullish(),
+    negativeMention: z.number().nullish(),
+    score: z.number().nullish(),
+    positiveScore: z.number().nullish(),
+    negativeScore: z.number().nullish(),
+  })
+  .catchall(z.json());
+
+export const FinnhubSocialSentimentSchema = z
+  .object({
+    symbol: z.string().nullish(),
+    data: z.array(FinnhubSocialPointSchema).nullish(),
+    reddit: z.array(FinnhubSocialPointSchema).nullish(),
+    twitter: z.array(FinnhubSocialPointSchema).nullish(),
+  })
+  .catchall(z.json());
+
 export const FinnhubEarningsResponseSchema = z.object({
-  earningsCalendar: z.array(z.unknown()).optional(),
+  earningsCalendar: z.array(FinnhubEarningSchema).optional(),
 });
 
 export const FinnhubInsiderResponseSchema = z.object({
-  data: z.array(z.unknown()).optional(),
+  data: z.array(FinnhubInsiderTransactionSchema).optional(),
 });
 
 // ============================================
@@ -213,12 +372,35 @@ export const FredObservationsResponseSchema = z.object({
   observations: z.array(FredObservationSchema).optional(),
 });
 
+// https://fred.stlouisfed.org/docs/api/fred/series.html
+export const FredSeriesSchema = z
+  .object({
+    id: z.string(),
+    title: z.string().nullish(),
+    units: z.string().nullish(),
+    frequency: z.string().nullish(),
+    observation_start: z.string().nullish(),
+    observation_end: z.string().nullish(),
+  })
+  .catchall(z.json());
+
+// https://fred.stlouisfed.org/docs/api/fred/releases.html
+export const FredReleaseSchema = z
+  .object({
+    id: z.number(),
+    name: z.string().nullish(),
+    press_release: z.boolean().nullish(),
+    link: z.string().nullish(),
+    notes: z.string().nullish(),
+  })
+  .catchall(z.json());
+
 export const FredSeriesResponseSchema = z.object({
-  seriess: z.array(z.unknown()).optional(),
+  seriess: z.array(FredSeriesSchema).optional(),
 });
 
 export const FredReleasesResponseSchema = z.object({
-  releases: z.array(z.unknown()).optional(),
+  releases: z.array(FredReleaseSchema).optional(),
 });
 
 // ============================================
@@ -301,19 +483,65 @@ export const BarSchema = z.object({
 // ============================================
 
 export type YahooQuote = z.infer<typeof YahooQuoteSchema>;
+
 export type YahooChartQuote = z.infer<typeof YahooChartQuoteSchema>;
+
 export type YahooSearchResult = z.infer<typeof YahooSearchResultSchema>;
+
 export type YahooOptionContract = z.infer<typeof YahooOptionContractSchema>;
+
 export type PolygonBar = z.infer<typeof PolygonBarSchema>;
+
 export type PolygonNewsArticle = z.infer<typeof PolygonNewsArticleSchema>;
+
 export type PolygonTickerSnapshot = z.infer<typeof PolygonTickerSnapshotSchema>;
+
 export type FinnhubQuote = z.infer<typeof FinnhubQuoteSchema>;
+
 export type FinnhubNewsArticle = z.infer<typeof FinnhubNewsArticleSchema>;
+
 export type FinnhubPattern = z.infer<typeof FinnhubPatternSchema>;
+
 export type FredObservation = z.infer<typeof FredObservationSchema>;
+
 export type FinvizScreenerResult = z.infer<typeof FinvizScreenerResultSchema>;
+
 export type FinvizScreenFilters = z.infer<typeof FinvizScreenFiltersSchema>;
+
 export type AlpacaPosition = z.infer<typeof AlpacaPositionSchema>;
+
 export type AlpacaOrder = z.infer<typeof AlpacaOrderSchema>;
+
 export type AlpacaBar = z.infer<typeof AlpacaBarSchema>;
+
 export type Bar = z.infer<typeof BarSchema>;
+
+export type PolygonTickerDetails = z.infer<typeof PolygonTickerDetailsSchema>;
+
+export type PolygonSplit = z.infer<typeof PolygonSplitSchema>;
+
+export type PolygonDividend = z.infer<typeof PolygonDividendSchema>;
+
+export type PolygonRelatedCompany = z.infer<typeof PolygonRelatedCompanySchema>;
+
+export type FinnhubCompanyProfile = z.infer<typeof FinnhubCompanyProfileSchema>;
+
+export type FinnhubNewsSentiment = z.infer<typeof FinnhubNewsSentimentSchema>;
+
+export type FinnhubRecommendation = z.infer<typeof FinnhubRecommendationSchema>;
+
+export type FinnhubPriceTarget = z.infer<typeof FinnhubPriceTargetSchema>;
+
+export type FinnhubEarning = z.infer<typeof FinnhubEarningSchema>;
+
+export type FinnhubInsiderTransaction = z.infer<typeof FinnhubInsiderTransactionSchema>;
+
+export type FinnhubBasicFinancials = z.infer<typeof FinnhubBasicFinancialsSchema>;
+
+export type FinnhubSupportResistance = z.infer<typeof FinnhubSupportResistanceSchema>;
+
+export type FinnhubSocialSentiment = z.infer<typeof FinnhubSocialSentimentSchema>;
+
+export type FredSeries = z.infer<typeof FredSeriesSchema>;
+
+export type FredRelease = z.infer<typeof FredReleaseSchema>;

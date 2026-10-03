@@ -1,5 +1,5 @@
 import { analyzeHistory, type Signal } from "@trading/core";
-import { getMarketDataClient } from "./market-data.js";
+import { getMarketDataClient, type MarketDataClient } from "./market-data.js";
 
 export interface ScanCriteria {
   minPrice?: number;
@@ -24,7 +24,7 @@ export interface ScanResult {
 }
 
 export class ScreenerService {
-  private marketData = getMarketDataClient().client;
+  constructor(private readonly marketData: MarketDataClient = getMarketDataClient().client) {}
 
   // Default universe if no symbols provided
   private defaultUniverse = [
@@ -60,7 +60,9 @@ export class ScreenerService {
     for (const [symbol, quote] of quotes) {
       // Apply price filters
       if (criteria.minPrice !== undefined && quote.price < criteria.minPrice) continue;
+
       if (criteria.maxPrice !== undefined && quote.price > criteria.maxPrice) continue;
+
       if (criteria.minVolume !== undefined && quote.volume < criteria.minVolume) continue;
 
       let rsi: number | undefined;
@@ -86,9 +88,12 @@ export class ScreenerService {
           // Every requested predicate must be available and true.
           if (criteria.minRsi !== undefined && (rsi === undefined || rsi < criteria.minRsi))
             continue;
+
           if (criteria.maxRsi !== undefined && (rsi === undefined || rsi > criteria.maxRsi))
             continue;
+
           if (criteria.aboveSma20 && aboveSma20 !== true) continue;
+
           if (criteria.aboveSma50 && aboveSma50 !== true) continue;
         } catch {
           // Skip symbol if we can't get technicals
@@ -120,12 +125,14 @@ export class ScreenerService {
       // `open` is frequently stale/out-of-session (e.g., pre-market at 06:00 UTC),
       // which makes "gainers/losers" look incorrect.
       const prevClose = quote.close > 0 ? quote.close : quote.price;
+
       if (prevClose <= 0) continue;
 
       const change = quote.price - prevClose;
       const changePercent = (change / prevClose) * 100;
 
       if (direction === "gainers" && changePercent <= 0) continue;
+
       if (direction === "losers" && changePercent >= 0) continue;
 
       results.push({ symbol, price: quote.price, volume: quote.volume, change, changePercent });
@@ -136,6 +143,7 @@ export class ScreenerService {
       if (direction === "gainers") {
         return b.changePercent - a.changePercent;
       }
+
       return a.changePercent - b.changePercent;
     });
 

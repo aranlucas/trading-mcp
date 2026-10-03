@@ -1,5 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
+import type { alpaca } from "@trading/core";
+import { connectTestTools, ToolTextSchema } from "./mcp-test-client.js";
 
 function barsFromCloses(closes: number[]) {
   return closes.map((c, i) => ({
@@ -12,40 +14,24 @@ function barsFromCloses(closes: number[]) {
   }));
 }
 
-const alpacaMock = vi.hoisted(() => ({
-  getBars: vi.fn(),
-}));
-
-vi.mock("@trading/core", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@trading/core")>()),
-  alpaca: alpacaMock,
-}));
+const alpacaMock = { getBars: vi.fn<typeof alpaca.getBars>() };
 
 import { registerTechnicalTools } from "../tools/technicals.js";
 
 describe("Technical MCP tools", () => {
-  let registeredTools: Map<
-    string,
-    { handler: (args: Record<string, unknown>) => Promise<unknown> }
-  >;
+  let harness: Awaited<ReturnType<typeof connectTestTools>>;
+  let registeredTools: Awaited<ReturnType<typeof connectTestTools>>["tools"];
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
-    registeredTools = new Map();
+    harness = await connectTestTools((server) =>
+      registerTechnicalTools(server, { alpaca: alpacaMock }),
+    );
+    registeredTools = harness.tools;
+  });
 
-    const server = {
-      registerTool: vi.fn(
-        (
-          name: string,
-          _config: unknown,
-          handler: (args: Record<string, unknown>) => Promise<unknown>,
-        ) => {
-          registeredTools.set(name, { handler });
-        },
-      ),
-    } as unknown as McpServer;
-
-    registerTechnicalTools(server);
+  afterEach(async () => {
+    await harness.close();
   });
 
   it("get_technicals returns indicator payload for valid history", async () => {
@@ -56,16 +42,15 @@ describe("Technical MCP tools", () => {
     const tool = registeredTools.get("get_technicals");
     const result = await tool!.handler({ symbol: "aapl" });
 
-    const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
-    const indicators = JSON.parse(content) as {
-      symbol: string;
-      sma200: number | null;
-      rsi14: number;
-    };
+    const content = ToolTextSchema.parse(result);
+
+    const indicators = z
+      .object({ symbol: z.string(), sma200: z.number().nullable(), rsi14: z.number() })
+      .parse(JSON.parse(content));
 
     expect(indicators.symbol).toBe("AAPL");
     expect(indicators.sma200).toBeNull();
-    expect(typeof indicators.rsi14).toBe("number");
+    expect(indicators.rsi14).toEqual(expect.any(Number));
   });
 
   it("get_signals emits RSI oversold + MA bearish for downtrend", async () => {
@@ -76,8 +61,11 @@ describe("Technical MCP tools", () => {
     const tool = registeredTools.get("get_signals");
     const result = await tool!.handler({ symbol: "aapl" });
 
-    const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
-    const signals = JSON.parse(content) as Array<{ type: string; symbol: string }>;
+    const content = ToolTextSchema.parse(result);
+
+    const signals = z
+      .array(z.object({ type: z.string(), symbol: z.string() }))
+      .parse(JSON.parse(content));
 
     expect(signals.some((s) => s.symbol === "AAPL")).toBe(true);
     expect(signals.some((s) => s.type === "RSI_OVERSOLD")).toBe(true);
@@ -92,8 +80,8 @@ describe("Technical MCP tools", () => {
     const tool = registeredTools.get("get_signals");
     const result = await tool!.handler({ symbol: "aapl" });
 
-    const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
-    const signals = JSON.parse(content) as Array<{ type: string }>;
+    const content = ToolTextSchema.parse(result);
+    const signals = z.array(z.object({ type: z.string() })).parse(JSON.parse(content));
 
     expect(signals.some((s) => s.type === "RSI_OVERBOUGHT")).toBe(true);
     expect(signals.some((s) => s.type === "MA_BULLISH")).toBe(true);
@@ -108,7 +96,7 @@ describe("Technical MCP tools", () => {
     const result = await tool!.handler({ symbol: "aapl" });
 
     expect(result).toHaveProperty("isError", true);
-    const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
+    const content = ToolTextSchema.parse(result);
     expect(content).toContain("Not enough data for signals");
   });
 
@@ -119,9 +107,10 @@ describe("Technical MCP tools", () => {
         barsFromCloses(Array.from({ length }, (_, i) => 100 + i)),
       );
       const result = await registeredTools.get("get_signals")!.handler({ symbol: "AAPL" });
-      const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
-      const signals = JSON.parse(content) as Array<{ type: string }>;
+      const content = ToolTextSchema.parse(result);
+      const signals = z.array(z.object({ type: z.string() })).parse(JSON.parse(content));
       expect(signals.some((s) => s.type.startsWith("MA_"))).toBe(false);
+
       if (length < 34) expect(signals.some((s) => s.type.startsWith("MACD_"))).toBe(false);
     },
   );
@@ -129,7 +118,7 @@ describe("Technical MCP tools", () => {
   it("does not call flat history overbought", async () => {
     alpacaMock.getBars.mockResolvedValueOnce(barsFromCloses(Array(50).fill(100)));
     const result = await registeredTools.get("get_signals")!.handler({ symbol: "AAPL" });
-    const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
+    const content = ToolTextSchema.parse(result);
     expect(JSON.parse(content)).toEqual([]);
   });
 
@@ -138,7 +127,7 @@ describe("Technical MCP tools", () => {
       barsFromCloses(Array.from({ length: 26 }, (_, i) => 100 + i)),
     );
     const result = await registeredTools.get("get_technicals")!.handler({ symbol: "AAPL" });
-    const content = (result as { content: Array<{ text: string }> }).content[0]!.text;
+    const content = ToolTextSchema.parse(result);
     expect(JSON.parse(content)).toMatchObject({ sma50: null, sma200: null, macd: null });
   });
 });

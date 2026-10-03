@@ -1,6 +1,7 @@
 // Polygon.io provider - Free tier: 5 API calls/min
 // Using direct fetch for better type control
 
+import { z } from "zod";
 import type { Quote, NewsItem } from "../types/index.js";
 import {
   PolygonAggregatesResponseSchema,
@@ -11,20 +12,28 @@ import {
   PolygonSplitsResponseSchema,
   PolygonDividendsResponseSchema,
   PolygonRelatedResponseSchema,
+  type PolygonTickerDetails,
+  type PolygonSplit,
+  type PolygonDividend,
+  type PolygonRelatedCompany,
   type Bar,
   type PolygonTickerSnapshot,
 } from "../schemas/index.js";
 
 const apiKey = process.env.POLYGON_API_KEY || "";
+
 const BASE_URL = "https://api.polygon.io";
 
-async function polygonFetch(endpoint: string): Promise<unknown> {
+async function polygonFetch<T>(endpoint: string, schema: z.ZodType<T>): Promise<T | null> {
   if (!apiKey) return null;
+
   try {
     const url = `${BASE_URL}${endpoint}${endpoint.includes("?") ? "&" : "?"}apiKey=${apiKey}`;
     const response = await fetch(url);
+
     if (!response.ok) return null;
-    return await response.json();
+
+    return schema.parse(await response.json());
   } catch {
     return null;
   }
@@ -39,13 +48,19 @@ export const polygon = {
 
   // Get previous day close
   async getPreviousClose(symbol: string): Promise<Quote | null> {
-    const raw = await polygonFetch(`/v2/aggs/ticker/${symbol}/prev`);
+    const raw = await polygonFetch(
+      `/v2/aggs/ticker/${symbol}/prev`,
+      PolygonAggregatesResponseSchema,
+    );
+
     if (!raw) return null;
 
     const result = PolygonAggregatesResponseSchema.safeParse(raw);
+
     if (!result.success || !result.data.results?.[0]) return null;
 
     const bar = result.data.results[0];
+
     return {
       symbol: bar.T ?? symbol,
       price: bar.c ?? 0,
@@ -70,10 +85,13 @@ export const polygon = {
   ): Promise<Bar[]> {
     const raw = await polygonFetch(
       `/v2/aggs/ticker/${symbol}/range/${multiplier}/${timespan}/${from}/${to}`,
+      PolygonAggregatesResponseSchema,
     );
+
     if (!raw) return [];
 
     const result = PolygonAggregatesResponseSchema.safeParse(raw);
+
     if (!result.success) return [];
 
     return (result.data.results ?? []).map((bar) => ({
@@ -87,21 +105,32 @@ export const polygon = {
   },
 
   // Get ticker details
-  async getTickerDetails(symbol: string): Promise<unknown> {
-    const raw = await polygonFetch(`/v3/reference/tickers/${symbol}`);
+  async getTickerDetails(symbol: string): Promise<PolygonTickerDetails | null> {
+    const raw = await polygonFetch(
+      `/v3/reference/tickers/${symbol}`,
+      PolygonTickerDetailsResponseSchema,
+    );
+
     if (!raw) return null;
 
     const result = PolygonTickerDetailsResponseSchema.safeParse(raw);
-    return result.success ? result.data.results : null;
+
+    return result.success ? (result.data.results ?? null) : null;
   },
 
   // Get news
   async getNews(symbol?: string, limit = 10): Promise<NewsItem[]> {
     const tickerParam = symbol ? `&ticker=${symbol}` : "";
-    const raw = await polygonFetch(`/v2/reference/news?limit=${limit}${tickerParam}`);
+
+    const raw = await polygonFetch(
+      `/v2/reference/news?limit=${limit}${tickerParam}`,
+      PolygonNewsResponseSchema,
+    );
+
     if (!raw) return [];
 
     const result = PolygonNewsResponseSchema.safeParse(raw);
+
     if (!result.success) return [];
 
     return (result.data.results ?? []).map((n) => ({
@@ -112,70 +141,99 @@ export const polygon = {
       source: n.publisher?.name ?? "",
       url: n.article_url ?? "",
       publishedAt: n.published_utc ?? "",
-      sentiment: n.insights?.[0]?.sentiment as "positive" | "negative" | "neutral" | undefined,
+      sentiment: n.insights?.[0]?.sentiment,
     }));
   },
 
   // Get market status
-  async getMarketStatus(): Promise<unknown> {
-    const raw = await polygonFetch(`/v1/marketstatus/now`);
+  async getMarketStatus(): Promise<z.infer<typeof PolygonMarketStatusResponseSchema> | null> {
+    const raw = await polygonFetch(`/v1/marketstatus/now`, PolygonMarketStatusResponseSchema);
+
     if (!raw) return null;
 
     const result = PolygonMarketStatusResponseSchema.safeParse(raw);
+
     return result.success ? result.data : null;
   },
 
   // Get stock splits
-  async getSplits(symbol: string): Promise<unknown[]> {
-    const raw = await polygonFetch(`/v3/reference/splits?ticker=${symbol}`);
+  async getSplits(symbol: string): Promise<PolygonSplit[]> {
+    const raw = await polygonFetch(
+      `/v3/reference/splits?ticker=${symbol}`,
+      PolygonSplitsResponseSchema,
+    );
+
     if (!raw) return [];
 
     const result = PolygonSplitsResponseSchema.safeParse(raw);
+
     return result.success ? (result.data.results ?? []) : [];
   },
 
   // Get dividends
-  async getDividends(symbol: string): Promise<unknown[]> {
-    const raw = await polygonFetch(`/v3/reference/dividends?ticker=${symbol}`);
+  async getDividends(symbol: string): Promise<PolygonDividend[]> {
+    const raw = await polygonFetch(
+      `/v3/reference/dividends?ticker=${symbol}`,
+      PolygonDividendsResponseSchema,
+    );
+
     if (!raw) return [];
 
     const result = PolygonDividendsResponseSchema.safeParse(raw);
+
     return result.success ? (result.data.results ?? []) : [];
   },
 
   // Get snapshot (all tickers)
   async getAllTickersSnapshot(): Promise<PolygonTickerSnapshot[]> {
-    const raw = await polygonFetch(`/v2/snapshot/locale/us/markets/stocks/tickers`);
+    const raw = await polygonFetch(
+      `/v2/snapshot/locale/us/markets/stocks/tickers`,
+      PolygonSnapshotResponseSchema,
+    );
+
     if (!raw) return [];
 
     const result = PolygonSnapshotResponseSchema.safeParse(raw);
+
     return result.success ? (result.data.tickers ?? []) : [];
   },
 
   // Get gainers/losers
   async getGainersLosers(direction: "gainers" | "losers"): Promise<PolygonTickerSnapshot[]> {
-    const raw = await polygonFetch(`/v2/snapshot/locale/us/markets/stocks/${direction}`);
+    const raw = await polygonFetch(
+      `/v2/snapshot/locale/us/markets/stocks/${direction}`,
+      PolygonSnapshotResponseSchema,
+    );
+
     if (!raw) return [];
 
     const result = PolygonSnapshotResponseSchema.safeParse(raw);
+
     return result.success ? (result.data.tickers ?? []) : [];
   },
 
   // Get ticker snapshot
   async getTickerSnapshot(symbol: string): Promise<PolygonTickerSnapshot | null> {
-    const raw = await polygonFetch(`/v2/snapshot/locale/us/markets/stocks/tickers/${symbol}`);
+    const raw = await polygonFetch(
+      `/v2/snapshot/locale/us/markets/stocks/tickers/${symbol}`,
+      PolygonSnapshotResponseSchema,
+    );
+
     if (!raw) return null;
 
     const result = PolygonSnapshotResponseSchema.safeParse(raw);
+
     return result.success ? (result.data.ticker ?? null) : null;
   },
 
   // Get related companies
-  async getRelatedCompanies(symbol: string): Promise<unknown[]> {
-    const raw = await polygonFetch(`/v1/related-companies/${symbol}`);
+  async getRelatedCompanies(symbol: string): Promise<PolygonRelatedCompany[]> {
+    const raw = await polygonFetch(`/v1/related-companies/${symbol}`, PolygonRelatedResponseSchema);
+
     if (!raw) return [];
 
     const result = PolygonRelatedResponseSchema.safeParse(raw);
+
     return result.success ? (result.data.results ?? []) : [];
   },
 };

@@ -59,21 +59,25 @@ async function fetchRealData(symbol: string, days: number): Promise<Bar[]> {
       return [];
     }
 
-    return result.quotes
-      .filter(
-        (q) =>
-          q.open != null && q.high != null && q.low != null && q.close != null && q.volume != null,
-      )
-      .map((q) => ({
+    const bars: Bar[] = [];
+
+    for (const q of result.quotes) {
+      if (q.open == null || q.high == null || q.low == null || q.close == null || q.volume == null)
+        continue;
+      bars.push({
         t: new Date(q.date).toISOString().slice(0, 10),
-        o: q.open as number,
-        h: q.high as number,
-        l: q.low as number,
-        c: q.close as number,
-        v: q.volume as number,
-      }));
+        o: q.open,
+        h: q.high,
+        l: q.low,
+        c: q.close,
+        v: q.volume,
+      });
+    }
+
+    return bars;
   } catch (error) {
     console.error(`Failed to fetch data for ${symbol}:`, error);
+
     return [];
   }
 }
@@ -83,6 +87,7 @@ function calculateRsi(closes: number[], period = 14): number {
   if (closes.length < period + 1) return 50;
 
   const changes: number[] = [];
+
   for (let i = 1; i < closes.length; i++) {
     changes.push(closes[i]! - closes[i - 1]!);
   }
@@ -95,6 +100,7 @@ function calculateRsi(closes: number[], period = 14): number {
 
   if (avgLoss === 0) return 100;
   const rs = avgGain / avgLoss;
+
   return 100 - 100 / (1 + rs);
 }
 
@@ -102,6 +108,7 @@ function calculateRsi(closes: number[], period = 14): number {
 function sma(data: number[], period: number): number {
   if (data.length < period) return 0;
   const slice = data.slice(-period);
+
   return slice.reduce((a, b) => a + b, 0) / period;
 }
 
@@ -257,8 +264,10 @@ class Backtester {
 
     for (const trade of trades) {
       cumulative += trade.pnlPercent;
+
       if (cumulative > peak) peak = cumulative;
       const drawdown = peak - cumulative;
+
       if (drawdown > maxDrawdown) maxDrawdown = drawdown;
     }
 
@@ -345,6 +354,7 @@ async function main() {
   for (const symbol of STOCK_UNIVERSE) {
     process.stdout.write(`  Fetching ${symbol}...`);
     const bars = await fetchRealData(symbol, 730);
+
     if (bars.length > 0) {
       dataCache.set(symbol, bars);
       console.log(` ✓ ${bars.length} bars (${bars[0]?.t} to ${bars[bars.length - 1]?.t})`);
@@ -368,6 +378,7 @@ async function main() {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
           new Backtester(symbol, bars).backtestRsiOversold(25, 5),
         );
+
         return aggregateResults(results);
       },
     },
@@ -377,6 +388,7 @@ async function main() {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
           new Backtester(symbol, bars).backtestRsiOversold(30, 5),
         );
+
         return aggregateResults(results);
       },
     },
@@ -386,6 +398,7 @@ async function main() {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
           new Backtester(symbol, bars).backtestRsiOversold(30, 10),
         );
+
         return aggregateResults(results);
       },
     },
@@ -395,6 +408,7 @@ async function main() {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
           new Backtester(symbol, bars).backtestRsiOversold(35, 5),
         );
+
         return aggregateResults(results);
       },
     },
@@ -404,6 +418,7 @@ async function main() {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
           new Backtester(symbol, bars).backtestRsiOverbought(70, 5),
         );
+
         return aggregateResults(results);
       },
     },
@@ -413,6 +428,7 @@ async function main() {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
           new Backtester(symbol, bars).backtestRsiOverbought(75, 5),
         );
+
         return aggregateResults(results);
       },
     },
@@ -422,6 +438,7 @@ async function main() {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
           new Backtester(symbol, bars).backtestMaBullishAlignment(5),
         );
+
         return aggregateResults(results);
       },
     },
@@ -431,6 +448,7 @@ async function main() {
         const results = Array.from(dataCache).map(([symbol, bars]) =>
           new Backtester(symbol, bars).backtestMaBullishAlignment(10),
         );
+
         return aggregateResults(results);
       },
     },
@@ -483,12 +501,15 @@ async function main() {
     const bestByWinRate = validResults.reduce((a, b) =>
       a.result.winRate > b.result.winRate ? a : b,
     );
+
     const bestByPnl = validResults.reduce((a, b) =>
       a.result.avgPnlPercent > b.result.avgPnlPercent ? a : b,
     );
+
     const bestByTotal = validResults.reduce((a, b) =>
       a.result.totalReturn > b.result.totalReturn ? a : b,
     );
+
     const bestBySharpe = validResults.reduce((a, b) =>
       a.result.avgSharpe > b.result.avgSharpe ? a : b,
     );
@@ -516,6 +537,7 @@ async function main() {
 
     if (profitableStrategies.length > 0) {
       console.log("✅ WORTHWHILE strategies:\n");
+
       for (const s of profitableStrategies) {
         console.log(
           `   • ${s.name}: ${s.result.winRate.toFixed(1)}% win rate, ${s.result.avgPnlPercent.toFixed(2)}% avg gain`,
@@ -529,6 +551,7 @@ async function main() {
 
     if (unprofitableStrategies.length > 0) {
       console.log("\n❌ NOT WORTHWHILE (negative expected return):\n");
+
       for (const s of unprofitableStrategies) {
         console.log(`   • ${s.name}: ${s.result.avgPnlPercent.toFixed(2)}% avg loss`);
       }

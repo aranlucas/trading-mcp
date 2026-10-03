@@ -16,6 +16,7 @@ export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
         clearTimeout(timeoutId);
         resolve(result);
       })
+      // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Promise rejection boundary forwards the original rejection without assuming its type.
       .catch((error: unknown) => {
         clearTimeout(timeoutId);
         reject(error);
@@ -31,6 +32,7 @@ export async function raceToSuccess<T>(promises: Array<Promise<T | null>>): Prom
   }
 
   const errors: unknown[] = [];
+
   for (const result of results) {
     if (result.status === "rejected") errors.push(result.reason);
     else if (result.value === null) errors.push(new Error("Provider returned null"));

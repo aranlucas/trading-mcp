@@ -11,6 +11,10 @@ export interface MarketDataClient {
   ): Promise<Array<{ t: string; o: number; h: number; l: number; c: number; v: number }>>;
 }
 
+const EpochDateSchema = z
+  .number()
+  .transform((value) => new Date(value > 10_000_000_000 ? value : value * 1000));
+
 const YahooQuoteSchema = z.object({
   symbol: z.string(),
   regularMarketPrice: z.number().optional(),
@@ -21,39 +25,15 @@ const YahooQuoteSchema = z.object({
   regularMarketVolume: z.number().optional(),
   regularMarketChange: z.number().optional(),
   regularMarketChangePercent: z.number().optional(),
-  regularMarketTime: z.union([z.number(), z.date()]).optional(),
+  regularMarketTime: z.union([EpochDateSchema, z.date()]).optional(),
 });
 
-function toIsoTimestamp(input: unknown): string {
-  if (input instanceof Date) return input.toISOString();
-  if (typeof input === "number") {
-    // Yahoo sometimes uses epoch seconds.
-    const ms = input > 10_000_000_000 ? input : input * 1000;
-    return new Date(ms).toISOString();
-  }
-  return new Date().toISOString();
+function toIsoTimestamp(input: Date | undefined): string {
+  return (input ?? new Date()).toISOString();
 }
 
-function toIsoDate(input: unknown): string | null {
-  try {
-    if (input instanceof Date) return input.toISOString();
-    if (typeof input === "number") {
-      const ms = input > 10_000_000_000 ? input : input * 1000;
-      return new Date(ms).toISOString();
-    }
-    if (typeof input === "string") {
-      const d = new Date(input);
-      if (!Number.isFinite(d.getTime())) return null;
-      return d.toISOString();
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function clampNumber(n: unknown, fallback = 0): number {
-  return typeof n === "number" && Number.isFinite(n) ? n : fallback;
+function clampNumber(n: number | null | undefined, fallback = 0): number {
+  return n != null && Number.isFinite(n) ? n : fallback;
 }
 
 class AlpacaMarketDataClient implements MarketDataClient {
@@ -73,7 +53,10 @@ const YahooChartSchema = z.object({
   quotes: z
     .array(
       z.object({
-        date: z.union([z.date(), z.number(), z.string()]),
+        date: z
+          .union([z.date(), EpochDateSchema, z.string().pipe(z.coerce.date())])
+          .nullable()
+          .catch(null),
         open: z.number().nullable().optional(),
         high: z.number().nullable().optional(),
         low: z.number().nullable().optional(),
@@ -84,26 +67,42 @@ const YahooChartSchema = z.object({
     .optional(),
 });
 
+type YahooQuotePayload =
+  | Awaited<ReturnType<typeof yahoo.getQuote>>
+  | z.input<typeof YahooQuoteSchema>;
+
+export interface YahooMarketDataSource {
+  getQuotes(symbols: string[]): Promise<YahooQuotePayload[]>;
+  getQuote(symbol: string): Promise<YahooQuotePayload>;
+  getHistory(symbol: string, from: Date): Promise<z.input<typeof YahooChartSchema>>;
+}
+
 class YahooMarketDataClient implements MarketDataClient {
+  constructor(private readonly source: YahooMarketDataSource) {}
+
   async getSnapshots(symbols: string[]): Promise<Map<string, Quote>> {
     const results = new Map<string, Quote>();
+
     if (symbols.length === 0) return results;
 
-    let list: unknown[];
+    let list: YahooQuotePayload[];
+
     try {
-      const raw = (await yahoo.getQuotes(symbols)) as unknown;
+      const raw = await this.source.getQuotes(symbols);
       list = Array.isArray(raw) ? raw : [raw];
     } catch {
       const settled = await Promise.allSettled(
-        symbols.map(async (s) => (await yahoo.getQuote(s)) as unknown),
+        symbols.map(async (s) => await this.source.getQuote(s)),
       );
+
       list = settled
-        .filter((r): r is PromiseFulfilledResult<unknown> => r.status === "fulfilled")
+        .filter((r): r is PromiseFulfilledResult<YahooQuotePayload> => r.status === "fulfilled")
         .map((r) => r.value);
     }
 
     for (const item of list) {
       const parsed = YahooQuoteSchema.safeParse(item);
+
       if (!parsed.success) continue;
 
       const q = parsed.data;
@@ -111,6 +110,7 @@ class YahooMarketDataClient implements MarketDataClient {
       const prevClose = clampNumber(q.regularMarketPreviousClose, price);
       const open = clampNumber(q.regularMarketOpen, prevClose);
       const change = clampNumber(q.regularMarketChange, price - prevClose);
+
       const changePercent = clampNumber(
         q.regularMarketChangePercent,
         prevClose !== 0 ? (change / prevClose) * 100 : 0,
@@ -144,17 +144,20 @@ class YahooMarketDataClient implements MarketDataClient {
     const period1 = new Date();
     period1.setDate(period1.getDate() - days);
 
-    const raw = (await yahoo.getHistory(symbol, period1)) as unknown;
+    const raw = await this.source.getHistory(symbol, period1);
     const parsed = YahooChartSchema.safeParse(raw);
+
     if (!parsed.success) return [];
 
     const quotes = parsed.data.quotes ?? [];
     const bars: Array<{ t: string; o: number; h: number; l: number; c: number; v: number }> = [];
 
     for (const q of quotes) {
-      const date = toIsoDate(q.date);
+      const date = q.date?.toISOString();
+
       if (!date) continue;
       const c = q.close ?? null;
+
       if (c === null || !Number.isFinite(c)) continue;
 
       bars.push({
@@ -171,10 +174,16 @@ class YahooMarketDataClient implements MarketDataClient {
   }
 }
 
-export function getMarketDataClient(): { provider: ScreenerProvider; client: MarketDataClient } {
+export interface MarketDataSelection {
+  provider: ScreenerProvider;
+  client: MarketDataClient;
+}
+
+export function getMarketDataClient(source: YahooMarketDataSource = yahoo): MarketDataSelection {
   const raw = (process.env.SCREENER_PROVIDER || "").trim().toLowerCase();
   const provider = (raw === "yahoo" || raw === "alpaca" ? raw : "yahoo") satisfies ScreenerProvider;
 
-  if (provider === "yahoo") return { provider, client: new YahooMarketDataClient() };
+  if (provider === "yahoo") return { provider, client: new YahooMarketDataClient(source) };
+
   return { provider: "alpaca", client: new AlpacaMarketDataClient() };
 }

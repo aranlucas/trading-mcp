@@ -2,115 +2,126 @@ import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { yahoo } from "@trading/core";
 import { publicErrorResponses } from "../openapi/error-responses.js";
 
-export const quotesRoutes = new OpenAPIHono();
+import type { YahooMarketDataSource } from "../services/market-data.js";
 
-// Validation schemas
-const symbolSchema = z
-  .string()
-  .min(1)
-  .max(10)
-  .regex(/^[A-Z0-9.]+$/i, "Invalid symbol format");
+export function createQuotesRoutes(source: YahooMarketDataSource = yahoo) {
+  const quotesRoutes = new OpenAPIHono();
 
-const symbolParamSchema = z.object({
-  symbol: symbolSchema,
-});
+  // Validation schemas
+  const symbolSchema = z
+    .string()
+    .min(1)
+    .max(10)
+    .regex(/^[A-Z0-9.]+$/i, "Invalid symbol format");
 
-const batchQuotesSchema = z.object({
-  symbols: z.array(symbolSchema).min(1).max(100),
-});
+  const symbolParamSchema = z.object({
+    symbol: symbolSchema,
+  });
 
-const barsQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(365).optional().default(100),
-});
+  const batchQuotesSchema = z.object({
+    symbols: z.array(symbolSchema).min(1).max(100),
+  });
 
-const getSingleQuoteRoute = createRoute({
-  method: "get",
-  path: "/{symbol}",
-  request: {
-    params: symbolParamSchema,
-  },
-  responses: {
-    200: {
-      description: "Quote (raw Yahoo Finance response)",
-      content: {
-        "application/json": {
-          schema: z.unknown(),
+  const barsQuerySchema = z.object({
+    limit: z.coerce.number().int().min(1).max(365).optional().default(100),
+  });
+
+  const getSingleQuoteRoute = createRoute({
+    method: "get",
+    path: "/{symbol}",
+    request: {
+      params: symbolParamSchema,
+    },
+    responses: {
+      200: {
+        description: "Quote (raw Yahoo Finance response)",
+        content: {
+          "application/json": {
+            schema: z.unknown(),
+          },
+        },
+      },
+      ...publicErrorResponses,
+    },
+  });
+
+  // Get single quote
+  quotesRoutes.openapi(getSingleQuoteRoute, async (c) => {
+    const { symbol } = c.req.valid("param");
+
+    const yahooQuote = await source.getQuote(symbol.toUpperCase());
+
+    return c.json(yahooQuote, 200);
+  });
+
+  const getBatchQuotesRoute = createRoute({
+    method: "post",
+    path: "/batch",
+    request: {
+      body: {
+        content: {
+          "application/json": {
+            schema: batchQuotesSchema,
+          },
         },
       },
     },
-    ...publicErrorResponses,
-  },
-});
-
-// Get single quote
-quotesRoutes.openapi(getSingleQuoteRoute, async (c) => {
-  const { symbol } = c.req.valid("param");
-
-  const yahooQuote = await yahoo.getQuote(symbol.toUpperCase());
-  return c.json(yahooQuote, 200);
-});
-
-const getBatchQuotesRoute = createRoute({
-  method: "post",
-  path: "/batch",
-  request: {
-    body: {
-      content: {
-        "application/json": {
-          schema: batchQuotesSchema,
+    responses: {
+      200: {
+        description: "Quotes (raw Yahoo Finance response)",
+        content: {
+          "application/json": {
+            schema: z.unknown(),
+          },
         },
       },
+      ...publicErrorResponses,
     },
-  },
-  responses: {
-    200: {
-      description: "Quotes (raw Yahoo Finance response)",
-      content: {
-        "application/json": {
-          schema: z.unknown(),
+  });
+
+  // Get multiple quotes
+  quotesRoutes.openapi(getBatchQuotesRoute, async (c) => {
+    const { symbols } = c.req.valid("json");
+
+    const yahooQuotes = await source.getQuotes(symbols.map((s) => s.toUpperCase()));
+
+    return c.json(yahooQuotes, 200);
+  });
+
+  const getPriceBarsRoute = createRoute({
+    method: "get",
+    path: "/{symbol}/bars",
+    request: {
+      params: symbolParamSchema,
+      query: barsQuerySchema,
+    },
+    responses: {
+      200: {
+        description: "Price bars (raw Yahoo Finance response)",
+        content: {
+          "application/json": {
+            schema: z.unknown(),
+          },
         },
       },
+      ...publicErrorResponses,
     },
-    ...publicErrorResponses,
-  },
-});
+  });
 
-// Get multiple quotes
-quotesRoutes.openapi(getBatchQuotesRoute, async (c) => {
-  const { symbols } = c.req.valid("json");
+  // Get price bars
+  quotesRoutes.openapi(getPriceBarsRoute, async (c) => {
+    const { symbol } = c.req.valid("param");
+    const { limit } = c.req.valid("query");
+    const days = limit;
+    const period1 = new Date();
+    period1.setDate(period1.getDate() - days);
 
-  const yahooQuotes = await yahoo.getQuotes(symbols.map((s) => s.toUpperCase()));
-  return c.json(yahooQuotes, 200);
-});
+    const chart = await source.getHistory(symbol.toUpperCase(), period1);
 
-const getPriceBarsRoute = createRoute({
-  method: "get",
-  path: "/{symbol}/bars",
-  request: {
-    params: symbolParamSchema,
-    query: barsQuerySchema,
-  },
-  responses: {
-    200: {
-      description: "Price bars (raw Yahoo Finance response)",
-      content: {
-        "application/json": {
-          schema: z.unknown(),
-        },
-      },
-    },
-    ...publicErrorResponses,
-  },
-});
+    return c.json(chart, 200);
+  });
 
-// Get price bars
-quotesRoutes.openapi(getPriceBarsRoute, async (c) => {
-  const { symbol } = c.req.valid("param");
-  const { limit } = c.req.valid("query");
-  const days = limit;
-  const period1 = new Date();
-  period1.setDate(period1.getDate() - days);
+  return quotesRoutes;
+}
 
-  const chart = await yahoo.getHistory(symbol.toUpperCase(), period1);
-  return c.json(chart, 200);
-});
+export const quotesRoutes = createQuotesRoutes();

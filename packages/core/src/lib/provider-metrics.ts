@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type ProviderOperation = "getQuote";
 
 export type ProviderMetricPoint = {
@@ -13,22 +15,24 @@ export type ProviderMetricSnapshot = {
   windowMs: number;
   providers: Record<
     string,
-    Record<
-      ProviderOperation,
-      {
-        rolling: {
-          total: number;
-          success: number;
-          failure: number;
-          errorRate: number;
-        };
-        totals: {
-          success: number;
-          failure: number;
-        };
-        latencyEmaMs?: number;
-        lastError?: { at: string; message: string };
-      }
+    Partial<
+      Record<
+        ProviderOperation,
+        {
+          rolling: {
+            total: number;
+            success: number;
+            failure: number;
+            errorRate: number;
+          };
+          totals: {
+            success: number;
+            failure: number;
+          };
+          latencyEmaMs?: number;
+          lastError?: { at: string; message: string };
+        }
+      >
     >
   >;
 };
@@ -54,13 +58,16 @@ class RollingWindowCounter {
 
   count(now: number): number {
     this.prune(now);
+
     return this.events.length - this.head;
   }
 
   private prune(now: number) {
     const cutoff = now - this.windowMs;
+
     while (this.head < this.events.length) {
       const t = this.events[this.head];
+
       if (t !== undefined && t >= cutoff) break;
       this.head += 1;
     }
@@ -73,16 +80,13 @@ class RollingWindowCounter {
   }
 }
 
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- JavaScript throw values are untrusted; this error boundary parses supported messages and safely stringifies the rest.
 function normalizeErrorMessage(err: unknown): string {
-  const raw = (() => {
-    if (err instanceof Error) return err.message;
-    if (typeof err === "string") return err;
-    if (err && typeof err === "object" && "message" in err) {
-      const msg = (err as { message?: unknown }).message;
-      if (typeof msg === "string") return msg;
-    }
-    return String(err);
-  })();
+  const parsed = z
+    .union([z.string(), z.object({ message: z.string() }).transform((value) => value.message)])
+    .safeParse(err);
+
+  const raw = parsed.success ? parsed.data : String(err);
 
   // Redact common secret-bearing query params (best-effort).
   return raw.replace(
@@ -106,12 +110,14 @@ export function createProviderMetrics(options: ProviderMetricsOptions) {
 
   function getOp(provider: string, operation: ProviderOperation): OpStats {
     let byOp = store.get(provider);
+
     if (!byOp) {
       byOp = new Map();
       store.set(provider, byOp);
     }
 
     let stats = byOp.get(operation);
+
     if (!stats) {
       stats = {
         rollingSuccess: new RollingWindowCounter(windowMs),
@@ -121,6 +127,7 @@ export function createProviderMetrics(options: ProviderMetricsOptions) {
       };
       byOp.set(operation, stats);
     }
+
     return stats;
   }
 
@@ -149,7 +156,8 @@ export function createProviderMetrics(options: ProviderMetricsOptions) {
     const providers: ProviderMetricSnapshot["providers"] = {};
 
     for (const [provider, byOp] of store.entries()) {
-      const opObj = {} as ProviderMetricSnapshot["providers"][string];
+      const opObj: ProviderMetricSnapshot["providers"][string] = {};
+
       for (const [operation, stats] of byOp.entries()) {
         const success = stats.rollingSuccess.count(now);
         const failure = stats.rollingFailure.count(now);
@@ -171,6 +179,7 @@ export function createProviderMetrics(options: ProviderMetricsOptions) {
             : undefined,
         };
       }
+
       providers[provider] = opObj;
     }
 

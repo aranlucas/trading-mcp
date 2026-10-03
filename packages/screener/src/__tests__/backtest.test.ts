@@ -42,6 +42,7 @@ function calculateRsi(closes: number[], period = 14): number {
   if (closes.length < period + 1) return 50;
 
   const changes: number[] = [];
+
   for (let i = 1; i < closes.length; i++) {
     changes.push(closes[i]! - closes[i - 1]!);
   }
@@ -54,6 +55,7 @@ function calculateRsi(closes: number[], period = 14): number {
 
   if (avgLoss === 0) return 100;
   const rs = avgGain / avgLoss;
+
   return 100 - 100 / (1 + rs);
 }
 
@@ -61,6 +63,7 @@ function calculateRsi(closes: number[], period = 14): number {
 function sma(data: number[], period: number): number {
   if (data.length < period) return 0;
   const slice = data.slice(-period);
+
   return slice.reduce((a, b) => a + b, 0) / period;
 }
 
@@ -317,8 +320,10 @@ class Backtester {
 
     for (const trade of trades) {
       cumulative += trade.pnlPercent;
+
       if (cumulative > peak) peak = cumulative;
       const drawdown = peak - cumulative;
+
       if (drawdown > maxDrawdown) maxDrawdown = drawdown;
     }
 
@@ -404,9 +409,9 @@ describe("Backtesting Framework", () => {
       );
 
       // All should be valid results
-      expect(typeof hold3.avgPnlPercent).toBe("number");
-      expect(typeof hold5.avgPnlPercent).toBe("number");
-      expect(typeof hold10.avgPnlPercent).toBe("number");
+      expect(hold3.avgPnlPercent).toEqual(expect.any(Number));
+      expect(hold5.avgPnlPercent).toEqual(expect.any(Number));
+      expect(hold10.avgPnlPercent).toEqual(expect.any(Number));
     });
   });
 
@@ -482,15 +487,19 @@ describe("Backtesting Framework", () => {
         const ma = backtester.backtestMaBullishAlignment(10);
 
         if (oversold.totalTrades > 0) oversoldResults.push(oversold.avgPnlPercent);
+
         if (overbought.totalTrades > 0) overboughtResults.push(overbought.avgPnlPercent);
+
         if (ma.totalTrades > 0) maResults.push(ma.avgPnlPercent);
       }
 
       const avg = (arr: number[]) =>
         arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+
       const std = (arr: number[]) => {
         if (arr.length < 2) return 0;
         const mean = avg(arr);
+
         return Math.sqrt(arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length);
       };
 
@@ -505,9 +514,9 @@ describe("Backtesting Framework", () => {
       );
 
       // Just verify we got valid numbers
-      expect(typeof avg(oversoldResults)).toBe("number");
-      expect(typeof avg(overboughtResults)).toBe("number");
-      expect(typeof avg(maResults)).toBe("number");
+      expect(avg(oversoldResults)).toEqual(expect.any(Number));
+      expect(avg(overboughtResults)).toEqual(expect.any(Number));
+      expect(avg(maResults)).toEqual(expect.any(Number));
     });
   });
 });
@@ -547,13 +556,16 @@ describe("Strategy Evaluation Summary", () => {
 
     // Find best strategy
     const validStrategies = strategies.filter((s) => s.result.totalTrades >= 5);
+
     if (validStrategies.length > 0) {
       const bestByWinRate = validStrategies.reduce((a, b) =>
         a.result.winRate > b.result.winRate ? a : b,
       );
+
       const bestByPnl = validStrategies.reduce((a, b) =>
         a.result.avgPnlPercent > b.result.avgPnlPercent ? a : b,
       );
+
       const bestBySharpe = validStrategies.reduce((a, b) =>
         a.result.sharpeRatio > b.result.sharpeRatio ? a : b,
       );
