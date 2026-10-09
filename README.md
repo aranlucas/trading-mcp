@@ -57,9 +57,7 @@ The REST API is available at `https://screener.trading-mcp.localhost`, including
 uses Portless's assigned port. This command delegates directly to the screener
 package so Turbo's environment filtering cannot drop that port.
 
-Use `pnpm dev:screener:direct` for the original direct `tsx` server, or
-`pnpm dev:direct` from the screener package. The MCP package uses stdio and
-continues to run with the root `pnpm dev` command. Build, test, deployment,
+The MCP package uses stdio and continues to run with the root `pnpm dev` command. Build, test, deployment,
 provider credentials, and paper/live trading settings retain their behavior.
 
 Linked Git worktrees get branch-prefixed hostnames, such as
@@ -100,7 +98,7 @@ settings are only needed for the optional notification script.
 | `ALPACA_PAPER` | Defaults to paper mode unless explicitly set to `false`. |
 | `SCREENER_PROVIDER` | `yahoo` (default) or `alpaca` for screener data. |
 | `POLYGON_API_KEY`, `FINNHUB_API_KEY`, `FRED_API_KEY` | Optional provider access. |
-| `PORT` | Assigned by Portless during screener development; direct mode defaults to `3000`. |
+| `PORT` | Assigned by Portless during screener development. |
 
 ## Architecture and source map
 

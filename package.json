@@ -23,8 +23,7 @@
     "test:gates": "node scripts/check-offline-test-gates.mjs",
     "test:providers": "pnpm --filter @trading/core build && RUN_REAL_PROVIDER_TESTS=1 vitest run --project screener packages/screener/src/__tests__/backtest-real.test.ts",
     "test:deployment": "RUN_DEPLOYMENT_E2E=1 vitest run --config vitest.vercel.config.ts",
-    "lint:plugin": "node tools/oxlint/verify-anti-slop.mjs",
-    "dev:screener:direct": "pnpm --filter @trading/screener dev:direct"
+    "lint:plugin": "node tools/oxlint/verify-anti-slop.mjs"
   },
   "devDependencies": {
     "@oxlint/plugins": "1.80.0",
