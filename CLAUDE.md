@@ -6,11 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 pnpm install                        # Install dependencies
-pnpm build                          # Build all packages (Turbo)
+pnpm build                          # Build all packages (pnpm -r, dependency order)
 pnpm typecheck                      # Type-check without emit
-pnpm test                           # Run all tests (Vitest via Turbo)
+pnpm test                           # Build, then run each package's Vitest
 pnpm --filter @trading/core test    # Run tests for a single package
-pnpm exec vitest run packages/core/src/__tests__/unified.fallback.test.ts  # Run a single test file
+pnpm --filter @trading/core exec vitest run src/__tests__/unified.fallback.test.ts  # Run a single test file
 pnpm lint                           # ESLint on all packages
 pnpm lint:fix                       # ESLint with auto-fix
 pnpm format                         # Prettier format
@@ -18,7 +18,7 @@ pnpm dev                            # Dev mode: MCP server (tsx watch)
 pnpm dev:screener                   # Dev mode: REST API (tsx watch)
 ```
 
-Build, typecheck, and test tasks depend on `^build` — dependencies must build first.
+`pnpm test` and `pnpm typecheck` build first: packages import `@trading/core` from its `dist/`.
 
 ## Project Overview
 

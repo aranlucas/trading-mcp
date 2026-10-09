@@ -9,4 +9,5 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - "ignore@7.0.8"
+  - '@types/node@26.6.5'
 pmOnFail: ignore

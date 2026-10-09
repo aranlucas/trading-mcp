@@ -120,12 +120,9 @@ pnpm lint
 pnpm secretlint
 ```
 
-`pnpm test` builds the workspace, verifies that live-test gates stay disabled,
-then runs the complete offline suite, including MCP tools and fixture-based
+`pnpm test` builds the workspace, then runs the complete offline suite, including MCP tools and fixture-based
 backtests. Live Yahoo backtests and deployment E2E are skipped by default.
 Credentials, CI mode, or a deployment URL alone do not enable them.
-`pnpm test:gates` checks both files with flags unset, `0`, and `true`; it blocks
-HTTP requests even if a gate regresses.
 
 Only run these separate commands when you intentionally want external requests:
 

@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   ci:
-    runs-on: ${{ vars.LOCAL_CI_ENABLED == 'true' && fromJSON('["self-hosted","linux","x64","omarchy-ci"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out repository
@@ -34,10 +34,13 @@ jobs:
 
       - parallel:
           - name: Typecheck
-            run: pnpm run typecheck
+            run: pnpm -r typecheck && pnpm exec tsc -p tsconfig.tests.json
 
           - name: Lint
-            run: pnpm run lint && pnpm run lint:plugin
+            run: pnpm run lint && pnpm run lint:plugin && pnpm run format:check && pnpm run secretlint && pnpm run syncpack:lint
 
           - name: Test
-            run: pnpm run test:gates && pnpm exec vitest run --maxWorkers=2
+            run: pnpm -r test
+
+          - name: Docker build
+            run: docker build -t trading-mcp:ci .

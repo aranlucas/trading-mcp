@@ -3,7 +3,6 @@ dist/
 .env
 *.log
 .DS_Store
-.turbo
 .vercel/
 packages/*/.vercel/
 .vercel

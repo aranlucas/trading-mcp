@@ -29,20 +29,20 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
-    "test": "vitest",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@alpacahq/alpaca-trade-api": "^4.0.1",
-    "bottleneck": "^2.19.5",
-    "finnhub": "^2.0.15",
-    "lru-cache": "^11.5.2",
-    "pino": "^10.3.1",
-    "yahoo-finance2": "^4.0.2",
-    "zod": "^4.5.4"
+    "@alpacahq/alpaca-trade-api": "5.0.0",
+    "bottleneck": "2.19.5",
+    "finnhub": "2.0.15",
+    "lru-cache": "11.5.3",
+    "pino": "10.4.0",
+    "yahoo-finance2": "4.0.3",
+    "zod": "4.6.5"
   },
   "devDependencies": {
-    "@types/node": "^26.4.0",
+    "@types/node": "^26.6.5",
     "typescript": "^7.0.2"
   }
 }
