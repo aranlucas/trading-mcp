@@ -19,7 +19,8 @@
     "dev": "tsx src/index.ts",
     "test": "vitest",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev:portless": "portless run --name screener.trading-mcp pnpm run dev"
   },
   "keywords": [
     "screener",

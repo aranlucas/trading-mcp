@@ -47,6 +47,38 @@ pnpm dev:screener
 
 The screener API serves `/api/health`, `/api/openapi.json`, quote routes, and screening routes. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for deeper design notes.
 
+### Named local screener URL (optional)
+
+Install [Portless](https://github.com/vercel-labs/portless/tree/v0.15.7) once with Node.js 24 or newer:
+
+```bash
+npm install -g portless@0.15.7
+```
+
+After the usual `pnpm install` and `pnpm build`, run:
+
+```bash
+pnpm dev:screener:portless
+```
+
+The REST API is available at `https://screener.trading-mcp.localhost`, including
+`/api/health` and `/api/openapi.json`. The screener's existing `PORT` handling
+uses Portless's assigned port. This command delegates directly to the screener
+package so Turbo's environment filtering cannot drop that port.
+
+The MCP package uses stdio and continues to run with `pnpm dev`; it does not get
+an HTTP proxy. `pnpm dev:screener`, build, test, and deployment commands keep their
+existing behavior. Provider credentials and paper/live trading settings are not
+changed by this command.
+
+Linked Git worktrees get branch-prefixed hostnames, such as
+`https://fix-ui.screener.trading-mcp.localhost`.
+
+Portless starts a shared HTTPS proxy and may request local administrator access on
+first use to bind port 443 and trust its development certificate. Use the URL it
+prints if your proxy uses a custom port or domain. Stop the command with Ctrl+C;
+`portless doctor` checks local proxy, certificate, and DNS setup.
+
 ### Technical analysis availability
 
 MCP technicals and REST screening share `analyzeHistory` in `@trading/core`.
