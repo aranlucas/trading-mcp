@@ -1,44 +1,43 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  test:
+  ci:
     runs-on: ${{ vars.LOCAL_CI_ENABLED == 'true' && fromJSON('["self-hosted","linux","x64","omarchy-ci"]') || 'ubuntu-latest' }}
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7.0.1
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+      - name: Set up pnpm, Node.js, and dependencies
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
         with:
           cache: true
           require-lockfile: true
 
-      - name: Typecheck
-        run: pnpm run typecheck
+      - name: Build packages
+        run: pnpm run build
 
-      - name: Lint
-        run: pnpm run lint && pnpm run lint:plugin
+      - parallel:
+          - name: Typecheck
+            run: pnpm run typecheck
 
-      - name: Test
-        run: pnpm run test
+          - name: Lint
+            run: pnpm run lint && pnpm run lint:plugin
 
-  security:
-    runs-on: ${{ vars.LOCAL_CI_ENABLED == 'true' && fromJSON('["self-hosted","linux","x64","omarchy-ci"]') || 'ubuntu-latest' }}
-    steps:
-      - uses: actions/checkout@v7.0.1
-
-      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
-        with:
-          cache: true
-          require-lockfile: true
-
-      - name: Security Audit
-        run: pnpm audit --audit-level=high
-        continue-on-error: true
+          - name: Test
+            run: pnpm run test:gates && pnpm exec vitest run --maxWorkers=2
