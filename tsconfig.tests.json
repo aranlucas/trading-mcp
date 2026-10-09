@@ -4,6 +4,6 @@
     "noEmit": true,
     "rootDir": "."
   },
-  "include": ["packages/*/src/**/*.ts", "e2e/**/*.ts", "test/**/*.ts"],
+  "include": ["packages/*/src/**/*.ts", "e2e/**/*.ts"],
   "exclude": ["node_modules", "**/dist/**"]
 }

@@ -23,7 +23,7 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
 
 # Build all packages
-RUN ./node_modules/.bin/turbo run build
+RUN pnpm -r build
 
 # Production image
 FROM node:24-alpine
