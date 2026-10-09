@@ -2,8 +2,7 @@
 
 The unchanged upstream plugin is vendored under `anti-slop/`; its commit, source,
 MIT license, and bundled Stylistic provenance are recorded in `anti-slop/UPSTREAM.md`.
-Oxlint and `@oxlint/plugins` are both pinned to 1.80.0. `pnpm lint:plugin` checks
-that valid input passes and representative invalid input triggers the plugin.
+Oxlint and `@oxlint/plugins` are both pinned to 1.87.0.
 All 18 generic rules plus Oxlint's accumulating-spread rule cover owned source,
 tests, and scripts. Effect rules do not apply: this repository has no Effect dependency.
 
@@ -27,10 +26,9 @@ tests, and scripts. Effect rules do not apply: this repository has no Effect dep
 
 ## Checks
 
-Run `pnpm typecheck`, `pnpm lint`, `pnpm lint:plugin`, `pnpm format:check`, and
-`pnpm test`. Keep `RUN_REAL_PROVIDER_TESTS=0` and `RUN_DEPLOYMENT_E2E=0` for ordinary
-verification. The gate regression also verifies that unset values and `true` do
-not enable live suites. Passing offline checks is not live-provider or live-trading
+Run `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `pnpm test`. Live
+suites stay skipped unless `RUN_REAL_PROVIDER_TESTS=1` or `RUN_DEPLOYMENT_E2E=1`.
+Passing offline checks is not live-provider or live-trading
 verification. Existing opt-in provider/deployment scripts and CI security audit
 remain in place.
 
