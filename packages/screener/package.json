@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsx src/index.ts",
+    "dev": "portless run --name screener.trading-mcp tsx src/index.ts",
     "test": "vitest",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit"
