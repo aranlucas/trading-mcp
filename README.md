@@ -40,33 +40,12 @@ pnpm build
 
 Set `ALPACA_API_KEY`, `ALPACA_API_SECRET`, and optionally `ALPACA_PAPER=true` before using provider-backed features. Never commit credentials.
 
-Run the stdio MCP server with `pnpm dev`. For the HTTP screener, use Node.js
-24 or newer and install its development proxy once:
-
 ```bash
-npm install -g portless@0.15.7
+pnpm dev
 pnpm dev:screener
 ```
 
-The screener API serves `/api/health`, `/api/openapi.json`, quote routes, and screening routes. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for deeper design notes.
-
-### Screener development URL
-
-The REST API is available at `https://screener.trading-mcp.localhost`, including
-`/api/health` and `/api/openapi.json`. The screener's existing `PORT` handling
-uses Portless's assigned port. This command delegates directly to the screener
-package so Turbo's environment filtering cannot drop that port.
-
-The MCP package uses stdio and continues to run with the root `pnpm dev` command. Build, test, deployment,
-provider credentials, and paper/live trading settings retain their behavior.
-
-Linked Git worktrees get branch-prefixed hostnames, such as
-`https://fix-ui.screener.trading-mcp.localhost`.
-
-Portless starts a shared HTTPS proxy and may request local administrator access on
-first use to bind port 443 and trust its development certificate. Use the URL it
-prints if your proxy uses a custom port or domain. Stop the command with Ctrl+C;
-`portless doctor` checks local proxy, certificate, and DNS setup.
+`pnpm dev:screener` serves the screener at `https://screener.trading-mcp.localhost` through [Portless](https://github.com/vercel-labs/portless) (a dev dependency); its first run may ask for `sudo` to bind port 443 and trust a local certificate. The screener API serves `/api/health`, `/api/openapi.json`, quote routes, and screening routes. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for deeper design notes.
 
 ### Technical analysis availability
 
@@ -98,7 +77,7 @@ settings are only needed for the optional notification script.
 | `ALPACA_PAPER` | Defaults to paper mode unless explicitly set to `false`. |
 | `SCREENER_PROVIDER` | `yahoo` (default) or `alpaca` for screener data. |
 | `POLYGON_API_KEY`, `FINNHUB_API_KEY`, `FRED_API_KEY` | Optional provider access. |
-| `PORT` | Assigned by Portless during screener development. |
+| `PORT` | Local screener port, default `3000`. |
 
 ## Architecture and source map
 
