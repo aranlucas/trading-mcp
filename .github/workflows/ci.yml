@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LOCAL_CI_ENABLED == 'true' && fromJSON('["self-hosted","linux","x64","omarchy-ci"]') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7.0.1
 
@@ -30,7 +30,7 @@ jobs:
         run: pnpm run test
 
   security:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LOCAL_CI_ENABLED == 'true' && fromJSON('["self-hosted","linux","x64","omarchy-ci"]') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7.0.1
 
