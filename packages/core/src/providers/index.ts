@@ -93,46 +93,43 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       const wrapped = quoteProviders.map(({ name, get }) => {
         const startedAt = Date.now();
 
-        return (
-          withRetry(() => withTimeout(get(symbol), opt.quoteTimeoutMs), {
-            retries: opt.quoteRetries,
-            minDelayMs: opt.quoteRetryMinDelayMs,
+        return withRetry(() => withTimeout(get(symbol), opt.quoteTimeoutMs), {
+          retries: opt.quoteRetries,
+          minDelayMs: opt.quoteRetryMinDelayMs,
+        })
+          .then((quote) => {
+            metrics.recordSuccess({
+              provider: name,
+              operation: "getQuote",
+              latencyMs: Date.now() - startedAt,
+            });
+
+            return quote;
           })
-            .then((quote) => {
-              metrics.recordSuccess({
-                provider: name,
-                operation: "getQuote",
-                latencyMs: Date.now() - startedAt,
-              });
+          .catch((err: unknown) => {
+            metrics.recordFailure({
+              provider: name,
+              operation: "getQuote",
+              latencyMs: Date.now() - startedAt,
+              err,
+            });
 
-              return quote;
-            })
-            // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Promise rejection boundary sends arbitrary values to the validated error normalizer.
-            .catch((err: unknown) => {
-              metrics.recordFailure({
-                provider: name,
-                operation: "getQuote",
-                latencyMs: Date.now() - startedAt,
-                err,
-              });
+            const snap = metrics.snapshot();
+            const providerSnap = snap.providers[name]?.getQuote;
 
-              const snap = metrics.snapshot();
-              const providerSnap = snap.providers[name]?.getQuote;
+            if (
+              providerSnap &&
+              providerSnap.rolling.total >= 5 &&
+              providerSnap.rolling.errorRate >= 0.5
+            ) {
+              providerLogger.warn(
+                { provider: name, operation: "getQuote", rolling: providerSnap.rolling },
+                "Provider error rate elevated",
+              );
+            }
 
-              if (
-                providerSnap &&
-                providerSnap.rolling.total >= 5 &&
-                providerSnap.rolling.errorRate >= 0.5
-              ) {
-                providerLogger.warn(
-                  { provider: name, operation: "getQuote", rolling: providerSnap.rolling },
-                  "Provider error rate elevated",
-                );
-              }
-
-              throw new ProviderError({ provider: name, operation: "getQuote", cause: err });
-            })
-        );
+            throw new ProviderError({ provider: name, operation: "getQuote", cause: err });
+          });
       });
 
       try {

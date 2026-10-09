@@ -16,7 +16,6 @@ export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
         clearTimeout(timeoutId);
         resolve(result);
       })
-      // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Promise rejection boundary forwards the original rejection without assuming its type.
       .catch((error: unknown) => {
         clearTimeout(timeoutId);
         reject(error);

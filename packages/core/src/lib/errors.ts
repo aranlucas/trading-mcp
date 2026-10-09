@@ -82,7 +82,6 @@ function toPublicStatus(status: number): PublicStatus {
   }
 }
 
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- Public error boundary accepts arbitrary caught values and only exposes validated error classes.
 export function toPublicError(err: unknown): PublicError {
   if (err instanceof AppError) {
     return {

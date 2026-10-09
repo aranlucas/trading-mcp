@@ -32,7 +32,6 @@ const client = new finnhub.DefaultApi(apiKey);
 
 // Finnhub has no TypeScript response contract. Validate at the callback boundary.
 function promisify<T>(
-  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Untrusted SDK callback data is parsed by the supplied endpoint schema before resolution.
   fn: (callback: (err: Error | null, data?: unknown) => void) => void,
   schema: z.ZodType<T>,
 ): Promise<T> {

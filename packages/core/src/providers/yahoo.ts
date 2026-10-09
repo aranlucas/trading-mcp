@@ -113,7 +113,6 @@ export const yahoo = {
   },
 };
 
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- Untrusted Yahoo payload boundary; the schema establishes the quote contract before any field access.
 export function normalizeYahooQuote(raw: unknown, symbol: string): Quote {
   const parsed = YahooQuoteSchema.safeParse(raw);
 
