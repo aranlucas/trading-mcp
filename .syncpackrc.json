@@ -1,5 +1,5 @@
 {
-  "$schema": "https://unpkg.com/syncpack@13/dist/schema.json",
+  "$schema": "./node_modules/syncpack/schema.json",
   "sortFirst": [
     "name",
     "version",

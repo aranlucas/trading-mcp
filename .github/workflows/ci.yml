@@ -37,7 +37,7 @@ jobs:
             run: pnpm -r typecheck && pnpm exec tsc -p tsconfig.tests.json
 
           - name: Lint
-            run: pnpm run lint && pnpm run lint:plugin && pnpm run format:check && pnpm run secretlint
+            run: pnpm run lint && pnpm run lint:plugin && pnpm run format:check && pnpm run secretlint && pnpm run syncpack:lint
 
           - name: Test
             run: pnpm -r test

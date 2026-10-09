@@ -155,25 +155,25 @@ importers:
   packages/core:
     dependencies:
       '@alpacahq/alpaca-trade-api':
-        specifier: ^5.0.0
+        specifier: 5.0.0
         version: 5.0.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       bottleneck:
-        specifier: ^2.19.5
+        specifier: 2.19.5
         version: 2.19.5
       finnhub:
-        specifier: ^2.0.15
+        specifier: 2.0.15
         version: 2.0.15
       lru-cache:
-        specifier: ^11.5.3
+        specifier: 11.5.3
         version: 11.5.3
       pino:
-        specifier: ^10.4.0
+        specifier: 10.4.0
         version: 10.4.0
       yahoo-finance2:
-        specifier: ^4.0.3
+        specifier: 4.0.3
         version: 4.0.3(supports-color@10.2.2)
       zod:
-        specifier: ^4.6.5
+        specifier: 4.6.5
         version: 4.6.5
     devDependencies:
       '@types/node':
@@ -186,13 +186,13 @@ importers:
   packages/mcp:
     dependencies:
       '@modelcontextprotocol/sdk':
-        specifier: ^1.32.1
+        specifier: 1.32.1
         version: 1.32.1(supports-color@10.2.2)(zod@4.6.5)
       '@trading/core':
         specifier: workspace:*
         version: link:../core
       zod:
-        specifier: ^4.6.5
+        specifier: 4.6.5
         version: 4.6.5
     devDependencies:
       '@types/node':
@@ -208,19 +208,19 @@ importers:
   packages/screener:
     dependencies:
       '@hono/node-server':
-        specifier: ^2.1.4
+        specifier: 2.1.4
         version: 2.1.4(hono@4.13.13)
       '@hono/zod-openapi':
-        specifier: ^1.6.3
+        specifier: 1.6.3
         version: 1.6.3(hono@4.13.13)(zod@4.6.5)
       '@trading/core':
         specifier: workspace:*
         version: link:../core
       hono:
-        specifier: ^4.13.13
+        specifier: 4.13.13
         version: 4.13.13
       zod:
-        specifier: ^4.6.5
+        specifier: 4.6.5
         version: 4.6.5
     devDependencies:
       '@types/node':
