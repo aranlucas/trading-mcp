@@ -16,11 +16,11 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsx src/index.ts",
+    "dev": "portless run --name screener.trading-mcp pnpm run dev:direct",
     "test": "vitest",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
-    "dev:portless": "portless run --name screener.trading-mcp pnpm run dev"
+    "dev:direct": "tsx src/index.ts"
   },
   "keywords": [
     "screener",
