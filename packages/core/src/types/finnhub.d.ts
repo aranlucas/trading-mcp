@@ -10,7 +10,6 @@ declare module "finnhub" {
   };
 
   // This untyped third-party SDK hands raw payloads to our endpoint schema parser.
-  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Boundary declaration only; provider callbacks parse data before use.
   type Callback = (err: Error | null, data?: unknown) => void;
 
   export class DefaultApi {

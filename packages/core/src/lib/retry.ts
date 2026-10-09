@@ -7,7 +7,6 @@ export type RetryOptions = {
   maxDelayMs: number;
   factor: number;
   jitter: number; // 0..1
-  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Retry predicates inspect arbitrary JavaScript rejection values, not trusted domain data.
   shouldRetry?: (err: unknown) => boolean;
 };
 
@@ -36,7 +35,6 @@ function withJitter(ms: number, jitter: number): number {
   return Math.max(0, Math.round(ms + offset));
 }
 
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- Catch boundary: parse third-party error fields before classifying retries.
 export function isRetryableError(err: unknown): boolean {
   if (err instanceof TimeoutError) return true;
 

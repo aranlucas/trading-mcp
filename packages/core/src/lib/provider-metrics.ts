@@ -80,7 +80,6 @@ class RollingWindowCounter {
   }
 }
 
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- JavaScript throw values are untrusted; this error boundary parses supported messages and safely stringifies the rest.
 function normalizeErrorMessage(err: unknown): string {
   const parsed = z
     .union([z.string(), z.object({ message: z.string() }).transform((value) => value.message)])
