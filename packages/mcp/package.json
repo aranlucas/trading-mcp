@@ -2,6 +2,15 @@
   "name": "@trading/mcp",
   "version": "0.1.0",
   "description": "Trading MCP server for stock trading operations",
+  "keywords": [
+    "mcp",
+    "stocks",
+    "trading"
+  ],
+  "license": "MIT",
+  "bin": {
+    "trading-mcp": "./dist/index.js"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -9,23 +18,18 @@
       "import": "./dist/index.js"
     }
   },
-  "bin": {
-    "trading-mcp": "./dist/index.js"
-  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "clean": "rm -rf dist",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check"
   },
-  "keywords": [
-    "mcp",
-    "trading",
-    "stocks"
-  ],
-  "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",
     "@trading/core": "workspace:*",

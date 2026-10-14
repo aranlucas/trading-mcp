@@ -2,6 +2,14 @@
   "name": "@trading/screener",
   "version": "0.1.0",
   "description": "Stock screener API service - deployable to Vercel",
+  "keywords": [
+    "api",
+    "screener",
+    "stocks",
+    "trading",
+    "vercel"
+  ],
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
@@ -19,16 +27,12 @@
     "dev": "portless run --name screener.trading-mcp tsx src/index.ts",
     "test": "vitest run",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check"
   },
-  "keywords": [
-    "screener",
-    "trading",
-    "stocks",
-    "api",
-    "vercel"
-  ],
-  "license": "MIT",
   "dependencies": {
     "@hono/node-server": "2.1.4",
     "@hono/zod-openapi": "1.6.3",
