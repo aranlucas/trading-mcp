@@ -86,7 +86,7 @@ function calculateRsi(closes: number[], period = 14): number {
     changes.push(closes[i]! - closes[i - 1]!);
   }
 
-  const gains = changes.slice(-period).map((c) => (c > 0 ? c : 0));
+  const gains = changes.slice(-period).map((c) => Math.max(c, 0));
   const losses = changes.slice(-period).map((c) => (c < 0 ? -c : 0));
 
   const avgGain = gains.reduce((a, b) => a + b, 0) / period;
@@ -319,12 +319,23 @@ interface AggregateResult {
   symbolResults: BacktestResult[];
 }
 
+interface Strategy {
+  name: string;
+  run: () => AggregateResult;
+}
+
+interface StrategyResult {
+  name: string;
+  result: AggregateResult;
+}
+
 function aggregateResults(results: BacktestResult[]): AggregateResult {
   const validResults = results.filter((r) => r.totalTrades > 0);
 
   if (validResults.length === 0) {
+    const strategy = results[0]?.strategy ?? "";
     return {
-      strategy: results[0]?.strategy || "Unknown",
+      strategy: strategy.length > 0 ? strategy : "Unknown",
       totalTrades: 0,
       winningTrades: 0,
       winRate: 0,
@@ -369,6 +380,24 @@ const STOCK_UNIVERSE = [
   "INTC",
 ];
 
+// Keep provider requests sequential to avoid increasing pressure on Yahoo's rate limits.
+async function loadHistoricalData(symbols: string[], dataCache: Map<string, Bar[]>): Promise<void> {
+  const [symbol, ...remaining] = symbols;
+  if (!symbol) return;
+
+  const bars = await fetchRealData(symbol, 730);
+  if (bars.length > 0) {
+    dataCache.set(symbol, bars);
+    console.log(
+      `  ✓ ${symbol}: ${bars.length} bars (${bars[0]?.t ?? "unknown"} to ${bars.at(-1)?.t ?? "unknown"})`,
+    );
+  } else {
+    console.log(`  ✗ ${symbol}: No data available`);
+  }
+
+  await loadHistoricalData(remaining, dataCache);
+}
+
 // These tests contact Yahoo. Credentials or CI mode are not permission to run them.
 const liveSuite = process.env.RUN_REAL_PROVIDER_TESTS === "1" ? describe : describe.skip;
 
@@ -382,18 +411,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
 
     console.log("\n📊 Fetching 2 years of real market data from Yahoo Finance...\n");
 
-    for (const symbol of STOCK_UNIVERSE) {
-      const bars = await fetchRealData(symbol, 730); // ~2 years
-
-      if (bars.length > 0) {
-        dataCache.set(symbol, bars);
-        console.log(
-          `  ✓ ${symbol}: ${bars.length} bars (${bars[0]?.t} to ${bars[bars.length - 1]?.t})`,
-        );
-      } else {
-        console.log(`  ✗ ${symbol}: No data available`);
-      }
-    }
+    await loadHistoricalData(STOCK_UNIVERSE, dataCache);
 
     console.log(`\n📈 Loaded data for ${dataCache.size} symbols\n`);
   }
@@ -511,7 +529,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
     console.log("COMPREHENSIVE STRATEGY COMPARISON - REAL DATA (2 YEARS)");
     console.log("=".repeat(80));
 
-    const strategies: { name: string; run: () => AggregateResult }[] = [
+    const strategies: Strategy[] = [
       {
         name: "RSI < 25 (5d)",
         run: () => {
@@ -615,7 +633,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
         "|",
     );
 
-    const allResults: { name: string; result: AggregateResult }[] = [];
+    const allResults: StrategyResult[] = [];
 
     for (const strategy of strategies) {
       const result = strategy.run();
@@ -718,7 +736,7 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
 
     // Show last 20 trades
     const recentTrades = allTrades
-      .sort((a, b) => b.entryDate.localeCompare(a.entryDate))
+      .toSorted((a, b) => b.entryDate.localeCompare(a.entryDate))
       .slice(0, 20);
 
     console.log("\n| Symbol | Entry Date | Entry $ | Exit Date  | Exit $  |  PnL % |");

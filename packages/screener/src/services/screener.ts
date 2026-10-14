@@ -1,4 +1,4 @@
-import { analyzeHistory, type Signal } from "@trading/core";
+import { forEachSequential, analyzeHistory, type Signal } from "@trading/core";
 import { getMarketDataClient, type MarketDataClient } from "./market-data.js";
 
 export interface ScanCriteria {
@@ -51,19 +51,19 @@ export class ScreenerService {
   ];
 
   async scan(criteria: ScanCriteria): Promise<ScanResult[]> {
-    const symbols = criteria.symbols || this.defaultUniverse;
+    const symbols = criteria.symbols ?? this.defaultUniverse;
     const results: ScanResult[] = [];
 
     // Get snapshots for all symbols
     const quotes = await this.marketData.getSnapshots(symbols);
 
-    for (const [symbol, quote] of quotes) {
+    await forEachSequential([...quotes], async ([symbol, quote]) => {
       // Apply price filters
-      if (criteria.minPrice !== undefined && quote.price < criteria.minPrice) continue;
+      if (criteria.minPrice !== undefined && quote.price < criteria.minPrice) return;
 
-      if (criteria.maxPrice !== undefined && quote.price > criteria.maxPrice) continue;
+      if (criteria.maxPrice !== undefined && quote.price > criteria.maxPrice) return;
 
-      if (criteria.minVolume !== undefined && quote.volume < criteria.minVolume) continue;
+      if (criteria.minVolume !== undefined && quote.volume < criteria.minVolume) return;
 
       let rsi: number | undefined;
       let aboveSma20: boolean | undefined;
@@ -86,18 +86,16 @@ export class ScreenerService {
           aboveSma50 = analysis.sma50 === null ? undefined : quote.price > analysis.sma50;
 
           // Every requested predicate must be available and true.
-          if (criteria.minRsi !== undefined && (rsi === undefined || rsi < criteria.minRsi))
-            continue;
+          if (criteria.minRsi !== undefined && (rsi === undefined || rsi < criteria.minRsi)) return;
 
-          if (criteria.maxRsi !== undefined && (rsi === undefined || rsi > criteria.maxRsi))
-            continue;
+          if (criteria.maxRsi !== undefined && (rsi === undefined || rsi > criteria.maxRsi)) return;
 
-          if (criteria.aboveSma20 && aboveSma20 !== true) continue;
+          if (criteria.aboveSma20 && aboveSma20 !== true) return;
 
-          if (criteria.aboveSma50 && aboveSma50 !== true) continue;
+          if (criteria.aboveSma50 && aboveSma50 !== true) return;
         } catch {
           // Skip symbol if we can't get technicals
-          continue;
+          return;
         }
       }
 
@@ -111,7 +109,7 @@ export class ScreenerService {
         aboveSma20,
         aboveSma50,
       });
-    }
+    });
 
     return results;
   }
@@ -139,7 +137,7 @@ export class ScreenerService {
     }
 
     // Sort by change percent
-    results.sort((a, b) => {
+    const sorted = results.toSorted((a, b) => {
       if (direction === "gainers") {
         return b.changePercent - a.changePercent;
       }
@@ -147,20 +145,20 @@ export class ScreenerService {
       return a.changePercent - b.changePercent;
     });
 
-    return results.slice(0, limit);
+    return sorted.slice(0, limit);
   }
 
   async getSignals(symbols: string[]): Promise<Signal[]> {
     const signals: Signal[] = [];
 
-    for (const symbol of symbols) {
+    await forEachSequential(symbols, async (symbol) => {
       try {
         const bars = await this.marketData.getBars(symbol, 60);
         const closes = bars.map((b) => b.c);
 
-        if (closes.length < 20) continue;
+        if (closes.length < 20) return;
 
-        const currentPrice = closes[closes.length - 1] ?? 0;
+        const currentPrice = closes.at(-1) ?? 0;
         const { rsi14: rsi, sma20, sma50 } = analyzeHistory(closes);
 
         // RSI signals
@@ -198,7 +196,7 @@ export class ScreenerService {
       } catch {
         // Skip symbol on error
       }
-    }
+    });
 
     return signals;
   }

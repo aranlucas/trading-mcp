@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createProviderMetrics } from "../lib/provider-metrics.js";
+import { createProviderMetrics } from "@/lib/provider-metrics.js";
 
 describe("provider metrics (rolling window)", () => {
   it("computes rolling error rate within window", () => {

@@ -15,6 +15,7 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "noUncheckedIndexedAccess": true,
-    "noEmit": false
+    "noEmit": false,
+    "types": ["node"]
   }
 }

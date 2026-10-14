@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getMarketDataClient } from "../services/market-data.js";
-import type { YahooMarketDataSource } from "../services/market-data.js";
+import { getMarketDataClient } from "@/services/market-data.js";
+import type { YahooMarketDataSource } from "@/services/market-data.js";
 
 const yahoo = {
   getHistory: vi.fn<YahooMarketDataSource["getHistory"]>(),

@@ -4,6 +4,13 @@ import YahooFinance from "yahoo-finance2";
 import { YahooQuoteSchema } from "../schemas/index.js";
 import type { Quote } from "../types/index.js";
 
+type StockScreenQuery = {
+  minPrice?: number;
+  maxPrice?: number;
+  minVolume?: number;
+  sector?: string;
+};
+
 // Instantiate the client (required in v3)
 export const yahooFinance = new YahooFinance({
   suppressNotices: ["yahooSurvey"],
@@ -14,7 +21,8 @@ export const yahoo = {
 
   // Get real-time quote (returns raw yahoofinance result)
   async getQuote(symbol: string) {
-    return await yahooFinance.quote(symbol);
+    const quote = await yahooFinance.quote(symbol);
+    return quote;
   },
 
   // Get real-time quote normalized into the core `Quote` shape
@@ -24,16 +32,18 @@ export const yahoo = {
 
   // Get multiple quotes (returns raw yahoofinance result)
   async getQuotes(symbols: string[]) {
-    return await yahooFinance.quote(symbols);
+    const quotes = await yahooFinance.quote(symbols);
+    return quotes;
   },
 
   // Get historical data (returns raw yahoofinance result)
   async getHistory(symbol: string, period1: Date, period2: Date = new Date()) {
-    return await yahooFinance.chart(symbol, {
+    const history = await yahooFinance.chart(symbol, {
       period1,
       period2,
       interval: "1d",
     });
+    return history;
   },
 
   // Get options chain - flattens the structure for easier use
@@ -52,12 +62,14 @@ export const yahoo = {
 
   // Get options for specific expiration (returns raw yahoofinance result)
   async getOptionsForExpiration(symbol: string, expiration: string) {
-    return await yahooFinance.options(symbol, { date: new Date(expiration) });
+    const options = await yahooFinance.options(symbol, { date: new Date(expiration) });
+    return options;
   },
 
   // Search symbols (returns raw yahoofinance result)
   async search(query: string) {
-    return await yahooFinance.search(query);
+    const results = await yahooFinance.search(query);
+    return results;
   },
 
   // Get trending tickers - returns quotes array
@@ -69,15 +81,17 @@ export const yahoo = {
 
   // Get company insights/summary (returns raw yahoofinance result)
   async getInsights(symbol: string) {
-    return await yahooFinance.quoteSummary(symbol, {
+    const insights = await yahooFinance.quoteSummary(symbol, {
       modules: ["summaryProfile", "financialData", "recommendationTrend", "earnings"],
     });
+    return insights;
   },
 
   // Get news (returns raw yahoofinance result)
   async getNews(symbol?: string) {
     if (symbol) {
-      return await yahooFinance.search(symbol, { newsCount: 10 });
+      const results = await yahooFinance.search(symbol, { newsCount: 10 });
+      return results;
     }
 
     // If no symbol provided, return empty array (SDK has no global news method)
@@ -85,26 +99,21 @@ export const yahoo = {
   },
 
   // Get gainers/losers (returns raw yahoofinance result)
-  async getMovers(type: "gainers" | "losers" | "most_actives") {
+  getMovers(type: "gainers" | "losers" | "most_actives") {
     try {
-      if (type === "losers") return yahooFinance.dailyLosers();
+      if (type === "losers") return Promise.resolve(yahooFinance.dailyLosers());
 
       // SDK doesn't expose a `mostActive()` method in types; fall back to dailyGainers
-      if (type === "most_actives") return yahooFinance.dailyGainers();
+      if (type === "most_actives") return Promise.resolve(yahooFinance.dailyGainers());
 
-      return await yahooFinance.dailyGainers();
+      return Promise.resolve(yahooFinance.dailyGainers());
     } catch {
-      return [];
+      return Promise.resolve([]);
     }
   },
 
   // Screen stocks (returns raw yahoofinance result)
-  async screen(_query: {
-    minPrice?: number;
-    maxPrice?: number;
-    minVolume?: number;
-    sector?: string;
-  }) {
+  async screen(_query: StockScreenQuery) {
     try {
       return await yahooFinance.screener({ scrIds: "day_gainers" });
     } catch {

@@ -1,16 +1,23 @@
 // Technical analysis tools
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { analyzeHistory, alpaca, type TechnicalIndicators, type Signal } from "@trading/core";
+import {
+  analyzeHistory,
+  alpaca as alpacaProvider,
+  type TechnicalIndicators,
+  type Signal,
+} from "@trading/core";
 
 export type TechnicalDependencies = {
-  alpaca: Pick<typeof alpaca, "getBars">;
+  alpaca: Pick<typeof alpacaProvider, "getBars">;
 };
+
+const defaultDependencies: TechnicalDependencies = { alpaca: alpacaProvider };
 
 export function registerTechnicalTools(
   server: McpServer,
-  dependencies: TechnicalDependencies = { alpaca },
+  dependencies: TechnicalDependencies = defaultDependencies,
 ) {
   const { alpaca } = dependencies;
 
@@ -59,7 +66,7 @@ export function registerTechnicalTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -82,7 +89,7 @@ export function registerTechnicalTools(
         const bars = await alpaca.getBars(symbol.toUpperCase(), "1Day", 200);
         const closes = bars.map((b) => b.c);
         const signals: Signal[] = [];
-        const currentPrice = closes[closes.length - 1] ?? 0;
+        const currentPrice = closes.at(-1) ?? 0;
 
         if (closes.length < 20) {
           return {
@@ -210,7 +217,7 @@ export function registerTechnicalTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyzeHistory } from "../lib/technicals.js";
+import { analyzeHistory } from "@/lib/technicals.js";
 
 describe("analyzeHistory", () => {
   it.each([0, 10, 14, 15, 19, 20, 25, 26, 33, 34, 49, 50, 199, 200])(
@@ -20,11 +20,11 @@ describe("analyzeHistory", () => {
   it("uses only the last period for SMA and trailing RSI changes", () => {
     const history = [1_000, ...Array.from({ length: 50 }, (_, i) => 100 + i)];
     expect(analyzeHistory(history)).toMatchObject({ sma20: 139.5, sma50: 124.5, rsi14: 100 });
-    expect(analyzeHistory(history.slice(1).reverse()).rsi14).toBe(0);
+    expect(analyzeHistory(history.slice(1).toReversed()).rsi14).toBe(0);
   });
 
   it("distinguishes flat history and valid zero averages from missing data", () => {
-    expect(analyzeHistory(Array(50).fill(0))).toMatchObject({
+    expect(analyzeHistory(Array.from({ length: 50 }, () => 0))).toMatchObject({
       rsi14: 50,
       sma20: 0,
       sma50: 0,
@@ -35,7 +35,7 @@ describe("analyzeHistory", () => {
   });
 
   it("seeds the MACD signal with nine actual MACD observations", () => {
-    const analysis = analyzeHistory([...Array(33).fill(100), 200]);
+    const analysis = analyzeHistory([...Array.from({ length: 33 }, () => 100), 200]);
     const expected = 100 * (2 / 13 - 2 / 27);
     expect(analysis.macd?.value).toBeCloseTo(expected, 10);
     expect(analysis.macd?.signal).toBeCloseTo(expected / 9, 10);
@@ -50,6 +50,8 @@ describe("analyzeHistory", () => {
   });
 
   it.each([NaN, Infinity, -Infinity])("rejects non-finite observations (%s)", (invalid) => {
-    expect(() => analyzeHistory([...Array(50).fill(100), invalid])).toThrow(/finite/);
+    expect(() => analyzeHistory([...Array.from({ length: 50 }, () => 100), invalid])).toThrow(
+      /finite/,
+    );
   });
 });

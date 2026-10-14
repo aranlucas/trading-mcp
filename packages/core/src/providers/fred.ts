@@ -10,7 +10,9 @@ import {
 
 const FRED_BASE = "https://api.stlouisfed.org/fred";
 
-const apiKey = process.env.FRED_API_KEY || "";
+const apiKey = process.env.FRED_API_KEY ?? "";
+
+type SeriesObservation = { date: string; value: number };
 
 export interface EconomicSeries {
   id: string;
@@ -46,7 +48,7 @@ export const fred = {
   },
 
   // Get series observations
-  async getSeries(seriesId: string, limit = 10): Promise<{ date: string; value: number }[]> {
+  async getSeries(seriesId: string, limit = 10): Promise<SeriesObservation[]> {
     if (!apiKey) return [];
 
     try {

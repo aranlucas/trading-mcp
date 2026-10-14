@@ -1,7 +1,9 @@
+import { z } from "zod";
+import { BarSchema } from "@trading/core";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { connectTestTools, ToolTextSchema } from "./mcp-test-client.js";
-import type { ToolDependencies } from "../tools/index.js";
-import { registerAllTools } from "../tools/index.js";
+import { connectTestTools, ToolTextSchema } from "@test/mcp-test-client.js";
+import type { ToolDependencies } from "@/tools/index.js";
+import { registerAllTools } from "@/tools/index.js";
 
 const dependencies = {
   alpaca: {
@@ -175,7 +177,7 @@ describe("MCP Tools Integration", () => {
 
       expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
-      const quote = JSON.parse(content);
+      const quote = z.object({ symbol: z.string(), price: z.number() }).parse(JSON.parse(content));
       expect(quote.symbol).toBe("AAPL");
       expect(quote.price).toBe(175.5);
     });
@@ -191,8 +193,9 @@ describe("MCP Tools Integration", () => {
 
       expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
-      const bars = JSON.parse(content);
-      expect(Array.isArray(bars)).toBe(true);
+      const bars = z.array(BarSchema).parse(JSON.parse(content));
+      expect(bars).toHaveLength(1);
+      expect(bars[0]?.c).toBe(175.5);
     });
 
     it("get_market_status should return market clock", async () => {
@@ -201,8 +204,8 @@ describe("MCP Tools Integration", () => {
 
       expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
-      const status = JSON.parse(content);
-      expect(status).toHaveProperty("isOpen");
+      const status = z.object({ isOpen: z.boolean() }).parse(JSON.parse(content));
+      expect(status.isOpen).toBe(true);
     });
   });
 
@@ -213,9 +216,9 @@ describe("MCP Tools Integration", () => {
 
       expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
-      const account = JSON.parse(content);
-      expect(account).toHaveProperty("equity");
-      expect(account).toHaveProperty("cash");
+      const account = z.object({ equity: z.string(), cash: z.string() }).parse(JSON.parse(content));
+      expect(account.equity).toBe("100000.00");
+      expect(account.cash).toBe("50000.00");
     });
 
     it("get_positions should return positions", async () => {
@@ -224,8 +227,10 @@ describe("MCP Tools Integration", () => {
 
       expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
-      const positions = JSON.parse(content);
-      expect(Array.isArray(positions)).toBe(true);
+      const positions = z
+        .array(z.object({ symbol: z.string(), quantity: z.number() }))
+        .parse(JSON.parse(content));
+      expect(positions).toEqual([{ symbol: "AAPL", quantity: 100 }]);
     });
   });
 
@@ -277,7 +282,7 @@ describe("MCP Tools Integration", () => {
 
       expect(result).not.toHaveProperty("isError");
       const content = ToolTextSchema.parse(result);
-      const order = JSON.parse(content);
+      const order = z.object({ id: z.string(), symbol: z.string() }).parse(JSON.parse(content));
       expect(order.symbol).toBe("AAPL");
     });
 
@@ -302,7 +307,7 @@ describe("MCP Tools Integration", () => {
 
       expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
-      const order = JSON.parse(content);
+      const order = z.object({ id: z.string(), symbol: z.string() }).parse(JSON.parse(content));
       expect(order.id).toBe("order-123");
     });
 
@@ -312,7 +317,7 @@ describe("MCP Tools Integration", () => {
 
       expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
-      const response = JSON.parse(content);
+      const response = z.object({ status: z.string() }).parse(JSON.parse(content));
       expect(response.status).toBe("cancelled");
     });
   });

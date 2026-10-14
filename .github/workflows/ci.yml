@@ -34,13 +34,13 @@ jobs:
 
       - parallel:
           - name: Typecheck
-            run: pnpm -r typecheck && pnpm exec tsc -p tsconfig.tests.json
+            run: pnpm -r typecheck && pnpm -r exec tsc -p tsconfig.tests.json && pnpm exec tsc -p tsconfig.tests.json && pnpm exec tsc -p api/tsconfig.json && pnpm exec tsc -p packages/screener/api/tsconfig.json
 
           - name: Lint
             run: pnpm run lint && pnpm run format:check && pnpm run secretlint && pnpm run syncpack:lint
 
           - name: Test
-            run: pnpm -r test
+            run: pnpm -r test && pnpm exec vitest run
 
           - name: Docker build
             run: docker build -t trading-mcp:ci .

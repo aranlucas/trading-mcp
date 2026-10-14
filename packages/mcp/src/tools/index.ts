@@ -1,6 +1,6 @@
 // Tool registration index
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerMarketTools } from "./market.js";
 import { registerPortfolioTools } from "./portfolio.js";
 import { registerOrderTools } from "./orders.js";
@@ -23,9 +23,11 @@ export type ToolDependencies = PortfolioDependencies &
   OrderDependencies &
   OptionsDependencies;
 
+const defaultDependencies: ToolDependencies = { alpaca, yahoo, polygon, finviz };
+
 export function registerAllTools(
   server: McpServer,
-  dependencies: ToolDependencies = { alpaca, yahoo, polygon, finviz },
+  dependencies: ToolDependencies = defaultDependencies,
 ) {
   registerMarketTools(server, dependencies);
   registerPortfolioTools(server, dependencies);

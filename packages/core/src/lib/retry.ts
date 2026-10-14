@@ -20,7 +20,9 @@ const DEFAULT_OPTIONS: RetryOptions = {
 };
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function clamp(n: number, min: number, max: number): number {
@@ -35,16 +37,16 @@ function withJitter(ms: number, jitter: number): number {
   return Math.max(0, Math.round(ms + offset));
 }
 
+const RetryableErrorSchema = z.object({
+  code: z.string().catch(""),
+  name: z.string().catch(""),
+  message: z.string().catch(""),
+});
+
 export function isRetryableError(err: unknown): boolean {
   if (err instanceof TimeoutError) return true;
 
-  const parsed = z
-    .object({
-      code: z.string().catch(""),
-      name: z.string().catch(""),
-      message: z.string().catch(""),
-    })
-    .safeParse(err);
+  const parsed = RetryableErrorSchema.safeParse(err);
 
   if (parsed.success) {
     const { code, name, message } = parsed.data;
@@ -72,9 +74,7 @@ export async function withRetry<T>(
 ): Promise<T> {
   const opt: RetryOptions = { ...DEFAULT_OPTIONS, ...options };
 
-  let attempt = 0;
-
-  while (true) {
+  async function runAttempt(attempt: number): Promise<T> {
     try {
       return await fn(attempt);
     } catch (err) {
@@ -84,8 +84,13 @@ export async function withRetry<T>(
 
       const base = opt.minDelayMs * Math.pow(opt.factor, attempt);
       const delayMs = withJitter(clamp(base, opt.minDelayMs, opt.maxDelayMs), opt.jitter);
-      attempt += 1;
       await sleep(delayMs);
+
+      return runAttempt(attempt + 1);
     }
   }
+
+  const result = await runAttempt(0);
+
+  return result;
 }

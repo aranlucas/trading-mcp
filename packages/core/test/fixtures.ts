@@ -1,6 +1,6 @@
 // Test fixtures and mock data for integration tests
 
-import type { Quote, Position, Order, Signal } from "../types/index.js";
+import type { Quote, Position, Order, Signal, Bar } from "@/types/index.js";
 
 // Mock quotes
 export const mockQuote: Quote = {
@@ -206,10 +206,7 @@ export const mockYahooQuote = {
 };
 
 // Helper to generate bar data for technical indicators
-export function generateBarsForRsi(
-  targetRsi: number,
-  periods = 30,
-): { t: string; o: number; h: number; l: number; c: number; v: number }[] {
+export function generateBarsForRsi(targetRsi: number, periods = 30): Bar[] {
   const bars = [];
   let price = 100;
 

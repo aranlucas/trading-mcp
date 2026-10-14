@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createQuotesRoutes } from "../routes/quotes.js";
-import type { YahooMarketDataSource } from "../services/market-data.js";
+import { createQuotesRoutes } from "@/routes/quotes.js";
+import type { YahooMarketDataSource } from "@/services/market-data.js";
 
 const yahooMock = {
   getQuote: vi.fn<YahooMarketDataSource["getQuote"]>(),

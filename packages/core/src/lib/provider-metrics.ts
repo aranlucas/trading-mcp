@@ -1,5 +1,20 @@
 import { z } from "zod";
 
+type ProviderSuccess = {
+  provider: string;
+  operation: ProviderOperation;
+  latencyMs: number;
+  at?: number;
+};
+
+type ProviderFailure = {
+  provider: string;
+  operation: ProviderOperation;
+  latencyMs: number;
+  err: unknown;
+  at?: number;
+};
+
 export type ProviderOperation = "getQuote";
 
 export type ProviderMetricPoint = {
@@ -88,7 +103,7 @@ function normalizeErrorMessage(err: unknown): string {
   const raw = parsed.success ? parsed.data : String(err);
 
   // Redact common secret-bearing query params (best-effort).
-  return raw.replace(
+  return raw.replaceAll(
     /([?&](?:apiKey|apikey|token|access_token|key|secret|signature)=)[^&\s]+/gi,
     "$1[REDACTED]",
   );
@@ -190,12 +205,7 @@ export function createProviderMetrics(options: ProviderMetricsOptions) {
   }
 
   return {
-    recordSuccess(params: {
-      provider: string;
-      operation: ProviderOperation;
-      latencyMs: number;
-      at?: number;
-    }) {
+    recordSuccess(params: ProviderSuccess) {
       record({
         provider: params.provider,
         operation: params.operation,
@@ -204,13 +214,7 @@ export function createProviderMetrics(options: ProviderMetricsOptions) {
         at: params.at ?? Date.now(),
       });
     },
-    recordFailure(params: {
-      provider: string;
-      operation: ProviderOperation;
-      latencyMs: number;
-      err: unknown;
-      at?: number;
-    }) {
+    recordFailure(params: ProviderFailure) {
       record({
         provider: params.provider,
         operation: params.operation,

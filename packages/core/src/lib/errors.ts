@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { TimeoutError } from "./timeout.js";
+import { AppError } from "./app-error.js";
+export { AppError } from "./app-error.js";
+export { ValidationError } from "./validation-error.js";
+export { ProviderError } from "./provider-error.js";
+export { NotFoundError } from "./not-found-error.js";
 
 export type PublicError = {
   status: 400 | 401 | 403 | 404 | 409 | 422 | 429 | 500 | 502 | 503 | 504;
@@ -8,60 +13,6 @@ export type PublicError = {
 };
 
 type PublicStatus = PublicError["status"];
-
-export class AppError extends Error {
-  readonly status: number;
-  readonly code: string;
-  readonly expose: boolean;
-  readonly cause?: unknown;
-
-  constructor(params: {
-    message: string;
-    status: number;
-    code: string;
-    expose?: boolean;
-    cause?: unknown;
-  }) {
-    super(params.message);
-    this.name = this.constructor.name;
-    this.status = params.status;
-    this.code = params.code;
-    this.expose = params.expose ?? false;
-    this.cause = params.cause;
-  }
-}
-
-export class ValidationError extends AppError {
-  readonly issues?: z.ZodIssue[];
-
-  constructor(message = "Invalid request", issues?: z.ZodIssue[]) {
-    super({ message, status: 400, code: "VALIDATION_ERROR", expose: true });
-    this.issues = issues;
-  }
-}
-
-export class ProviderError extends AppError {
-  readonly provider: string;
-  readonly operation: string;
-
-  constructor(params: { provider: string; operation: string; message?: string; cause?: unknown }) {
-    super({
-      message: params.message ?? "Upstream provider error",
-      status: 502,
-      code: "PROVIDER_ERROR",
-      expose: true,
-      cause: params.cause,
-    });
-    this.provider = params.provider;
-    this.operation = params.operation;
-  }
-}
-
-export class NotFoundError extends AppError {
-  constructor(message = "Not found") {
-    super({ message, status: 404, code: "NOT_FOUND", expose: true });
-  }
-}
 
 function toPublicStatus(status: number): PublicStatus {
   switch (status) {

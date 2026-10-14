@@ -13,7 +13,7 @@ const FINVIZ_BASE = "https://finviz.com";
 // Parse value with suffix (K, M, B, %)
 function parseValue(str: string | undefined): number {
   if (!str || str === "-") return 0;
-  str = str.replace(/,/g, "").replace(/%/g, "");
+  str = str.replaceAll(",", "").replaceAll("%", "");
 
   const multipliers = new Map([
     ["K", 1e3],
@@ -91,7 +91,7 @@ export const finviz = {
         params.set("f", filterStr);
       }
 
-      const response = await fetch(`${FINVIZ_BASE}/screener.ashx?${params}`, {
+      const response = await fetch(`${FINVIZ_BASE}/screener.ashx?${params.toString()}`, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
         },
@@ -124,7 +124,7 @@ export const finviz = {
 
         // Extract company name (third td)
         const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
-        const companyCell = cells[2]?.[1]?.replace(/<[^>]+>/g, "").trim() ?? "";
+        const companyCell = cells[2]?.[1]?.replaceAll(/<[^>]+>/g, "").trim() ?? "";
 
         // Extract change percentage
         const changeMatch = row.match(/([+-]?\d+\.?\d*)%/);
@@ -136,7 +136,7 @@ export const finviz = {
 
         // Extract volume (usually last numeric td)
         const volumeMatch = row.match(/([0-9,]+)<\/a><\/td>\s*$/);
-        const volume = volumeMatch?.[1] ? parseInt(volumeMatch[1].replace(/,/g, "")) : 0;
+        const volume = volumeMatch?.[1] ? parseInt(volumeMatch[1].replaceAll(",", "")) : 0;
 
         // Extract market cap
         const mcMatch = row.match(/>([0-9.]+[BMK])</);
@@ -207,32 +207,38 @@ export const finviz = {
 
   // Get oversold stocks (RSI < 30)
   async getOversold(): Promise<FinvizScreenerResult[]> {
-    return this.screen({ signal: "ta_oversold" });
+    const results = await this.screen({ signal: "ta_oversold" });
+    return results;
   },
 
   // Get overbought stocks (RSI > 70)
   async getOverbought(): Promise<FinvizScreenerResult[]> {
-    return this.screen({ signal: "ta_overbought" });
+    const results = await this.screen({ signal: "ta_overbought" });
+    return results;
   },
 
   // Get new highs
   async getNewHighs(): Promise<FinvizScreenerResult[]> {
-    return this.screen({ signal: "ta_newhigh" });
+    const results = await this.screen({ signal: "ta_newhigh" });
+    return results;
   },
 
   // Get new lows
   async getNewLows(): Promise<FinvizScreenerResult[]> {
-    return this.screen({ signal: "ta_newlow" });
+    const results = await this.screen({ signal: "ta_newlow" });
+    return results;
   },
 
   // Get unusual volume
   async getUnusualVolume(): Promise<FinvizScreenerResult[]> {
-    return this.screen({ signal: "ta_unusualvolume" });
+    const results = await this.screen({ signal: "ta_unusualvolume" });
+    return results;
   },
 
   // Get most volatile
   async getMostVolatile(): Promise<FinvizScreenerResult[]> {
-    return this.screen({ signal: "ta_mostvolatile" });
+    const results = await this.screen({ signal: "ta_mostvolatile" });
+    return results;
   },
 
   // Get signals for a stock

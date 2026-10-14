@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createUnified } from "../providers/index.js";
-import { ProviderError } from "../lib/errors.js";
+import { createUnified } from "@/providers/index.js";
+import { ProviderError } from "@/lib/errors.js";
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 describe("unified.getQuote fallback", () => {
@@ -15,8 +17,8 @@ describe("unified.getQuote fallback", () => {
   it("returns the first successful provider result (parallel)", async () => {
     vi.useFakeTimers();
 
-    const finnhub = (await import("../providers/finnhub.js")).finnhubProvider;
-    const polygon = (await import("../providers/polygon.js")).polygon;
+    const finnhub = (await import("@/providers/finnhub.js")).finnhubProvider;
+    const polygon = (await import("@/providers/polygon.js")).polygon;
     vi.spyOn(finnhub, "isConfigured").mockReturnValue(false);
     vi.spyOn(polygon, "isConfigured").mockReturnValue(false);
 
@@ -24,8 +26,8 @@ describe("unified.getQuote fallback", () => {
 
     // Monkey-patch the provider implementations by mocking the module boundary via dynamic import.
     // This test validates first-success behavior via timing, not provider internals.
-    const yahoo = (await import("../providers/yahoo.js")).yahoo;
-    const finviz = (await import("../providers/finviz.js")).finviz;
+    const yahoo = (await import("@/providers/yahoo.js")).yahoo;
+    const finviz = (await import("@/providers/finviz.js")).finviz;
 
     const yahooSpy = vi
       .spyOn(yahoo, "getQuoteNormalized")
@@ -78,8 +80,8 @@ describe("unified.getQuote fallback", () => {
   it("retries retryable failures", async () => {
     vi.useFakeTimers();
 
-    const finnhub = (await import("../providers/finnhub.js")).finnhubProvider;
-    const polygon = (await import("../providers/polygon.js")).polygon;
+    const finnhub = (await import("@/providers/finnhub.js")).finnhubProvider;
+    const polygon = (await import("@/providers/polygon.js")).polygon;
     vi.spyOn(finnhub, "isConfigured").mockReturnValue(false);
     vi.spyOn(polygon, "isConfigured").mockReturnValue(false);
 
@@ -89,14 +91,12 @@ describe("unified.getQuote fallback", () => {
       quoteRetryMinDelayMs: 10,
     });
 
-    const yahoo = (await import("../providers/yahoo.js")).yahoo;
-    const finviz = (await import("../providers/finviz.js")).finviz;
+    const yahoo = (await import("@/providers/yahoo.js")).yahoo;
+    const finviz = (await import("@/providers/finviz.js")).finviz;
 
     const yahooSpy = vi
       .spyOn(yahoo, "getQuoteNormalized")
-      .mockImplementationOnce(async () => {
-        throw Object.assign(new Error("fetch failed"), { code: "ECONNRESET" });
-      })
+      .mockRejectedValueOnce(Object.assign(new Error("fetch failed"), { code: "ECONNRESET" }))
       .mockImplementationOnce(async (symbol: string) => {
         await sleep(1);
 
@@ -124,46 +124,42 @@ describe("unified.getQuote fallback", () => {
   });
 
   it("wraps all-provider failure into a unified ProviderError (AggregateError cause)", async () => {
-    const finnhub = (await import("../providers/finnhub.js")).finnhubProvider;
-    const polygon = (await import("../providers/polygon.js")).polygon;
+    const finnhub = (await import("@/providers/finnhub.js")).finnhubProvider;
+    const polygon = (await import("@/providers/polygon.js")).polygon;
     vi.spyOn(finnhub, "isConfigured").mockReturnValue(false);
     vi.spyOn(polygon, "isConfigured").mockReturnValue(false);
 
     const unified = createUnified({ quoteRetries: 0 });
 
-    const yahoo = (await import("../providers/yahoo.js")).yahoo;
-    const finviz = (await import("../providers/finviz.js")).finviz;
+    const yahoo = (await import("@/providers/yahoo.js")).yahoo;
+    const finviz = (await import("@/providers/finviz.js")).finviz;
 
     vi.spyOn(yahoo, "getQuoteNormalized").mockRejectedValueOnce(new Error("yahoo down"));
     vi.spyOn(finviz, "getQuote").mockRejectedValueOnce(new Error("finviz down"));
 
-    try {
-      await unified.getQuote("AAPL");
-      throw new Error("expected unified.getQuote to throw");
-    } catch (err) {
-      expect(err).toBeInstanceOf(ProviderError);
-
-      if (!(err instanceof ProviderError)) throw err;
-      const pe = err;
-      expect(pe.provider).toBe("unified");
-      expect(pe.operation).toBe("getQuote");
-      expect(pe.cause).toBeInstanceOf(AggregateError);
-    }
+    const error: unknown = await unified.getQuote("AAPL").catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(ProviderError);
+    expect(error).toMatchObject({
+      provider: "unified",
+      operation: "getQuote",
+    });
+    if (!(error instanceof ProviderError)) throw new Error("Expected a provider failure");
+    expect(error.cause).toBeInstanceOf(AggregateError);
   });
 
   it("treats provider timeouts as failures and records metrics", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-02-05T00:00:00.000Z"));
 
-    const finnhub = (await import("../providers/finnhub.js")).finnhubProvider;
-    const polygon = (await import("../providers/polygon.js")).polygon;
+    const finnhub = (await import("@/providers/finnhub.js")).finnhubProvider;
+    const polygon = (await import("@/providers/polygon.js")).polygon;
     vi.spyOn(finnhub, "isConfigured").mockReturnValue(false);
     vi.spyOn(polygon, "isConfigured").mockReturnValue(false);
 
     const unified = createUnified({ quoteTimeoutMs: 10, quoteRetries: 0 });
 
-    const yahoo = (await import("../providers/yahoo.js")).yahoo;
-    const finviz = (await import("../providers/finviz.js")).finviz;
+    const yahoo = (await import("@/providers/yahoo.js")).yahoo;
+    const finviz = (await import("@/providers/finviz.js")).finviz;
 
     vi.spyOn(yahoo, "getQuoteNormalized").mockImplementation(async () => {
       await new Promise<void>(() => {});
@@ -175,10 +171,9 @@ describe("unified.getQuote fallback", () => {
       return null;
     });
 
-    const pending = unified.getQuote("TSLA");
-    const assertion = expect(pending).rejects.toBeInstanceOf(ProviderError);
+    const pending = unified.getQuote("TSLA").catch((cause: unknown) => cause);
     await vi.advanceTimersByTimeAsync(20);
-    await assertion;
+    expect(await pending).toBeInstanceOf(ProviderError);
 
     const snap = unified.getProviderMetrics();
     expect(snap.providers.yahoo?.getQuote?.totals.failure).toBe(1);

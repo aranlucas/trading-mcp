@@ -4,7 +4,7 @@ FROM node:24-alpine AS builder
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME/bin:$PATH
 ENV ENV=/etc/profile.d/pnpm.sh
-RUN touch "$ENV" && wget -qO- https://get.pnpm.io/install.sh | env PNPM_VERSION=12.2.1 SHELL=/bin/sh ENV="$ENV" sh -
+RUN touch "$ENV" && wget -qO- https://get.pnpm.io/install.sh | env PNPM_VERSION=12.10.1 SHELL=/bin/sh ENV="$ENV" sh -
 
 WORKDIR /app
 
@@ -31,7 +31,7 @@ FROM node:24-alpine
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME/bin:$PATH
 ENV ENV=/etc/profile.d/pnpm.sh
-RUN touch "$ENV" && wget -qO- https://get.pnpm.io/install.sh | env PNPM_VERSION=12.2.1 SHELL=/bin/sh ENV="$ENV" sh -
+RUN touch "$ENV" && wget -qO- https://get.pnpm.io/install.sh | env PNPM_VERSION=12.10.1 SHELL=/bin/sh ENV="$ENV" sh -
 
 WORKDIR /app
 

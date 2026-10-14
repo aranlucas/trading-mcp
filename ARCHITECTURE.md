@@ -126,10 +126,12 @@ flowchart LR
 ### Configuration
 
 **Current**
+
 - `packages/core/src/config.ts` reads env at import-time and prints warnings.
 - `packages/core/src/lib/env.ts` validates env with Zod but is not called by default.
 
 **Desired**
+
 - A single “composition root” per runnable package that:
   - calls env validation once on startup
   - constructs any clients with validated config
@@ -138,9 +140,11 @@ flowchart LR
 ### Rate limiting and caching
 
 **Current**
+
 - Bottleneck limiters and LRU caches exist in `@trading/core`, but most provider calls do not consistently go through them.
 
 **Desired**
+
 - All external calls should be wrapped by:
   - per-provider rate limiting
   - timeouts
@@ -149,18 +153,22 @@ flowchart LR
 ### Errors
 
 **Current**
+
 - Errors are often returned as `String(error)` with inconsistent shapes between MCP and REST.
 
 **Desired**
+
 - A small, typed error taxonomy (e.g., `ProviderError`, `ValidationError`, `NotConfiguredError`, `UpstreamUnavailableError`)
 - Stable public error envelope for REST and MCP (never leak secrets; include correlation id)
 
 ### Observability
 
 **Current**
+
 - Pino logger exists, but REST uses `console.log` and request correlation isn’t standard.
 
 **Desired**
+
 - Correlation IDs across REST and MCP boundaries.
 - Minimal metrics targets (latency, error rates, provider health, cache hit rate).
 
@@ -175,6 +183,7 @@ Create a `marketData` module in `@trading/core` that is the only way the rest of
 - callers (MCP tools and REST routes) stay thin and consistent
 
 Concrete change examples:
+
 - REST quote routes should call `marketData.getQuote(s)` instead of `yahoo.getQuote(s)`
 - MCP “read-only” tools should use the same facade, reserving Alpaca for trading/portfolio
 
@@ -247,4 +256,3 @@ Pick measurable targets so “better” is objective:
 - < 1% 5xx on REST quote endpoints (excluding upstream outages)
 - provider health reported with latency + error rate
 - 80%+ unit coverage on core orchestration logic (facades, policy, breaker)
-

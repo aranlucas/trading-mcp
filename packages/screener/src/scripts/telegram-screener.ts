@@ -1,3 +1,10 @@
+type ReportOptions = {
+  kind: ReportKind;
+  limit: number;
+  scanCriteria?: ScanCriteria;
+  watchlist: string[];
+};
+
 import { z } from "zod";
 import type { Signal } from "@trading/core";
 import type { ScanCriteria, ScreenerScanResult } from "./lib/screener-api.js";
@@ -15,7 +22,11 @@ function requireEnv(name: string): string {
 type ScreenerProvider = "yahoo" | "alpaca";
 
 function getProvider(): ScreenerProvider {
-  const raw = (process.env.SCREENER_PROVIDER || "yahoo").trim().toLowerCase();
+  const raw = (
+    process.env.SCREENER_PROVIDER === "" ? "yahoo" : (process.env.SCREENER_PROVIDER ?? "yahoo")
+  )
+    .trim()
+    .toLowerCase();
 
   return raw === "alpaca" ? "alpaca" : "yahoo";
 }
@@ -87,7 +98,7 @@ function formatSignalsBlock(signals: Signal[]): string {
     bySymbol.set(s.symbol, list);
   }
 
-  const symbols = [...bySymbol.keys()].sort();
+  const symbols = [...bySymbol.keys()].toSorted();
   const lines: string[] = [];
 
   for (const sym of symbols) {
@@ -95,7 +106,7 @@ function formatSignalsBlock(signals: Signal[]): string {
 
     const top = list
       .slice()
-      .sort((a, b) => b.strength - a.strength)
+      .toSorted((a, b) => b.strength - a.strength)
       .slice(0, 3)
       .map((s) => `${s.type} (${s.direction}) ${Math.round(s.strength * 100)}%`)
       .join(", ");
@@ -109,7 +120,7 @@ function formatSignalsBlock(signals: Signal[]): string {
 function formatScanBlock(results: ScreenerScanResult[], limit: number): string {
   const sorted = results
     .slice()
-    .sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent))
+    .toSorted((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent))
     .slice(0, limit);
 
   const lines = sorted.map((r) => {
@@ -135,12 +146,7 @@ function nowStampUtc(): string {
 
 type ReportKind = "movers" | "scan" | "signals";
 
-async function buildReport(opts: {
-  kind: ReportKind;
-  limit: number;
-  scanCriteria?: ScanCriteria;
-  watchlist: string[];
-}): Promise<string> {
+async function buildReport(opts: ReportOptions): Promise<string> {
   const header = `Screener update (${nowStampUtc()})`;
 
   if (opts.kind === "signals") {
@@ -184,9 +190,10 @@ async function buildReport(opts: {
 async function main(): Promise<void> {
   const provider = getProvider();
 
+  const report = process.env.SCREENER_REPORT?.trim();
   const kind = z
     .enum(["movers", "signals", "scan"])
-    .parse(process.env.SCREENER_REPORT?.trim() || "movers");
+    .parse(report === "" ? "movers" : (report ?? "movers"));
 
   const limit = envInt("SCREENER_LIMIT", 10);
   const watchlist = parseCsvSymbols(process.env.SCREENER_WATCHLIST);

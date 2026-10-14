@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import type { alpaca } from "@trading/core";
-import { connectTestTools, ToolTextSchema } from "./mcp-test-client.js";
+import { connectTestTools, ToolTextSchema } from "@test/mcp-test-client.js";
 
 function barsFromCloses(closes: number[]) {
   return closes.map((c, i) => ({
@@ -16,7 +16,7 @@ function barsFromCloses(closes: number[]) {
 
 const alpacaMock = { getBars: vi.fn<typeof alpaca.getBars>() };
 
-import { registerTechnicalTools } from "../tools/technicals.js";
+import { registerTechnicalTools } from "@/tools/technicals.js";
 
 describe("Technical MCP tools", () => {
   let harness: Awaited<ReturnType<typeof connectTestTools>>;
@@ -110,13 +110,21 @@ describe("Technical MCP tools", () => {
       const content = ToolTextSchema.parse(result);
       const signals = z.array(z.object({ type: z.string() })).parse(JSON.parse(content));
       expect(signals.some((s) => s.type.startsWith("MA_"))).toBe(false);
-
-      if (length < 34) expect(signals.some((s) => s.type.startsWith("MACD_"))).toBe(false);
     },
   );
 
+  it.each([20, 25, 26, 33])("does not invent MACD signals with %i bars", async (length) => {
+    alpacaMock.getBars.mockResolvedValueOnce(
+      barsFromCloses(Array.from({ length }, (_, i) => 100 + i)),
+    );
+    const result = await registeredTools.get("get_signals")!.handler({ symbol: "AAPL" });
+    const content = ToolTextSchema.parse(result);
+    const signals = z.array(z.object({ type: z.string() })).parse(JSON.parse(content));
+    expect(signals.some((signal) => signal.type.startsWith("MACD_"))).toBe(false);
+  });
+
   it("does not call flat history overbought", async () => {
-    alpacaMock.getBars.mockResolvedValueOnce(barsFromCloses(Array(50).fill(100)));
+    alpacaMock.getBars.mockResolvedValueOnce(barsFromCloses(Array.from({ length: 50 }, () => 100)));
     const result = await registeredTools.get("get_signals")!.handler({ symbol: "AAPL" });
     const content = ToolTextSchema.parse(result);
     expect(JSON.parse(content)).toEqual([]);

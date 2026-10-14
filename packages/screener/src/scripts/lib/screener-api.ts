@@ -3,6 +3,11 @@ import { app } from "../../app.js";
 
 import { z } from "zod";
 
+type MoversOptions = {
+  direction: "gainers" | "losers";
+  limit: number;
+};
+
 export const ScreenerScanResultSchema = z.object({
   symbol: z.string(),
   price: z.number(),
@@ -49,10 +54,7 @@ async function appJson<T>(path: string, schema: z.ZodType<T>, init?: RequestInit
   return schema.parse(await res.json());
 }
 
-export async function getMovers(opts: {
-  direction: "gainers" | "losers";
-  limit: number;
-}): Promise<ScreenerScanResult[]> {
+export async function getMovers(opts: MoversOptions): Promise<ScreenerScanResult[]> {
   const data = await appJson(
     `/api/screener/movers/${opts.direction}?limit=${opts.limit}`,
     z.object({ movers: z.array(ScreenerScanResultSchema) }),

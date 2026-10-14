@@ -1,5 +1,12 @@
 {
   "extends": "./tsconfig.base.json",
   "include": ["packages/*/src/**/*.ts"],
-  "exclude": ["**/node_modules/**", "**/dist/**", "**/__tests__/**", "**/*.test.ts"]
+  "exclude": ["**/node_modules/**", "**/dist/**", "**/__tests__/**", "**/*.test.ts"],
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./packages/*"],
+      "@test/*": ["./test/*"],
+      "@api/*": ["./api/*"]
+    }
+  }
 }
