@@ -1,11 +1,11 @@
 // Screener tools - find stocks by criteria
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
-  finviz,
-  polygon,
-  yahoo,
+  finviz as finvizProvider,
+  polygon as polygonProvider,
+  yahoo as yahooProvider,
   type FinvizScreenerResult,
   type PolygonTickerSnapshot,
 } from "@trading/core";
@@ -21,10 +21,10 @@ interface ScreenerResult {
 }
 
 export type ScreenerDependencies = {
-  polygon: Pick<typeof polygon, "getGainersLosers" | "isConfigured">;
-  yahoo: Pick<typeof yahoo, "getTrending" | "search">;
+  polygon: Pick<typeof polygonProvider, "getGainersLosers" | "isConfigured">;
+  yahoo: Pick<typeof yahooProvider, "getTrending" | "search">;
   finviz: Pick<
-    typeof finviz,
+    typeof finvizProvider,
     | "getGainers"
     | "getLosers"
     | "getMostVolatile"
@@ -36,9 +36,15 @@ export type ScreenerDependencies = {
   >;
 };
 
+const defaultDependencies: ScreenerDependencies = {
+  yahoo: yahooProvider,
+  finviz: finvizProvider,
+  polygon: polygonProvider,
+};
+
 export function registerScreenerTools(
   server: McpServer,
-  dependencies: ScreenerDependencies = { yahoo, finviz, polygon },
+  dependencies: ScreenerDependencies = defaultDependencies,
 ) {
   const { yahoo, finviz, polygon } = dependencies;
 
@@ -94,7 +100,7 @@ export function registerScreenerTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -153,7 +159,7 @@ export function registerScreenerTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -192,7 +198,7 @@ export function registerScreenerTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -231,7 +237,7 @@ export function registerScreenerTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -270,7 +276,7 @@ export function registerScreenerTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -309,7 +315,7 @@ export function registerScreenerTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -348,7 +354,7 @@ export function registerScreenerTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -387,7 +393,7 @@ export function registerScreenerTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -414,7 +420,7 @@ export function registerScreenerTools(
             {
               type: "text" as const,
               text: JSON.stringify(
-                results.map((t: { symbol: string }) => ({
+                results.map((t) => ({
                   symbol: t.symbol,
                   source: "yahoo",
                 })),
@@ -426,7 +432,7 @@ export function registerScreenerTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -453,7 +459,7 @@ export function registerScreenerTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }

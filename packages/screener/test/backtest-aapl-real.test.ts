@@ -287,7 +287,7 @@ function calculateRsi(closes: number[], period = 14): number {
     changes.push(closes[i]! - closes[i - 1]!);
   }
 
-  const gains = changes.slice(-period).map((c) => (c > 0 ? c : 0));
+  const gains = changes.slice(-period).map((c) => Math.max(c, 0));
   const losses = changes.slice(-period).map((c) => (c < 0 ? -c : 0));
 
   const avgGain = gains.reduce((a, b) => a + b, 0) / period;
@@ -441,7 +441,9 @@ describe("AAPL Real Data Backtest", () => {
   it("should have valid historical data", () => {
     expect(AAPL_DATA.length).toBeGreaterThan(200);
     console.log(`\n📊 AAPL Data: ${AAPL_DATA.length} trading days`);
-    console.log(`   Period: ${AAPL_DATA[0]?.t} to ${AAPL_DATA[AAPL_DATA.length - 1]?.t}`);
+    console.log(
+      `   Period: ${AAPL_DATA[0]?.t ?? "unknown"} to ${AAPL_DATA.at(-1)?.t ?? "unknown"}`,
+    );
   });
 
   it("should backtest RSI Oversold strategy", () => {
@@ -594,7 +596,7 @@ describe("AAPL Real Data Backtest", () => {
     if (profitable.length > 0) {
       console.log("\n✅ WORTHWHILE STRATEGIES:");
 
-      for (const s of profitable.sort((a, b) => b.avgPnl - a.avgPnl)) {
+      for (const s of profitable.toSorted((a, b) => b.avgPnl - a.avgPnl)) {
         console.log(
           `   • ${s.name}: ${s.winRate.toFixed(0)}% win rate, +${s.avgPnl.toFixed(2)}% avg per trade`,
         );

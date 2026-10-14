@@ -17,8 +17,8 @@ export interface Config {
 }
 
 export function loadConfig(): Config {
-  const alpacaKey = process.env.ALPACA_API_KEY || "";
-  const alpacaSecret = process.env.ALPACA_API_SECRET || "";
+  const alpacaKey = process.env.ALPACA_API_KEY ?? "";
+  const alpacaSecret = process.env.ALPACA_API_SECRET ?? "";
   const alpacaPaper = process.env.ALPACA_PAPER !== "false";
 
   if (!alpacaKey || !alpacaSecret) {

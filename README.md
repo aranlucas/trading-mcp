@@ -71,13 +71,13 @@ for portfolio, order, and Alpaca-backed screening features. The default
 Polygon, Finnhub, and FRED keys enable additional provider features. Telegram
 settings are only needed for the optional notification script.
 
-| Variable | Role |
-| --- | --- |
-| `ALPACA_API_KEY` / `ALPACA_API_SECRET` | Alpaca account and trading API credentials. |
-| `ALPACA_PAPER` | Defaults to paper mode unless explicitly set to `false`. |
-| `SCREENER_PROVIDER` | `yahoo` (default) or `alpaca` for screener data. |
-| `POLYGON_API_KEY`, `FINNHUB_API_KEY`, `FRED_API_KEY` | Optional provider access. |
-| `PORT` | Local screener port, default `3000`. |
+| Variable                                             | Role                                                     |
+| ---------------------------------------------------- | -------------------------------------------------------- |
+| `ALPACA_API_KEY` / `ALPACA_API_SECRET`               | Alpaca account and trading API credentials.              |
+| `ALPACA_PAPER`                                       | Defaults to paper mode unless explicitly set to `false`. |
+| `SCREENER_PROVIDER`                                  | `yahoo` (default) or `alpaca` for screener data.         |
+| `POLYGON_API_KEY`, `FINNHUB_API_KEY`, `FRED_API_KEY` | Optional provider access.                                |
+| `PORT`                                               | Local screener port, default `3000`.                     |
 
 ## Architecture and source map
 
@@ -104,9 +104,10 @@ flowchart LR
 The current provider paths are intentionally documented in
 [`ARCHITECTURE.md`](ARCHITECTURE.md), including known differences between MCP
 and REST data sources and the roadmap for a single market-data facade.
+
 ## Deployment
 
-Vercel uses Corepack to honor the root package's pinned `pnpm@12.4.2`
+Vercel uses Corepack to honor the root package's pinned `pnpm@12.10.1`
 toolchain.
 
 ## Verify

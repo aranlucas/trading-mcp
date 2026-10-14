@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeYahooQuote } from "../providers/yahoo.js";
+import { normalizeYahooQuote } from "@/providers/yahoo.js";
 
 describe("Yahoo quote response parser", () => {
   it("rejects an invalid payload before field access", () => {

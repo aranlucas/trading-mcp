@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createUnified, yahoo, polygon, finnhub, finviz } from "../providers/index.js";
-import { mockBars } from "./fixtures.js";
-import type { Quote } from "../types/index.js";
+import { createUnified, yahoo, polygon, finnhub, finviz } from "@/providers/index.js";
+import { mockBars } from "@test/fixtures.js";
+import type { Quote } from "@/types/index.js";
 
 const quote: Quote = {
   symbol: "AAPL",
@@ -29,14 +29,15 @@ describe("Unified provider with offline provider seams", () => {
   });
 
   it("returns a real normalized provider result through the unified coordinator", async () => {
+    const getQuote = vi.spyOn(yahoo, "getQuoteNormalized");
     expect(await createUnified({ quoteRetries: 0 }).getQuote("AAPL")).toEqual(quote);
-    expect(yahoo.getQuoteNormalized).toHaveBeenCalledWith("AAPL");
+    expect(getQuote).toHaveBeenCalledWith("AAPL");
   });
 
   it("passes through a successful batch and handles an empty batch", async () => {
-    vi.spyOn(yahoo, "getQuotes").mockResolvedValue([]);
+    const getQuotes = vi.spyOn(yahoo, "getQuotes").mockResolvedValue([]);
     expect(await createUnified().getQuotes([])).toEqual([]);
-    expect(yahoo.getQuotes).toHaveBeenCalledWith([]);
+    expect(getQuotes).toHaveBeenCalledWith([]);
   });
 
   it("falls back from a failed batch to individual normalized quotes", async () => {
@@ -46,16 +47,16 @@ describe("Unified provider with offline provider seams", () => {
 
   it("skips symbols when all individual providers fail", async () => {
     vi.spyOn(yahoo, "getQuotes").mockRejectedValue(new Error("batch unavailable"));
-    vi.mocked(yahoo.getQuoteNormalized).mockRejectedValue(new Error("quote unavailable"));
+    vi.spyOn(yahoo, "getQuoteNormalized").mockRejectedValue(new Error("quote unavailable"));
     expect(await createUnified({ quoteRetries: 0 }).getQuotes(["AAPL"])).toEqual([]);
   });
 
   it("falls back to Polygon bars when Yahoo history fails", async () => {
     vi.spyOn(yahoo, "getHistory").mockRejectedValue(new Error("history unavailable"));
-    vi.spyOn(polygon, "getAggregates").mockResolvedValue(mockBars);
+    const getAggregates = vi.spyOn(polygon, "getAggregates").mockResolvedValue(mockBars);
     const bars = await createUnified().getBars("AAPL", 30);
     expect(bars).toEqual(mockBars);
-    expect(polygon.getAggregates).toHaveBeenCalledWith(
+    expect(getAggregates).toHaveBeenCalledWith(
       "AAPL",
       1,
       "day",

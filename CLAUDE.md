@@ -24,17 +24,18 @@ pnpm dev:screener                   # Dev mode: REST API (tsx watch)
 
 A trading tools monorepo with three packages:
 
-| Package | Path | Purpose |
-|---------|------|---------|
-| `@trading/core` | `packages/core/` | Shared types, Zod schemas, data providers, and infrastructure (cache, rate limiter, errors, retry, timeout) |
-| `@trading/mcp` | `packages/mcp/` | MCP server (stdio transport) for AI-assisted trading |
-| `@trading/screener` | `packages/screener/` | REST API (Hono + OpenAPI) for stock screening, deployed to Vercel via `api/` directory |
+| Package             | Path                 | Purpose                                                                                                     |
+| ------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `@trading/core`     | `packages/core/`     | Shared types, Zod schemas, data providers, and infrastructure (cache, rate limiter, errors, retry, timeout) |
+| `@trading/mcp`      | `packages/mcp/`      | MCP server (stdio transport) for AI-assisted trading                                                        |
+| `@trading/screener` | `packages/screener/` | REST API (Hono + OpenAPI) for stock screening, deployed to Vercel via `api/` directory                      |
 
 ## Architecture
 
 ### Provider System (`packages/core/src/providers/index.ts`)
 
 The `unified` facade is the primary entry point for market data:
+
 - `Promise.any()` queries all configured providers in parallel (yahoo, finnhub, polygon, finviz)
 - First successful response wins; 2s per-provider timeout with 1 retry (exponential backoff + jitter)
 - Rolling-window metrics track error rates per provider; warns at >50% failure
@@ -70,6 +71,7 @@ Hono routes use `@hono/zod-openapi` for automatic request validation and OpenAPI
 ## Code Style
 
 Enforced by Prettier (pre-commit via Husky + lint-staged):
+
 - Double quotes, semicolons, trailing commas, 2-space indent, 100-char width
 - Naming: PascalCase types/interfaces, camelCase functions/variables, SCREAMING_SNAKE_CASE constants
 
@@ -91,13 +93,13 @@ Enforced by Prettier (pre-commit via Husky + lint-staged):
 
 See `.env.example` for the full list. Key variables:
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `ALPACA_API_KEY` | For trading | Alpaca API key |
-| `ALPACA_API_SECRET` | For trading | Alpaca API secret |
-| `ALPACA_PAPER` | No (default: true) | Use paper trading |
-| `POLYGON_API_KEY` | No | Polygon market data |
-| `FINNHUB_API_KEY` | No | Finnhub news/sentiment |
-| `FRED_API_KEY` | No | Federal Reserve economic data |
-| `SCREENER_PROVIDER` | No (default: yahoo) | `yahoo` (free) or `alpaca` |
-| `PORT` | No (default: 3000) | REST API port |
+| Variable            | Required            | Description                   |
+| ------------------- | ------------------- | ----------------------------- |
+| `ALPACA_API_KEY`    | For trading         | Alpaca API key                |
+| `ALPACA_API_SECRET` | For trading         | Alpaca API secret             |
+| `ALPACA_PAPER`      | No (default: true)  | Use paper trading             |
+| `POLYGON_API_KEY`   | No                  | Polygon market data           |
+| `FINNHUB_API_KEY`   | No                  | Finnhub news/sentiment        |
+| `FRED_API_KEY`      | No                  | Federal Reserve economic data |
+| `SCREENER_PROVIDER` | No (default: yahoo) | `yahoo` (free) or `alpaca`    |
+| `PORT`              | No (default: 3000)  | REST API port                 |

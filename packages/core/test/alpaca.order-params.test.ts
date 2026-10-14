@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AlpacaOrderRequestSchema } from "../lib/alpaca.js";
+import { AlpacaOrderRequestSchema } from "@/lib/alpaca.js";
 
 describe("AlpacaOrderRequestSchema", () => {
   it("rejects limit order without limit_price", () => {

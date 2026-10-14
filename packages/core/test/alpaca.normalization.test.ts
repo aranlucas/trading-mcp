@@ -1,6 +1,6 @@
 import { createMockAlpaca } from "@alpacahq/alpaca-trade-api/testing";
 import { describe, expect, it } from "vitest";
-import { mapOrder, parseTimeframe, mapMarketClock } from "../lib/alpaca.js";
+import { mapOrder, parseTimeframe, mapMarketClock } from "@/lib/alpaca.js";
 
 describe("Alpaca SDK order normalization (synthetic only)", () => {
   it.each([
@@ -81,7 +81,7 @@ describe("Alpaca timeframe boundary", () => {
   it.each(["garbage", "0Min", "60Min", "1Second", "-1Day"])(
     "rejects invalid timeframe %s locally",
     (value) => {
-      expect(() => parseTimeframe(value)).toThrow();
+      expect(() => parseTimeframe(value)).toThrow(Error);
     },
   );
 });

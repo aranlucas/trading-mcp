@@ -29,6 +29,7 @@ This document tracks remaining work for the trading-mcp repository. Delete this 
 **Target:** 80%+ coverage
 
 **Remaining:**
+
 - Add coverage for trading/order flows beyond parameter validation
 
 **Priority:** High
@@ -42,6 +43,7 @@ This document tracks remaining work for the trading-mcp repository. Delete this 
 **Problem:** `packages/core/src/providers/finviz.ts` parses HTML with regex (brittle, possible ToS issues).
 
 **Alternatives:**
+
 1. Finviz Elite API (paid)
 2. Alpha Vantage (free tier)
 3. Tradier (free market data)
@@ -56,6 +58,7 @@ This document tracks remaining work for the trading-mcp repository. Delete this 
 **Current:** Basic OpenAPI spec exists at `GET /openapi.json`.
 
 **Remaining:**
+
 - Document rate limiting behavior
 
 **Priority:** High

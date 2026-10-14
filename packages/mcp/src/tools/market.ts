@@ -1,16 +1,18 @@
 // Market data tools
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { alpaca } from "@trading/core";
+import { alpaca as alpacaProvider } from "@trading/core";
 
 export type MarketDependencies = {
-  alpaca: Pick<typeof alpaca, "getBars" | "getMarketClock" | "getQuote">;
+  alpaca: Pick<typeof alpacaProvider, "getBars" | "getMarketClock" | "getQuote">;
 };
+
+const defaultDependencies: MarketDependencies = { alpaca: alpacaProvider };
 
 export function registerMarketTools(
   server: McpServer,
-  dependencies: MarketDependencies = { alpaca },
+  dependencies: MarketDependencies = defaultDependencies,
 ) {
   const { alpaca } = dependencies;
 
@@ -34,7 +36,7 @@ export function registerMarketTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -66,7 +68,7 @@ export function registerMarketTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -91,7 +93,7 @@ export function registerMarketTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }

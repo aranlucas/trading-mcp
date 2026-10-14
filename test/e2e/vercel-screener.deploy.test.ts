@@ -13,48 +13,49 @@ function normalizeBaseUrl(raw: string): URL {
   return url;
 }
 
-async function fetchJson(
-  url: URL,
-  init?: RequestInit,
-): Promise<{
+interface JsonResponse {
   status: number;
   json: z.infer<ReturnType<typeof z.json>>;
   contentType: string | null;
-}> {
-  const res = await fetch(url, {
-    ...init,
-    headers: {
-      accept: "application/json",
-      "user-agent": "trading-mcp vercel integration tests",
-      ...init?.headers,
-    },
-  });
+}
 
+async function fetchJson(url: URL, init?: RequestInit): Promise<JsonResponse> {
+  const headers = new Headers(init?.headers);
+  if (!headers.has("accept")) headers.set("accept", "application/json");
+  if (!headers.has("user-agent")) headers.set("user-agent", "trading-mcp vercel integration tests");
+  const res = await fetch(url, { ...init, headers });
   const contentType = res.headers.get("content-type");
   const json = z.json().parse(await res.json());
 
   return { status: res.status, json, contentType };
 }
 
-async function waitForDeployment(baseUrl: URL, timeoutMs: number) {
-  const deadline = Date.now() + timeoutMs;
-  const apiUrl = new URL("/api", baseUrl);
-  let lastError = "No response";
-
-  while (Date.now() < deadline) {
-    try {
-      const { status } = await fetchJson(apiUrl);
-
-      if (status >= 200 && status < 300) return;
-      lastError = `Unexpected status: ${status}`;
-    } catch (err) {
-      lastError = String(err);
-    }
-
-    await new Promise((r) => setTimeout(r, 1500));
+async function pollDeployment(
+  apiUrl: URL,
+  deadline: number,
+  lastError = "No response",
+): Promise<void> {
+  if (Date.now() >= deadline) {
+    throw new Error(`Deployment did not become ready at ${apiUrl.toString()} (${lastError})`);
   }
 
-  throw new Error(`Deployment did not become ready at ${apiUrl.toString()} (${String(lastError)})`);
+  let failure: string;
+  try {
+    const { status } = await fetchJson(apiUrl);
+    if (status >= 200 && status < 300) return;
+    failure = `Unexpected status: ${status}`;
+  } catch (error) {
+    failure = String(error);
+  }
+
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 1500);
+  });
+  await pollDeployment(apiUrl, deadline, failure);
+}
+
+function waitForDeployment(baseUrl: URL, timeoutMs: number): Promise<void> {
+  return pollDeployment(new URL("/api", baseUrl), Date.now() + timeoutMs);
 }
 
 const rawBaseUrl = process.env.VERCEL_DEPLOY_URL ?? process.env.INTEGRATION_BASE_URL;
@@ -72,8 +73,8 @@ const baseUrl = enabled && rawBaseUrl ? normalizeBaseUrl(rawBaseUrl) : null;
 
 suite("Vercel Screener deployment", () => {
   beforeAll(async () => {
-    expect(baseUrl).not.toBeNull();
-    const url = baseUrl!;
+    if (!baseUrl) throw new Error("Deployment base URL is required");
+    const url = baseUrl;
 
     if (url.protocol !== "https:") {
       throw new Error(`Refusing to run against non-HTTPS URL: ${url.toString()}`);
@@ -106,13 +107,14 @@ suite("Vercel Screener deployment", () => {
 
     expect(contentType ?? "").toMatch(/application\/json/i);
     expect(status).toBe(200);
-    expect(json).toEqual(
-      expect.objectContaining({
-        openapi: expect.any(String),
-        info: expect.any(Object),
-        paths: expect.any(Object),
-      }),
-    );
+    const document = z
+      .object({
+        openapi: z.string(),
+        info: z.record(z.string(), z.json()),
+        paths: z.record(z.string(), z.json()),
+      })
+      .parse(json);
+    expect(document.openapi).toEqual(expect.any(String));
   });
 
   test("GET /api/quotes/AAPL returns JSON (quote or public error)", async () => {
@@ -120,16 +122,16 @@ suite("Vercel Screener deployment", () => {
 
     expect(contentType ?? "").toMatch(/application\/json/i);
 
-    if (status === 200) {
-      expect(json).toEqual(expect.objectContaining({ symbol: "AAPL" }));
-
-      return;
-    }
-
-    // Yahoo may rate-limit or intermittently fail in CI; validate the contract instead of flaking.
-    expect(status).toBeGreaterThanOrEqual(400);
-    expect(json).toEqual(
-      expect.objectContaining({ error: expect.any(String), code: expect.any(String) }),
-    );
+    // Yahoo may rate-limit or intermittently fail in CI; validate either response contract.
+    const response = z
+      .union([
+        z.object({ status: z.literal(200), json: z.object({ symbol: z.literal("AAPL") }) }),
+        z.object({
+          status: z.number().int().min(400).max(599),
+          json: z.object({ error: z.string(), code: z.string() }),
+        }),
+      ])
+      .parse({ status, json });
+    expect(response.status).toBe(status);
   });
 });

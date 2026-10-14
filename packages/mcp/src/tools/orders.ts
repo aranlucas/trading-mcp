@@ -1,16 +1,18 @@
 // Order management tools
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { alpaca } from "@trading/core";
+import { alpaca as alpacaProvider } from "@trading/core";
 
 export type OrderDependencies = {
-  alpaca: Pick<typeof alpaca, "cancelOrder" | "getOrder" | "getOrders" | "placeOrder">;
+  alpaca: Pick<typeof alpacaProvider, "cancelOrder" | "getOrder" | "getOrders" | "placeOrder">;
 };
+
+const defaultDependencies: OrderDependencies = { alpaca: alpacaProvider };
 
 export function registerOrderTools(
   server: McpServer,
-  dependencies: OrderDependencies = { alpaca },
+  dependencies: OrderDependencies = defaultDependencies,
 ) {
   const { alpaca } = dependencies;
 
@@ -83,7 +85,7 @@ export function registerOrderTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -110,7 +112,7 @@ export function registerOrderTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -137,7 +139,7 @@ export function registerOrderTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -168,7 +170,7 @@ export function registerOrderTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }

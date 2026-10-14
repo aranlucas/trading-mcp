@@ -1,4 +1,7 @@
 #!/usr/bin/env -S pnpm exec tsx
+type BacktestStrategy = { name: string; run: () => ReturnType<typeof aggregateResults> };
+type StrategyResult = { name: string; result: ReturnType<typeof aggregateResults> };
+
 /**
  * Real Data Backtest Script
  *
@@ -9,7 +12,7 @@
  *   cd packages/screener && pnpm exec tsx src/scripts/run-backtest.ts
  */
 
-import { yahoo } from "@trading/core";
+import { forEachSequential, yahoo } from "@trading/core";
 
 interface Bar {
   t: string;
@@ -62,7 +65,18 @@ async function fetchRealData(symbol: string, days: number): Promise<Bar[]> {
     const bars: Bar[] = [];
 
     for (const q of result.quotes) {
-      if (q.open == null || q.high == null || q.low == null || q.close == null || q.volume == null)
+      if (
+        q.open === null ||
+        q.open === undefined ||
+        q.high === null ||
+        q.high === undefined ||
+        q.low === null ||
+        q.low === undefined ||
+        q.close === null ||
+        q.close === undefined ||
+        q.volume === null ||
+        q.volume === undefined
+      )
         continue;
       bars.push({
         t: new Date(q.date).toISOString().slice(0, 10),
@@ -92,7 +106,7 @@ function calculateRsi(closes: number[], period = 14): number {
     changes.push(closes[i]! - closes[i - 1]!);
   }
 
-  const gains = changes.slice(-period).map((c) => (c > 0 ? c : 0));
+  const gains = changes.slice(-period).map((c) => Math.max(c, 0));
   const losses = changes.slice(-period).map((c) => (c < 0 ? -c : 0));
 
   const avgGain = gains.reduce((a, b) => a + b, 0) / period;
@@ -299,7 +313,7 @@ function aggregateResults(results: BacktestResult[]) {
 
   if (validResults.length === 0) {
     return {
-      strategy: results[0]?.strategy || "Unknown",
+      strategy: results[0]?.strategy === "" ? "Unknown" : (results[0]?.strategy ?? "Unknown"),
       totalTrades: 0,
       winningTrades: 0,
       winRate: 0,
@@ -351,17 +365,19 @@ async function main() {
 
   const dataCache = new Map<string, Bar[]>();
 
-  for (const symbol of STOCK_UNIVERSE) {
+  await forEachSequential(STOCK_UNIVERSE, async (symbol) => {
     process.stdout.write(`  Fetching ${symbol}...`);
     const bars = await fetchRealData(symbol, 730);
 
     if (bars.length > 0) {
       dataCache.set(symbol, bars);
-      console.log(` ✓ ${bars.length} bars (${bars[0]?.t} to ${bars[bars.length - 1]?.t})`);
+      console.log(
+        ` ✓ ${bars.length} bars (${bars[0]?.t ?? "unknown"} to ${bars.at(-1)?.t ?? "unknown"})`,
+      );
     } else {
       console.log(" ✗ No data");
     }
-  }
+  });
 
   if (dataCache.size === 0) {
     console.log("\n❌ No data available. Check your network connection.\n");
@@ -371,7 +387,7 @@ async function main() {
   console.log(`\n📈 Loaded data for ${dataCache.size} symbols\n`);
 
   // Define strategies to test
-  const strategies: { name: string; run: () => ReturnType<typeof aggregateResults> }[] = [
+  const strategies: BacktestStrategy[] = [
     {
       name: "RSI < 25 (5d)",
       run: () => {
@@ -479,7 +495,7 @@ async function main() {
       "|",
   );
 
-  const allResults: { name: string; result: ReturnType<typeof aggregateResults> }[] = [];
+  const allResults: StrategyResult[] = [];
 
   for (const strategy of strategies) {
     const result = strategy.run();

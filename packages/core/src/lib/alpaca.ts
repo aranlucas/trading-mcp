@@ -12,33 +12,37 @@ type TimeFrameString = ReturnType<typeof timeFrame>;
 
 // Initialize official Alpaca client lazily (v4 throws if creds missing at construction).
 // In tests and local dev without keys we still need the module to import (e.g. order schema tests).
-let _alpaca: Alpaca | null = null;
+let alpacaClient: Alpaca | null = null;
 
 function getAlpaca(): Alpaca {
-  if (_alpaca) return _alpaca;
+  if (alpacaClient) return alpacaClient;
   const keyId = config.alpaca.apiKey || "test-key-id";
   const secret = config.alpaca.apiSecret || "test-secret";
-  _alpaca = new Alpaca({ keyId, secret, paper: config.alpaca.paper });
+  alpacaClient = new Alpaca({ keyId, secret, paper: config.alpaca.paper });
 
-  return _alpaca;
+  return alpacaClient;
 }
 
 // Account & Portfolio
-export async function getAccount(): Promise<{
+type AccountSummary = {
   id: string;
   status: string;
   equity: string;
   cash: string;
   buying_power: string;
-}> {
+};
+
+type PriceBar = { t: string; o: number; h: number; l: number; c: number; v: number };
+
+export async function getAccount(): Promise<AccountSummary> {
   const raw = await getAlpaca().trading.account.getAccount();
 
   return {
-    id: String(raw.id ?? ""),
-    status: String(raw.status ?? ""),
-    equity: String(raw.equity ?? "0"),
-    cash: String(raw.cash ?? "0"),
-    buying_power: String(raw.buyingPower ?? "0"),
+    id: raw.id ?? "",
+    status: raw.status ?? "",
+    equity: raw.equity ?? "0",
+    cash: raw.cash ?? "0",
+    buying_power: raw.buyingPower ?? "0",
   };
 }
 
@@ -46,13 +50,13 @@ export async function getPositions(): Promise<Position[]> {
   const positions = await getAlpaca().trading.positions.getAllOpenPositions();
 
   return positions.map((p) => ({
-    symbol: String(p.symbol),
-    quantity: parseFloat(String(p.qty ?? "0")),
-    avgCost: parseFloat(String(p.avgEntryPrice ?? "0")),
-    currentPrice: parseFloat(String(p.currentPrice ?? "0")),
-    marketValue: parseFloat(String(p.marketValue ?? "0")),
-    unrealizedPL: parseFloat(String(p.unrealizedPl ?? "0")),
-    unrealizedPLPercent: parseFloat(String(p.unrealizedPlpc ?? "0")) * 100,
+    symbol: p.symbol,
+    quantity: parseFloat(p.qty ?? "0"),
+    avgCost: parseFloat(p.avgEntryPrice ?? "0"),
+    currentPrice: parseFloat(p.currentPrice ?? "0"),
+    marketValue: parseFloat(p.marketValue ?? "0"),
+    unrealizedPL: parseFloat(p.unrealizedPl ?? "0"),
+    unrealizedPLPercent: parseFloat(p.unrealizedPlpc ?? "0") * 100,
   }));
 }
 
@@ -76,12 +80,12 @@ export async function getQuote(symbol: string): Promise<Quote> {
     limit: 2,
   });
 
-  const sorted = [...bars].sort(
+  const sorted = bars.toSorted(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
   );
 
-  const prevBar = sorted.length >= 2 ? sorted[sorted.length - 2] : null;
-  const lastBar = sorted.length >= 1 ? sorted[sorted.length - 1] : null;
+  const prevBar = sorted.length >= 2 ? sorted.at(-2) : null;
+  const lastBar = sorted.length >= 1 ? sorted.at(-1) : null;
 
   const price = lastBar?.close ?? 0;
   const prevClose = prevBar?.close ?? price;
@@ -107,7 +111,7 @@ export async function getBars(
   symbol: string,
   timeframe = "1Day",
   limit = 100,
-): Promise<{ t: string; o: number; h: number; l: number; c: number; v: number }[]> {
+): Promise<PriceBar[]> {
   const bars = await getAlpaca().marketData.getStockBarsFor(symbol, {
     timeframe: parseTimeframe(timeframe),
     limit,
@@ -167,15 +171,7 @@ export const AlpacaOrderRequestSchema = z
     }
   });
 
-export async function placeOrder(params: {
-  symbol: string;
-  qty: number;
-  side: "buy" | "sell";
-  type: "market" | "limit" | "stop" | "stop_limit";
-  time_in_force: "day" | "gtc" | "ioc" | "fok";
-  limit_price?: number;
-  stop_price?: number;
-}): Promise<Order> {
+export async function placeOrder(params: z.input<typeof AlpacaOrderRequestSchema>): Promise<Order> {
   const parsed = AlpacaOrderRequestSchema.safeParse(params);
 
   if (!parsed.success) {

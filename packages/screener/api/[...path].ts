@@ -1,5 +1,5 @@
 // Vercel Serverless Function catch-all entrypoint for `/api/*`
-import { handle } from "@hono/node-server/vercel";
+import { getRequestListener } from "@hono/node-server";
 import { app } from "../dist/app.js";
 
-export default handle(app);
+export default getRequestListener(app.fetch);

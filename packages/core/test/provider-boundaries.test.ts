@@ -15,9 +15,9 @@ import {
   PolygonSplitsResponseSchema,
   PolygonDividendsResponseSchema,
   PolygonRelatedResponseSchema,
-} from "../schemas/index.js";
-import { isRetryableError } from "../lib/retry.js";
-import { toPublicError, ProviderError } from "../lib/errors.js";
+} from "@/schemas/index.js";
+import { isRetryableError } from "@/lib/retry.js";
+import { toPublicError, ProviderError } from "@/lib/errors.js";
 
 describe("Provider payload boundaries", () => {
   it("validates FRED metadata and preserves extensions", () => {

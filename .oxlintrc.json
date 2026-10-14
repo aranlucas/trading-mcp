@@ -2,8 +2,7 @@
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "extends": [
     "./node_modules/@aranlucas/oxforge/configs/recommended.json",
-    "./node_modules/@aranlucas/oxforge/configs/vitest.json",
-    "./node_modules/@aranlucas/oxforge/configs/type-aware.json"
+    "./node_modules/@aranlucas/oxforge/configs/vitest.json"
   ],
   "plugins": ["import", "typescript", "unicorn"],
   "env": {
@@ -18,20 +17,9 @@
         "varsIgnorePattern": "^_"
       }
     ],
-    "typescript/no-explicit-any": "error",
     "typescript/no-empty-object-type": "off",
-    "oxc/no-accumulating-spread": "error",
     "eslint/curly": "off",
     "eslint/no-console": "off",
-    "eslint/no-magic-numbers": "off",
-    "eslint/id-length": "off",
-    "eslint/max-lines": "off",
-    "eslint/max-lines-per-function": "off",
-    "eslint/max-statements": "off",
-    "eslint/func-style": "off",
-    "eslint/no-inline-comments": "off",
-    "eslint/no-negated-condition": "off",
-    "eslint/new-cap": "off",
     "eslint/no-restricted-imports": "off",
     "unicorn/no-useless-undefined": "off",
     "unicorn/prefer-add-event-listener": "off",

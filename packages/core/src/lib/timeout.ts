@@ -5,22 +5,19 @@ export class TimeoutError extends Error {
   }
 }
 
-export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
+export async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timeoutId = setTimeout(() => {
       reject(new TimeoutError(ms));
     }, ms);
-
-    promise
-      .then((result) => {
-        clearTimeout(timeoutId);
-        resolve(result);
-      })
-      .catch((error: unknown) => {
-        clearTimeout(timeoutId);
-        reject(error);
-      });
   });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export async function raceToSuccess<T>(promises: Array<Promise<T | null>>): Promise<T> {

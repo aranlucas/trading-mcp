@@ -1,5 +1,13 @@
 // Unified data providers
 
+type QuoteProvider = { name: string; get: QuoteGetter };
+
+type MarketMover = {
+  ticker: string;
+  todaysChange?: number;
+  todaysChangePerc?: number;
+};
+
 export { yahoo } from "./yahoo.js";
 
 export { polygon } from "./polygon.js";
@@ -21,8 +29,7 @@ import { providerLogger } from "../lib/logger.js";
 import { createProviderMetrics } from "../lib/provider-metrics.js";
 import { withRetry } from "../lib/retry.js";
 import type { FinnhubRecommendation, FinnhubEarning } from "../schemas/index.js";
-import type { Quote } from "../types/index.js";
-import type { NewsItem, SentimentData } from "../types/index.js";
+import type { Quote, NewsItem, SentimentData } from "../types/index.js";
 
 export type UnifiedOptions = {
   quoteTimeoutMs: number;
@@ -44,7 +51,7 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
   const opt: UnifiedOptions = { ...DEFAULT_UNIFIED_OPTIONS, ...options };
   const metrics = createProviderMetrics({ windowMs: opt.metricsWindowMs });
 
-  const quoteProviders: Array<{ name: string; get: QuoteGetter }> = [
+  const quoteProviders: Array<QuoteProvider> = [
     { name: "yahoo", get: (symbol) => yahoo.getQuoteNormalized(symbol) },
     ...(finnhub.isConfigured()
       ? [
@@ -219,7 +226,7 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
         const fromStr = from.toISOString().slice(0, 10);
         const toStr = to.toISOString().slice(0, 10);
 
-        return await polygon.getAggregates(symbol, 1, "day", fromStr, toStr);
+        return polygon.getAggregates(symbol, 1, "day", fromStr, toStr);
       }
     },
 
@@ -289,13 +296,7 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
     },
 
     // Get movers
-    async getMovers(direction: "gainers" | "losers"): Promise<
-      Array<{
-        ticker: string;
-        todaysChange?: number;
-        todaysChangePerc?: number;
-      }>
-    > {
+    async getMovers(direction: "gainers" | "losers"): Promise<Array<MarketMover>> {
       try {
         // Try Polygon first
         const pgMovers = await polygon.getGainersLosers(direction);
@@ -346,7 +347,8 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
 
     // Get macro/economic data
     async getMacro() {
-      return await fred.getMacroSnapshot();
+      const snapshot = await fred.getMacroSnapshot();
+      return snapshot;
     },
 
     // Get recommendations/ratings

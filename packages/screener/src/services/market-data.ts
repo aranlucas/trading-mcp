@@ -1,14 +1,14 @@
 import { z } from "zod";
-import { alpaca, yahoo, type Quote } from "@trading/core";
+import { AlpacaMarketDataClient } from "./alpaca-market-data.js";
+import { yahoo, type alpaca, type Quote } from "@trading/core";
+
+type PriceBar = Awaited<ReturnType<typeof alpaca.getBars>>[number];
 
 export type ScreenerProvider = "alpaca" | "yahoo";
 
 export interface MarketDataClient {
   getSnapshots(symbols: string[]): Promise<Map<string, Quote>>;
-  getBars(
-    symbol: string,
-    limit: number,
-  ): Promise<Array<{ t: string; o: number; h: number; l: number; c: number; v: number }>>;
+  getBars(symbol: string, limit: number): Promise<PriceBar[]>;
 }
 
 const EpochDateSchema = z
@@ -33,20 +33,7 @@ function toIsoTimestamp(input: Date | undefined): string {
 }
 
 function clampNumber(n: number | null | undefined, fallback = 0): number {
-  return n != null && Number.isFinite(n) ? n : fallback;
-}
-
-class AlpacaMarketDataClient implements MarketDataClient {
-  async getSnapshots(symbols: string[]): Promise<Map<string, Quote>> {
-    return await alpaca.getSnapshots(symbols);
-  }
-
-  async getBars(
-    symbol: string,
-    limit: number,
-  ): Promise<Array<{ t: string; o: number; h: number; l: number; c: number; v: number }>> {
-    return await alpaca.getBars(symbol, "1Day", limit);
-  }
+  return n !== null && n !== undefined && Number.isFinite(n) ? n : fallback;
 }
 
 const YahooChartSchema = z.object({
@@ -92,7 +79,10 @@ class YahooMarketDataClient implements MarketDataClient {
       list = Array.isArray(raw) ? raw : [raw];
     } catch {
       const settled = await Promise.allSettled(
-        symbols.map(async (s) => await this.source.getQuote(s)),
+        symbols.map(async (s) => {
+          const quote = await this.source.getQuote(s);
+          return quote;
+        }),
       );
 
       list = settled
@@ -133,10 +123,7 @@ class YahooMarketDataClient implements MarketDataClient {
     return results;
   }
 
-  async getBars(
-    symbol: string,
-    limit: number,
-  ): Promise<Array<{ t: string; o: number; h: number; l: number; c: number; v: number }>> {
+  async getBars(symbol: string, limit: number): Promise<PriceBar[]> {
     if (!Number.isInteger(limit) || limit < 1) return [];
     // `limit` counts observations, not calendar days. Allow for weekends and
     // holidays; newly listed/suspended symbols can still return fewer bars.
@@ -150,7 +137,7 @@ class YahooMarketDataClient implements MarketDataClient {
     if (!parsed.success) return [];
 
     const quotes = parsed.data.quotes ?? [];
-    const bars: Array<{ t: string; o: number; h: number; l: number; c: number; v: number }> = [];
+    const bars: PriceBar[] = [];
 
     for (const q of quotes) {
       const date = q.date?.toISOString();
@@ -170,7 +157,7 @@ class YahooMarketDataClient implements MarketDataClient {
       });
     }
 
-    return bars.sort((a, b) => a.t.localeCompare(b.t)).slice(-limit);
+    return bars.toSorted((a, b) => a.t.localeCompare(b.t)).slice(-limit);
   }
 }
 
@@ -180,7 +167,7 @@ export interface MarketDataSelection {
 }
 
 export function getMarketDataClient(source: YahooMarketDataSource = yahoo): MarketDataSelection {
-  const raw = (process.env.SCREENER_PROVIDER || "").trim().toLowerCase();
+  const raw = (process.env.SCREENER_PROVIDER ?? "").trim().toLowerCase();
   const provider = (raw === "yahoo" || raw === "alpaca" ? raw : "yahoo") satisfies ScreenerProvider;
 
   if (provider === "yahoo") return { provider, client: new YahooMarketDataClient(source) };

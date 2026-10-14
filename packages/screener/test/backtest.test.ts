@@ -47,7 +47,7 @@ function calculateRsi(closes: number[], period = 14): number {
     changes.push(closes[i]! - closes[i - 1]!);
   }
 
-  const gains = changes.slice(-period).map((c) => (c > 0 ? c : 0));
+  const gains = changes.slice(-period).map((c) => Math.max(c, 0));
   const losses = changes.slice(-period).map((c) => (c < 0 ? -c : 0));
 
   const avgGain = gains.reduce((a, b) => a + b, 0) / period;

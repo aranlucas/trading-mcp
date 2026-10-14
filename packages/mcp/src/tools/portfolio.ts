@@ -1,16 +1,18 @@
 // Portfolio and account tools
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { alpaca } from "@trading/core";
+import { alpaca as alpacaProvider } from "@trading/core";
 
 export type PortfolioDependencies = {
-  alpaca: Pick<typeof alpaca, "getAccount" | "getPortfolio" | "getPositions">;
+  alpaca: Pick<typeof alpacaProvider, "getAccount" | "getPortfolio" | "getPositions">;
 };
+
+const defaultDependencies: PortfolioDependencies = { alpaca: alpacaProvider };
 
 export function registerPortfolioTools(
   server: McpServer,
-  dependencies: PortfolioDependencies = { alpaca },
+  dependencies: PortfolioDependencies = defaultDependencies,
 ) {
   const { alpaca } = dependencies;
 
@@ -32,7 +34,7 @@ export function registerPortfolioTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -57,7 +59,7 @@ export function registerPortfolioTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -88,7 +90,7 @@ export function registerPortfolioTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }

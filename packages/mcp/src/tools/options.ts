@@ -1,8 +1,8 @@
 // Options tools - get options chain data
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { yahoo, type YahooOptionContract } from "@trading/core";
+import { yahoo as yahooProvider, type YahooOptionContract } from "@trading/core";
 
 // Helper to safely get numeric value
 function num(value: number | undefined): number {
@@ -10,12 +10,14 @@ function num(value: number | undefined): number {
 }
 
 export type OptionsDependencies = {
-  yahoo: Pick<typeof yahoo, "getOptions" | "getOptionsForExpiration">;
+  yahoo: Pick<typeof yahooProvider, "getOptions" | "getOptionsForExpiration">;
 };
+
+const defaultDependencies: OptionsDependencies = { yahoo: yahooProvider };
 
 export function registerOptionsTools(
   server: McpServer,
-  dependencies: OptionsDependencies = { yahoo },
+  dependencies: OptionsDependencies = defaultDependencies,
 ) {
   const { yahoo } = dependencies;
 
@@ -71,7 +73,7 @@ export function registerOptionsTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -99,7 +101,7 @@ export function registerOptionsTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -124,7 +126,7 @@ export function registerOptionsTools(
 
         const highIVCalls = (options.calls ?? [])
           .filter((c: YahooOptionContract) => num(c.impliedVolatility) >= minIV)
-          .sort(
+          .toSorted(
             (a: YahooOptionContract, b: YahooOptionContract) =>
               num(b.impliedVolatility) - num(a.impliedVolatility),
           )
@@ -143,7 +145,7 @@ export function registerOptionsTools(
 
         const highIVPuts = (options.puts ?? [])
           .filter((p: YahooOptionContract) => num(p.impliedVolatility) >= minIV)
-          .sort(
+          .toSorted(
             (a: YahooOptionContract, b: YahooOptionContract) =>
               num(b.impliedVolatility) - num(a.impliedVolatility),
           )
@@ -179,7 +181,7 @@ export function registerOptionsTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -209,7 +211,7 @@ export function registerOptionsTools(
             volOIRatio: num(c.volume) / num(c.openInterest),
           }))
           .filter((c) => c.volOIRatio > 1)
-          .sort((a, b) => b.volOIRatio - a.volOIRatio)
+          .toSorted((a, b) => b.volOIRatio - a.volOIRatio)
           .slice(0, 10)
           .map((c) => ({
             type: "call",
@@ -232,7 +234,7 @@ export function registerOptionsTools(
             volOIRatio: num(p.volume) / num(p.openInterest),
           }))
           .filter((p) => p.volOIRatio > 1)
-          .sort((a, b) => b.volOIRatio - a.volOIRatio)
+          .toSorted((a, b) => b.volOIRatio - a.volOIRatio)
           .slice(0, 10)
           .map((p) => ({
             type: "put",
@@ -267,7 +269,7 @@ export function registerOptionsTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }
@@ -330,7 +332,9 @@ export function registerOptionsTools(
 
         // Find most active strikes
         const mostActiveCalls = [...calls]
-          .sort((a: YahooOptionContract, b: YahooOptionContract) => num(b.volume) - num(a.volume))
+          .toSorted(
+            (a: YahooOptionContract, b: YahooOptionContract) => num(b.volume) - num(a.volume),
+          )
           .slice(0, 5)
           .map((c: YahooOptionContract) => ({
             strike: c.strike,
@@ -339,7 +343,9 @@ export function registerOptionsTools(
           }));
 
         const mostActivePuts = [...puts]
-          .sort((a: YahooOptionContract, b: YahooOptionContract) => num(b.volume) - num(a.volume))
+          .toSorted(
+            (a: YahooOptionContract, b: YahooOptionContract) => num(b.volume) - num(a.volume),
+          )
           .slice(0, 5)
           .map((p: YahooOptionContract) => ({
             strike: p.strike,
@@ -382,7 +388,7 @@ export function registerOptionsTools(
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${error}` }],
+          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
           isError: true,
         };
       }

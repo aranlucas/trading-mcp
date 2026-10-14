@@ -1,11 +1,8 @@
-import type { Quote } from "@trading/core";
+import type { Bar, Quote } from "@trading/core";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Generate bars with a deterministic RSI tendency.
-function generateBarsForRsi(
-  targetRsi: number,
-  periods = 30,
-): { t: string; o: number; h: number; l: number; c: number; v: number }[] {
+function generateBarsForRsi(targetRsi: number, periods = 30): Bar[] {
   const bars = [];
   let price = 100;
 
@@ -47,7 +44,7 @@ function generateBarsForSmaAlignment(
   aboveSma20: boolean,
   aboveSma50: boolean,
   periods = 60,
-): { t: string; o: number; h: number; l: number; c: number; v: number }[] {
+): Bar[] {
   const bars = [];
 
   // Start at 100, adjust trend based on desired alignment
@@ -171,9 +168,15 @@ const mockBarsOversold = generateBarsForRsi(20, 30);
 
 const mockBarsOverbought = generateBarsForRsi(85, 30);
 
+function barsForSymbol(symbol: string): Bar[] {
+  if (symbol === "INTC") return mockBarsOversold;
+  if (symbol === "NVDA") return mockBarsOverbought;
+  return mockBarsNeutral;
+}
+
 // Inject the exact market-data contract, without replacing the core module.
 const alpaca = {
-  getSnapshots: vi.fn().mockImplementation(async (symbols: string[]) => {
+  getSnapshots: vi.fn<MarketDataClient["getSnapshots"]>().mockImplementation((symbols) => {
     const result = new Map<string, Quote>();
 
     for (const symbol of symbols) {
@@ -184,41 +187,35 @@ const alpaca = {
       }
     }
 
-    return result;
+    return Promise.resolve(result);
   }),
-  getBars: vi.fn().mockImplementation(async (symbol: string) => {
-    // Return different bars based on symbol to test different signals
-    if (symbol === "INTC") return mockBarsOversold;
-
-    if (symbol === "NVDA") return mockBarsOverbought;
-
-    return mockBarsNeutral;
-  }),
+  getBars: vi
+    .fn<MarketDataClient["getBars"]>()
+    .mockImplementation((symbol) => Promise.resolve(barsForSymbol(symbol))),
 } satisfies MarketDataClient;
 
-import { ScreenerService, type ScanCriteria } from "../services/screener.js";
-import type { MarketDataClient } from "../services/market-data.js";
+import { ScreenerService, type ScanCriteria } from "@/services/screener.js";
+import type { MarketDataClient } from "@/services/market-data.js";
 
 describe("ScreenerService", () => {
   let screener: ScreenerService;
 
-  it.each([0, 10, 14, 15, 19, 20, 49, 50])(
-    "requires enough observations for every requested predicate (%i bars)",
-    async (length) => {
-      vi.mocked(alpaca.getBars).mockResolvedValue(generateBarsForSmaAlignment(true, true, length));
-
-      for (const [criteria, required] of [
-        [{ minRsi: 0 }, 15],
-        [{ maxRsi: 100 }, 15],
-        [{ aboveSma20: true }, 20],
-        [{ aboveSma50: true }, 50],
-        [{ minRsi: 0, aboveSma50: true }, 50],
-      ] as const) {
+  describe.each([
+    { criteria: { minRsi: 0 }, required: 15 },
+    { criteria: { maxRsi: 100 }, required: 15 },
+    { criteria: { aboveSma20: true }, required: 20 },
+    { criteria: { aboveSma50: true }, required: 50 },
+    { criteria: { minRsi: 0, aboveSma50: true }, required: 50 },
+  ])("history required by $criteria", ({ criteria, required }) => {
+    it.each([0, 10, 14, 15, 19, 20, 49, 50])(
+      "requires enough observations for every predicate (%i bars)",
+      async (length) => {
+        alpaca.getBars.mockResolvedValue(generateBarsForSmaAlignment(true, true, length));
         const results = await screener.scan({ symbols: ["AAPL"], ...criteria });
-        expect(results, JSON.stringify(criteria)).toHaveLength(length >= required ? 1 : 0);
-      }
-    },
-  );
+        expect(results).toHaveLength(length >= required ? 1 : 0);
+      },
+    );
+  });
 
   it("honors zero maximum RSI and price thresholds", async () => {
     vi.mocked(alpaca.getBars).mockResolvedValue(generateBarsForSmaAlignment(true, true));
@@ -243,13 +240,7 @@ describe("ScreenerService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(alpaca.getBars).mockImplementation(async (symbol: string) => {
-      if (symbol === "INTC") return mockBarsOversold;
-
-      if (symbol === "NVDA") return mockBarsOverbought;
-
-      return mockBarsNeutral;
-    });
+    alpaca.getBars.mockImplementation((symbol) => Promise.resolve(barsForSymbol(symbol)));
     process.env.SCREENER_PROVIDER = "alpaca";
     screener = new ScreenerService(alpaca);
   });
@@ -405,9 +396,9 @@ describe("ScreenerService", () => {
         symbol: "INTC",
         type: "RSI_OVERSOLD",
         direction: "bullish",
-        strength: expect.closeTo(0.2857, 3),
         description: "RSI at 21.4 - oversold",
       });
+      expect(signals[0]?.strength).toBeCloseTo(0.2857, 3);
       expect(signals[0]?.timestamp).toEqual(expect.any(String));
       expect(alpaca.getBars).toHaveBeenCalledWith("INTC", 60);
     });
@@ -421,9 +412,9 @@ describe("ScreenerService", () => {
         symbol: "NVDA",
         type: "RSI_OVERBOUGHT",
         direction: "bearish",
-        strength: expect.closeTo(0.5238, 3),
         description: "RSI at 85.7 - overbought",
       });
+      expect(signals[0]?.strength).toBeCloseTo(0.5238, 3);
       expect(signals[0]?.timestamp).toEqual(expect.any(String));
       expect(alpaca.getBars).toHaveBeenCalledWith("NVDA", 60);
     });

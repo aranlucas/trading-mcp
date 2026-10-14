@@ -25,7 +25,7 @@ import {
 } from "../schemas/index.js";
 import * as finnhub from "finnhub";
 
-const apiKey = process.env.FINNHUB_API_KEY || "";
+const apiKey = process.env.FINNHUB_API_KEY ?? "";
 
 // Configure clientb
 const client = new finnhub.DefaultApi(apiKey);

@@ -1,3 +1,4 @@
+import { forEachSequential } from "@trading/core";
 import { z } from "zod";
 
 const TelegramSendMessageResponseSchema = z.discriminatedUnion("ok", [
@@ -20,7 +21,7 @@ type TelegramPayload = {
 };
 
 function chunkText(text: string, maxLen: number): string[] {
-  const normalized = text.replace(/\r\n/g, "\n");
+  const normalized = text.replaceAll("\r\n", "\n");
 
   if (normalized.length <= maxLen) return [normalized];
 
@@ -42,17 +43,19 @@ function chunkText(text: string, maxLen: number): string[] {
   return chunks;
 }
 
-export async function sendTelegramText(opts: {
+type TelegramTextOptions = {
   botToken: string;
   chatId: string;
   text: string;
   messageThreadId?: string;
   disableWebPreview?: boolean;
-}): Promise<void> {
+};
+
+export async function sendTelegramText(opts: TelegramTextOptions): Promise<void> {
   const url = `https://api.telegram.org/bot${opts.botToken}/sendMessage`;
   const chunks = chunkText(opts.text, 4000);
 
-  for (const chunk of chunks) {
+  await forEachSequential(chunks, async (chunk) => {
     const payload: TelegramPayload = {
       chat_id: opts.chatId,
       text: chunk,
@@ -78,7 +81,7 @@ export async function sendTelegramText(opts: {
     const parsed = TelegramSendMessageResponseSchema.safeParse(await res.json().catch(() => null));
     const data = parsed.success ? parsed.data : null;
 
-    if (!res.ok || !data || data.ok !== true) {
+    if (!res.ok || data?.ok !== true) {
       const details =
         data && "ok" in data && data.ok === false
           ? `${data.error_code ?? "?"} ${data.description ?? "Unknown error"}`
@@ -86,5 +89,5 @@ export async function sendTelegramText(opts: {
 
       throw new Error(`Telegram sendMessage failed: ${details}`);
     }
-  }
+  });
 }

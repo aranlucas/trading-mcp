@@ -1,7 +1,7 @@
 // Polygon.io provider - Free tier: 5 API calls/min
 // Using direct fetch for better type control
 
-import { z } from "zod";
+import type { z } from "zod";
 import type { Quote, NewsItem } from "../types/index.js";
 import {
   PolygonAggregatesResponseSchema,
@@ -20,7 +20,7 @@ import {
   type PolygonTickerSnapshot,
 } from "../schemas/index.js";
 
-const apiKey = process.env.POLYGON_API_KEY || "";
+const apiKey = process.env.POLYGON_API_KEY ?? "";
 
 const BASE_URL = "https://api.polygon.io";
 
