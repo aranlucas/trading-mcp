@@ -3,7 +3,9 @@ import type { TechnicalIndicators } from "../types/index.js";
 export type HistoryIndicators = Omit<TechnicalIndicators, "symbol" | "timestamp">;
 
 function sma(closes: readonly number[], period: number): number | null {
-  if (closes.length < period) return null;
+  if (closes.length < period) {
+    return null;
+  }
 
   return closes.slice(-period).reduce((sum, close) => sum + close, 0) / period;
 }
@@ -11,7 +13,10 @@ function sma(closes: readonly number[], period: number): number | null {
 function emaSeries(closes: readonly number[], period: number): number[] {
   const seed = sma(closes.slice(0, period), period);
 
-  if (seed === null) return [];
+  if (seed === null) {
+    return [];
+  }
+
   const values = [seed];
   let value = seed;
   const weight = 2 / (period + 1);
@@ -26,7 +31,10 @@ function emaSeries(closes: readonly number[], period: number): number[] {
 
 // Retain the existing simple, trailing-14-change RSI definition on both surfaces.
 function rsi(closes: readonly number[]): number | null {
-  if (closes.length < 15) return null;
+  if (closes.length < 15) {
+    return null;
+  }
+
   let gains = 0;
   let losses = 0;
 
@@ -36,9 +44,13 @@ function rsi(closes: readonly number[]): number | null {
     losses += Math.max(0, -change);
   }
 
-  if (gains === 0 && losses === 0) return 50;
+  if (gains === 0 && losses === 0) {
+    return 50;
+  }
 
-  if (losses === 0) return 100;
+  if (losses === 0) {
+    return 100;
+  }
 
   return 100 - 100 / (1 + gains / losses);
 }

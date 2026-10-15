@@ -148,3 +148,9 @@ The monorepo is an active prototype with working MCP and REST surfaces and a
 documented reliability/safety roadmap. It does not provide a trading UI,
 guaranteed quotes, high-frequency execution, or a complete preview/commit
 policy for live orders yet.
+
+### Lint policy boundaries
+
+The repository inherits Oxforge's recommended and Vitest presets, including all 18 anti-slop rules. Blanket local rule disables have been removed. Operational console output is allowed only for the methods used in the listed CLI, startup, and diagnostic-test files; MCP logs remain on stderr. Untrusted provider responses and JavaScript rejection values retain documented line-scoped parser/error-boundary exceptions rather than asserting fabricated types.
+
+Existing non-null assertions remain temporarily allowed only in the explicitly listed backtest, technical-series, and integration-test files. That isolates the remaining type-safety work without rewriting financial calculations as part of a tooling cleanup. New files inherit the strict rule. Formatting, offline tests, package and test typechecks, secret scanning, and dependency policy checks remain required.

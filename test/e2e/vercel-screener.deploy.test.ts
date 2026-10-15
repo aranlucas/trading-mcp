@@ -21,8 +21,15 @@ interface JsonResponse {
 
 async function fetchJson(url: URL, init?: RequestInit): Promise<JsonResponse> {
   const headers = new Headers(init?.headers);
-  if (!headers.has("accept")) headers.set("accept", "application/json");
-  if (!headers.has("user-agent")) headers.set("user-agent", "trading-mcp vercel integration tests");
+
+  if (!headers.has("accept")) {
+    headers.set("accept", "application/json");
+  }
+
+  if (!headers.has("user-agent")) {
+    headers.set("user-agent", "trading-mcp vercel integration tests");
+  }
+
   const res = await fetch(url, { ...init, headers });
   const contentType = res.headers.get("content-type");
   const json = z.json().parse(await res.json());
@@ -40,9 +47,14 @@ async function pollDeployment(
   }
 
   let failure: string;
+
   try {
     const { status } = await fetchJson(apiUrl);
-    if (status >= 200 && status < 300) return;
+
+    if (status >= 200 && status < 300) {
+      return;
+    }
+
     failure = `Unexpected status: ${status}`;
   } catch (error) {
     failure = String(error);
@@ -73,7 +85,10 @@ const baseUrl = enabled && rawBaseUrl ? normalizeBaseUrl(rawBaseUrl) : null;
 
 suite("Vercel Screener deployment", () => {
   beforeAll(async () => {
-    if (!baseUrl) throw new Error("Deployment base URL is required");
+    if (!baseUrl) {
+      throw new Error("Deployment base URL is required");
+    }
+
     const url = baseUrl;
 
     if (url.protocol !== "https:") {
@@ -107,6 +122,7 @@ suite("Vercel Screener deployment", () => {
 
     expect(contentType ?? "").toMatch(/application\/json/i);
     expect(status).toBe(200);
+
     const document = z
       .object({
         openapi: z.string(),
@@ -114,6 +130,7 @@ suite("Vercel Screener deployment", () => {
         paths: z.record(z.string(), z.json()),
       })
       .parse(json);
+
     expect(document.openapi).toEqual(expect.any(String));
   });
 
@@ -132,6 +149,7 @@ suite("Vercel Screener deployment", () => {
         }),
       ])
       .parse({ status, json });
+
     expect(response.status).toBe(status);
   });
 });

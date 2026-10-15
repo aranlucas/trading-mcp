@@ -25,13 +25,17 @@ const apiKey = process.env.POLYGON_API_KEY ?? "";
 const BASE_URL = "https://api.polygon.io";
 
 async function polygonFetch<T>(endpoint: string, schema: z.ZodType<T>): Promise<T | null> {
-  if (!apiKey) return null;
+  if (!apiKey) {
+    return null;
+  }
 
   try {
     const url = `${BASE_URL}${endpoint}${endpoint.includes("?") ? "&" : "?"}apiKey=${apiKey}`;
     const response = await fetch(url);
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      return null;
+    }
 
     return schema.parse(await response.json());
   } catch {
@@ -53,11 +57,15 @@ export const polygon = {
       PolygonAggregatesResponseSchema,
     );
 
-    if (!raw) return null;
+    if (!raw) {
+      return null;
+    }
 
     const result = PolygonAggregatesResponseSchema.safeParse(raw);
 
-    if (!result.success || !result.data.results?.[0]) return null;
+    if (!result.success || !result.data.results?.[0]) {
+      return null;
+    }
 
     const bar = result.data.results[0];
 
@@ -88,11 +96,15 @@ export const polygon = {
       PolygonAggregatesResponseSchema,
     );
 
-    if (!raw) return [];
+    if (!raw) {
+      return [];
+    }
 
     const result = PolygonAggregatesResponseSchema.safeParse(raw);
 
-    if (!result.success) return [];
+    if (!result.success) {
+      return [];
+    }
 
     return (result.data.results ?? []).map((bar) => ({
       t: new Date(bar.t ?? 0).toISOString(),
@@ -111,7 +123,9 @@ export const polygon = {
       PolygonTickerDetailsResponseSchema,
     );
 
-    if (!raw) return null;
+    if (!raw) {
+      return null;
+    }
 
     const result = PolygonTickerDetailsResponseSchema.safeParse(raw);
 
@@ -127,11 +141,15 @@ export const polygon = {
       PolygonNewsResponseSchema,
     );
 
-    if (!raw) return [];
+    if (!raw) {
+      return [];
+    }
 
     const result = PolygonNewsResponseSchema.safeParse(raw);
 
-    if (!result.success) return [];
+    if (!result.success) {
+      return [];
+    }
 
     return (result.data.results ?? []).map((n) => ({
       id: n.id ?? "",
@@ -149,7 +167,9 @@ export const polygon = {
   async getMarketStatus(): Promise<z.infer<typeof PolygonMarketStatusResponseSchema> | null> {
     const raw = await polygonFetch(`/v1/marketstatus/now`, PolygonMarketStatusResponseSchema);
 
-    if (!raw) return null;
+    if (!raw) {
+      return null;
+    }
 
     const result = PolygonMarketStatusResponseSchema.safeParse(raw);
 
@@ -163,7 +183,9 @@ export const polygon = {
       PolygonSplitsResponseSchema,
     );
 
-    if (!raw) return [];
+    if (!raw) {
+      return [];
+    }
 
     const result = PolygonSplitsResponseSchema.safeParse(raw);
 
@@ -177,7 +199,9 @@ export const polygon = {
       PolygonDividendsResponseSchema,
     );
 
-    if (!raw) return [];
+    if (!raw) {
+      return [];
+    }
 
     const result = PolygonDividendsResponseSchema.safeParse(raw);
 
@@ -191,7 +215,9 @@ export const polygon = {
       PolygonSnapshotResponseSchema,
     );
 
-    if (!raw) return [];
+    if (!raw) {
+      return [];
+    }
 
     const result = PolygonSnapshotResponseSchema.safeParse(raw);
 
@@ -205,7 +231,9 @@ export const polygon = {
       PolygonSnapshotResponseSchema,
     );
 
-    if (!raw) return [];
+    if (!raw) {
+      return [];
+    }
 
     const result = PolygonSnapshotResponseSchema.safeParse(raw);
 
@@ -219,7 +247,9 @@ export const polygon = {
       PolygonSnapshotResponseSchema,
     );
 
-    if (!raw) return null;
+    if (!raw) {
+      return null;
+    }
 
     const result = PolygonSnapshotResponseSchema.safeParse(raw);
 
@@ -230,7 +260,9 @@ export const polygon = {
   async getRelatedCompanies(symbol: string): Promise<PolygonRelatedCompany[]> {
     const raw = await polygonFetch(`/v1/related-companies/${symbol}`, PolygonRelatedResponseSchema);
 
-    if (!raw) return [];
+    if (!raw) {
+      return [];
+    }
 
     const result = PolygonRelatedResponseSchema.safeParse(raw);
 

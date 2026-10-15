@@ -85,7 +85,7 @@ const dependencies = {
       createdAt: "2024-01-15T10:00:00Z",
     }),
     getOrders: vi.fn<ToolDependencies["alpaca"]["getOrders"]>().mockResolvedValue([]),
-    cancelOrder: vi.fn<ToolDependencies["alpaca"]["cancelOrder"]>().mockResolvedValue(undefined),
+    cancelOrder: vi.fn<ToolDependencies["alpaca"]["cancelOrder"]>().mockResolvedValue(),
   },
   polygon: {
     isConfigured: vi.fn<ToolDependencies["polygon"]["isConfigured"]>().mockReturnValue(false),
@@ -227,9 +227,11 @@ describe("MCP Tools Integration", () => {
 
       expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
+
       const positions = z
         .array(z.object({ symbol: z.string(), quantity: z.number() }))
         .parse(JSON.parse(content));
+
       expect(positions).toEqual([{ symbol: "AAPL", quantity: 100 }]);
     });
   });

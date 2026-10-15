@@ -8,7 +8,10 @@ export function forEachSequential<T>(
   async function next(): Promise<void> {
     const item = iterator.next();
 
-    if (item.done) return;
+    if (item.done) {
+      return;
+    }
+
     await visit(item.value);
 
     return next();

@@ -7,6 +7,8 @@ export type RetryOptions = {
   maxDelayMs: number;
   factor: number;
   jitter: number; // 0..1
+  // Promise rejections may contain any JavaScript value; the retry boundary validates before classifying.
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters
   shouldRetry?: (err: unknown) => boolean;
 };
 
@@ -30,7 +32,10 @@ function clamp(n: number, min: number, max: number): number {
 }
 
 function withJitter(ms: number, jitter: number): number {
-  if (jitter <= 0) return ms;
+  if (jitter <= 0) {
+    return ms;
+  }
+
   const delta = ms * jitter;
   const offset = (Math.random() * 2 - 1) * delta;
 
@@ -43,8 +48,12 @@ const RetryableErrorSchema = z.object({
   message: z.string().catch(""),
 });
 
+// Promise rejections may contain any JavaScript value; the retry boundary validates before classifying.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 export function isRetryableError(err: unknown): boolean {
-  if (err instanceof TimeoutError) return true;
+  if (err instanceof TimeoutError) {
+    return true;
+  }
 
   const parsed = RetryableErrorSchema.safeParse(err);
 
@@ -60,9 +69,13 @@ export function isRetryableError(err: unknown): boolean {
       return true;
     }
 
-    if (name === "FetchError") return true;
+    if (name === "FetchError") {
+      return true;
+    }
 
-    if (message.toLowerCase().includes("fetch failed")) return true;
+    if (message.toLowerCase().includes("fetch failed")) {
+      return true;
+    }
   }
 
   return false;
@@ -80,7 +93,9 @@ export async function withRetry<T>(
     } catch (err) {
       const shouldRetry = attempt < opt.retries && (opt.shouldRetry?.(err) ?? false);
 
-      if (!shouldRetry) throw err;
+      if (!shouldRetry) {
+        throw err;
+      }
 
       const base = opt.minDelayMs * Math.pow(opt.factor, attempt);
       const delayMs = withJitter(clamp(base, opt.minDelayMs, opt.maxDelayMs), opt.jitter);

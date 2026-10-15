@@ -18,10 +18,12 @@ afterEach(() => {
 describe("Telegram delivery", () => {
   it("sends chunks in order without overlapping requests", async () => {
     const first = Promise.withResolvers<Response>();
+
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockReturnValueOnce(first.promise)
       .mockResolvedValueOnce(Response.json({ ok: true, result: { message_id: 2 } }));
+
     vi.stubGlobal("fetch", fetchMock);
 
     const delivery = sendTelegramText({ ...options, messageThreadId: "12" });
@@ -32,6 +34,7 @@ describe("Telegram delivery", () => {
     const payloads = fetchMock.mock.calls.map(([, init]) =>
       MessagePayloadSchema.parse(JSON.parse(z.string().parse(init?.body))),
     );
+
     expect(payloads.map((payload) => payload.text.length)).toEqual([4000, 1]);
     expect(payloads.map((payload) => payload.message_thread_id)).toEqual([12, 12]);
     expect(payloads.map((payload) => payload.chat_id)).toEqual(["test-chat", "test-chat"]);
@@ -43,6 +46,7 @@ describe("Telegram delivery", () => {
       .mockResolvedValue(
         Response.json({ ok: false, error_code: 400, description: "rejected" }, { status: 400 }),
       );
+
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(sendTelegramText(options)).rejects.toThrow(

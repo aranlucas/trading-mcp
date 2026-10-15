@@ -143,7 +143,11 @@ describe("unified.getQuote fallback", () => {
       provider: "unified",
       operation: "getQuote",
     });
-    if (!(error instanceof ProviderError)) throw new Error("Expected a provider failure");
+
+    if (!(error instanceof ProviderError)) {
+      throw new Error("Expected a provider failure");
+    }
+
     expect(error.cause).toBeInstanceOf(AggregateError);
   });
 

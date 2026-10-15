@@ -23,5 +23,35 @@
     "**/.pi/**",
     "**/.roo/**",
     "**/.windsurf/**"
+  ],
+  "overrides": [
+    {
+      "files": ["src/config.ts"],
+      "rules": {
+        "eslint/no-console": [
+          "error",
+          {
+            "allow": ["error"]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/providers/finviz.ts"],
+      "rules": {
+        "eslint/no-console": [
+          "error",
+          {
+            "allow": ["error"]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/lib/technicals.ts"],
+      "rules": {
+        "typescript/no-non-null-assertion": "off"
+      }
+    }
   ]
 }

@@ -11,10 +11,12 @@ describe("sequential work", () => {
   it("waits for each operation before starting the next", async () => {
     const first = Promise.withResolvers<void>();
     const second = Promise.withResolvers<void>();
+
     const visit = vi
       .fn<(item: number) => Promise<void>>()
       .mockReturnValueOnce(first.promise)
       .mockReturnValueOnce(second.promise);
+
     const pending = forEachSequential([1, 2], visit);
 
     expect(visit.mock.calls).toEqual([[1]]);
@@ -26,9 +28,10 @@ describe("sequential work", () => {
 
   it("stops at a rejected operation and preserves its error", async () => {
     const error = new Error("Provider unavailable");
+
     const visit = vi
       .fn<(item: number) => Promise<void>>()
-      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce()
       .mockRejectedValueOnce(error);
 
     await expect(forEachSequential([1, 2, 3], visit)).rejects.toBe(error);
@@ -47,11 +50,13 @@ describe("retry timing", () => {
   it("preserves zero-based attempts, exponential backoff, and the delay cap", async () => {
     vi.useFakeTimers();
     const failure = new Error("Transient failure");
+
     const operation = vi
       .fn<(attempt: number) => Promise<string>>()
       .mockRejectedValueOnce(failure)
       .mockRejectedValueOnce(failure)
       .mockResolvedValue("ok");
+
     const result = withRetry(operation, {
       retries: 2,
       minDelayMs: 100,
@@ -100,6 +105,8 @@ describe("timeouts", () => {
     vi.useFakeTimers();
     const deferred = Promise.withResolvers<void>();
     const result = withTimeout(deferred.promise, 100);
+    // The test intentionally observes arbitrary rejection values to verify they are preserved.
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters
     const rejection = result.catch((error: unknown) => error);
 
     await vi.advanceTimersByTimeAsync(100);

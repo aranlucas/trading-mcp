@@ -20,6 +20,7 @@ async function startServer(handler: Handler): Promise<Server> {
       outgoing.end("Handler failed");
     });
   });
+
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
 
@@ -29,7 +30,11 @@ async function startServer(handler: Handler): Promise<Server> {
 function getStatus(server: Server): Promise<ApiResponse> {
   const address = server.address();
 
-  if (!address || typeof address === "string") throw new Error("Expected a TCP listener");
+  // Node returns a pipe path or TCP address; this guard verifies the loopback listener shape.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
+  if (!address || typeof address === "string") {
+    throw new Error("Expected a TCP listener");
+  }
 
   return new Promise((resolve, reject) => {
     const req = request({ host: "127.0.0.1", port: address.port, path: "/api" }, (res) => {
@@ -43,6 +48,7 @@ function getStatus(server: Server): Promise<ApiResponse> {
       });
       res.on("error", reject);
     });
+
     req.on("error", reject);
     req.end();
   });
@@ -51,8 +57,11 @@ function getStatus(server: Server): Promise<ApiResponse> {
 function stopServer(server: Server): Promise<void> {
   return new Promise((resolve, reject) => {
     server.close((error) => {
-      if (error) reject(error);
-      else resolve();
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
     });
   });
 }
@@ -65,6 +74,7 @@ describe("Node serverless entrypoints", () => {
     ["workspace catch-all", workspaceCatchAllHandler],
   ] as const)("serves the offline status route through %s", async (_name, handler) => {
     const server = await startServer(handler);
+
     try {
       const response = await getStatus(server);
       expect(response.status).toBe(200);

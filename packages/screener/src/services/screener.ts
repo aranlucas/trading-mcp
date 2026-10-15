@@ -59,11 +59,17 @@ export class ScreenerService {
 
     await forEachSequential([...quotes], async ([symbol, quote]) => {
       // Apply price filters
-      if (criteria.minPrice !== undefined && quote.price < criteria.minPrice) return;
+      if (criteria.minPrice !== undefined && quote.price < criteria.minPrice) {
+        return;
+      }
 
-      if (criteria.maxPrice !== undefined && quote.price > criteria.maxPrice) return;
+      if (criteria.maxPrice !== undefined && quote.price > criteria.maxPrice) {
+        return;
+      }
 
-      if (criteria.minVolume !== undefined && quote.volume < criteria.minVolume) return;
+      if (criteria.minVolume !== undefined && quote.volume < criteria.minVolume) {
+        return;
+      }
 
       let rsi: number | undefined;
       let aboveSma20: boolean | undefined;
@@ -86,13 +92,21 @@ export class ScreenerService {
           aboveSma50 = analysis.sma50 === null ? undefined : quote.price > analysis.sma50;
 
           // Every requested predicate must be available and true.
-          if (criteria.minRsi !== undefined && (rsi === undefined || rsi < criteria.minRsi)) return;
+          if (criteria.minRsi !== undefined && (rsi === undefined || rsi < criteria.minRsi)) {
+            return;
+          }
 
-          if (criteria.maxRsi !== undefined && (rsi === undefined || rsi > criteria.maxRsi)) return;
+          if (criteria.maxRsi !== undefined && (rsi === undefined || rsi > criteria.maxRsi)) {
+            return;
+          }
 
-          if (criteria.aboveSma20 && aboveSma20 !== true) return;
+          if (criteria.aboveSma20 && aboveSma20 !== true) {
+            return;
+          }
 
-          if (criteria.aboveSma50 && aboveSma50 !== true) return;
+          if (criteria.aboveSma50 && aboveSma50 !== true) {
+            return;
+          }
         } catch {
           // Skip symbol if we can't get technicals
           return;
@@ -124,14 +138,20 @@ export class ScreenerService {
       // which makes "gainers/losers" look incorrect.
       const prevClose = quote.close > 0 ? quote.close : quote.price;
 
-      if (prevClose <= 0) continue;
+      if (prevClose <= 0) {
+        continue;
+      }
 
       const change = quote.price - prevClose;
       const changePercent = (change / prevClose) * 100;
 
-      if (direction === "gainers" && changePercent <= 0) continue;
+      if (direction === "gainers" && changePercent <= 0) {
+        continue;
+      }
 
-      if (direction === "losers" && changePercent >= 0) continue;
+      if (direction === "losers" && changePercent >= 0) {
+        continue;
+      }
 
       results.push({ symbol, price: quote.price, volume: quote.volume, change, changePercent });
     }
@@ -156,7 +176,9 @@ export class ScreenerService {
         const bars = await this.marketData.getBars(symbol, 60);
         const closes = bars.map((b) => b.c);
 
-        if (closes.length < 20) return;
+        if (closes.length < 20) {
+          return;
+        }
 
         const currentPrice = closes.at(-1) ?? 0;
         const { rsi14: rsi, sma20, sma50 } = analyzeHistory(closes);

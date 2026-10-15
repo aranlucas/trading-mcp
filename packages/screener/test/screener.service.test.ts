@@ -14,7 +14,9 @@ function generateBarsForRsi(targetRsi: number, periods = 30): Bar[] {
   const changes = Array.from({ length: periods - 1 }, (_, index) => {
     const rsiWindowStart = periods - 1 - rsiPeriod;
 
-    if (index < rsiWindowStart) return 0;
+    if (index < rsiWindowStart) {
+      return 0;
+    }
 
     const dayInRsiWindow = index - rsiWindowStart;
 
@@ -169,8 +171,14 @@ const mockBarsOversold = generateBarsForRsi(20, 30);
 const mockBarsOverbought = generateBarsForRsi(85, 30);
 
 function barsForSymbol(symbol: string): Bar[] {
-  if (symbol === "INTC") return mockBarsOversold;
-  if (symbol === "NVDA") return mockBarsOverbought;
+  if (symbol === "INTC") {
+    return mockBarsOversold;
+  }
+
+  if (symbol === "NVDA") {
+    return mockBarsOverbought;
+  }
+
   return mockBarsNeutral;
 }
 

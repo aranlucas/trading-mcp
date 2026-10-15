@@ -14,7 +14,9 @@ import { sendTelegramText } from "./lib/telegram.js";
 function requireEnv(name: string): string {
   const v = process.env[name];
 
-  if (!v || v.trim().length === 0) throw new Error(`Missing required env var: ${name}`);
+  if (!v || v.trim().length === 0) {
+    throw new Error(`Missing required env var: ${name}`);
+  }
 
   return v.trim();
 }
@@ -34,7 +36,10 @@ function getProvider(): ScreenerProvider {
 function envInt(name: string, fallback: number): number {
   const raw = process.env[name]?.trim();
 
-  if (!raw) return fallback;
+  if (!raw) {
+    return fallback;
+  }
+
   const n = Number(raw);
 
   if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
@@ -45,7 +50,9 @@ function envInt(name: string, fallback: number): number {
 }
 
 function parseCsvSymbols(csv: string | undefined): string[] {
-  if (!csv) return [];
+  if (!csv) {
+    return [];
+  }
 
   return csv
     .split(",")
@@ -58,11 +65,17 @@ function parseCsvSymbols(csv: string | undefined): string[] {
 function formatCompactNumber(n: number): string {
   const abs = Math.abs(n);
 
-  if (abs >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+  if (abs >= 1_000_000_000) {
+    return `${(n / 1_000_000_000).toFixed(1)}B`;
+  }
 
-  if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000_000) {
+    return `${(n / 1_000_000).toFixed(1)}M`;
+  }
 
-  if (abs >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  if (abs >= 1_000) {
+    return `${(n / 1_000).toFixed(1)}K`;
+  }
 
   return `${n}`;
 }
@@ -150,8 +163,10 @@ async function buildReport(opts: ReportOptions): Promise<string> {
   const header = `Screener update (${nowStampUtc()})`;
 
   if (opts.kind === "signals") {
-    if (opts.watchlist.length === 0)
+    if (opts.watchlist.length === 0) {
       throw new Error("SCREENER_WATCHLIST is required for signals report");
+    }
+
     const signals = await getSignals(opts.watchlist);
 
     return [header, "", formatSignalsBlock(signals)].join("\n");
@@ -160,8 +175,10 @@ async function buildReport(opts: ReportOptions): Promise<string> {
   if (opts.kind === "scan") {
     const criteria = opts.scanCriteria ?? {};
 
-    if (criteria.symbols === undefined && opts.watchlist.length > 0)
+    if (criteria.symbols === undefined && opts.watchlist.length > 0) {
       criteria.symbols = opts.watchlist;
+    }
+
     const results = await scan(criteria);
 
     return [header, "", formatScanBlock(results, opts.limit)].join("\n");
@@ -181,7 +198,9 @@ async function buildReport(opts: ReportOptions): Promise<string> {
   if (opts.watchlist.length > 0) {
     const signals = await getSignals(opts.watchlist);
 
-    if (signals.length > 0) blocks.push("", formatSignalsBlock(signals));
+    if (signals.length > 0) {
+      blocks.push("", formatSignalsBlock(signals));
+    }
   }
 
   return [header, "", ...blocks].join("\n");
@@ -191,6 +210,7 @@ async function main(): Promise<void> {
   const provider = getProvider();
 
   const report = process.env.SCREENER_REPORT?.trim();
+
   const kind = z
     .enum(["movers", "signals", "scan"])
     .parse(report === "" ? "movers" : (report ?? "movers"));

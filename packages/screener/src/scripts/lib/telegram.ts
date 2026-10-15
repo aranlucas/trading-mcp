@@ -23,7 +23,9 @@ type TelegramPayload = {
 function chunkText(text: string, maxLen: number): string[] {
   const normalized = text.replaceAll("\r\n", "\n");
 
-  if (normalized.length <= maxLen) return [normalized];
+  if (normalized.length <= maxLen) {
+    return [normalized];
+  }
 
   const chunks: string[] = [];
   let remaining = normalized;
@@ -38,7 +40,9 @@ function chunkText(text: string, maxLen: number): string[] {
     remaining = remaining.slice(splitAt).trimStart();
   }
 
-  if (remaining.length > 0) chunks.push(remaining);
+  if (remaining.length > 0) {
+    chunks.push(remaining);
+  }
 
   return chunks;
 }

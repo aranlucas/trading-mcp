@@ -60,7 +60,9 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
             get: async (symbol: string): Promise<Quote> => {
               const q = await finnhub.getQuote(symbol);
 
-              if (!q) throw new Error("No quote");
+              if (!q) {
+                throw new Error("No quote");
+              }
 
               return q;
             },
@@ -74,7 +76,9 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
             get: async (symbol: string): Promise<Quote> => {
               const q = await polygon.getPreviousClose(symbol);
 
-              if (!q) throw new Error("No quote");
+              if (!q) {
+                throw new Error("No quote");
+              }
 
               return q;
             },
@@ -86,7 +90,9 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       get: async (symbol: string): Promise<Quote> => {
         const q = await finviz.getQuote(symbol);
 
-        if (!q) throw new Error("No quote");
+        if (!q) {
+          throw new Error("No quote");
+        }
 
         return q;
       },
@@ -100,43 +106,47 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       const wrapped = quoteProviders.map(({ name, get }) => {
         const startedAt = Date.now();
 
-        return withRetry(() => withTimeout(get(symbol), opt.quoteTimeoutMs), {
-          retries: opt.quoteRetries,
-          minDelayMs: opt.quoteRetryMinDelayMs,
-        })
-          .then((quote) => {
-            metrics.recordSuccess({
-              provider: name,
-              operation: "getQuote",
-              latencyMs: Date.now() - startedAt,
-            });
-
-            return quote;
+        return (
+          withRetry(() => withTimeout(get(symbol), opt.quoteTimeoutMs), {
+            retries: opt.quoteRetries,
+            minDelayMs: opt.quoteRetryMinDelayMs,
           })
-          .catch((err: unknown) => {
-            metrics.recordFailure({
-              provider: name,
-              operation: "getQuote",
-              latencyMs: Date.now() - startedAt,
-              err,
-            });
+            .then((quote) => {
+              metrics.recordSuccess({
+                provider: name,
+                operation: "getQuote",
+                latencyMs: Date.now() - startedAt,
+              });
 
-            const snap = metrics.snapshot();
-            const providerSnap = snap.providers[name]?.getQuote;
+              return quote;
+            })
+            // Provider promise rejections are preserved as causes, then wrapped in a typed ProviderError.
+            // oxlint-disable-next-line anti-slop/no-unknown-parameters
+            .catch((err: unknown) => {
+              metrics.recordFailure({
+                provider: name,
+                operation: "getQuote",
+                latencyMs: Date.now() - startedAt,
+                err,
+              });
 
-            if (
-              providerSnap &&
-              providerSnap.rolling.total >= 5 &&
-              providerSnap.rolling.errorRate >= 0.5
-            ) {
-              providerLogger.warn(
-                { provider: name, operation: "getQuote", rolling: providerSnap.rolling },
-                "Provider error rate elevated",
-              );
-            }
+              const snap = metrics.snapshot();
+              const providerSnap = snap.providers[name]?.getQuote;
 
-            throw new ProviderError({ provider: name, operation: "getQuote", cause: err });
-          });
+              if (
+                providerSnap &&
+                providerSnap.rolling.total >= 5 &&
+                providerSnap.rolling.errorRate >= 0.5
+              ) {
+                providerLogger.warn(
+                  { provider: name, operation: "getQuote", rolling: providerSnap.rolling },
+                  "Provider error rate elevated",
+                );
+              }
+
+              throw new ProviderError({ provider: name, operation: "getQuote", cause: err });
+            })
+        );
       });
 
       try {
@@ -288,7 +298,10 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       const seen = new Set<string>();
 
       return allNews.filter((n) => {
-        if (seen.has(n.headline)) return false;
+        if (seen.has(n.headline)) {
+          return false;
+        }
+
         seen.add(n.headline);
 
         return true;
@@ -348,6 +361,7 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
     // Get macro/economic data
     async getMacro() {
       const snapshot = await fred.getMacroSnapshot();
+
       return snapshot;
     },
 
