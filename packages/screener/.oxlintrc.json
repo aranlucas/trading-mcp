@@ -23,5 +23,86 @@
     "**/.pi/**",
     "**/.roo/**",
     "**/.windsurf/**"
+  ],
+  "overrides": [
+    {
+      "files": ["src/index.ts"],
+      "rules": {
+        "eslint/no-console": [
+          "error",
+          {
+            "allow": ["log"]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/scripts/run-backtest.ts"],
+      "rules": {
+        "eslint/no-console": [
+          "error",
+          {
+            "allow": ["error", "log"]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/scripts/telegram-screener.ts"],
+      "rules": {
+        "eslint/no-console": [
+          "error",
+          {
+            "allow": ["error", "log"]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["test/backtest-aapl-real.test.ts"],
+      "rules": {
+        "eslint/no-console": [
+          "error",
+          {
+            "allow": ["log"]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["test/backtest-real.test.ts"],
+      "rules": {
+        "eslint/no-console": [
+          "error",
+          {
+            "allow": ["error", "log"]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["test/backtest.test.ts"],
+      "rules": {
+        "eslint/no-console": [
+          "error",
+          {
+            "allow": ["log"]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/scripts/run-backtest.ts",
+        "test/backtest-aapl-real.test.ts",
+        "test/backtest-real.test.ts",
+        "test/backtest.test.ts",
+        "test/market-data.test.ts",
+        "test/screener.service.test.ts"
+      ],
+      "rules": {
+        "typescript/no-non-null-assertion": "off"
+      }
+    }
   ]
 }

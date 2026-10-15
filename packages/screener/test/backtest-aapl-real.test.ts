@@ -279,7 +279,9 @@ interface Trade {
 
 // RSI calculation
 function calculateRsi(closes: number[], period = 14): number {
-  if (closes.length < period + 1) return 50;
+  if (closes.length < period + 1) {
+    return 50;
+  }
 
   const changes: number[] = [];
 
@@ -293,7 +295,10 @@ function calculateRsi(closes: number[], period = 14): number {
   const avgGain = gains.reduce((a, b) => a + b, 0) / period;
   const avgLoss = losses.reduce((a, b) => a + b, 0) / period;
 
-  if (avgLoss === 0) return 100;
+  if (avgLoss === 0) {
+    return 100;
+  }
+
   const rs = avgGain / avgLoss;
 
   return 100 - 100 / (1 + rs);
@@ -301,7 +306,10 @@ function calculateRsi(closes: number[], period = 14): number {
 
 // SMA calculation
 function sma(data: number[], period: number): number {
-  if (data.length < period) return 0;
+  if (data.length < period) {
+    return 0;
+  }
+
   const slice = data.slice(-period);
 
   return slice.reduce((a, b) => a + b, 0) / period;

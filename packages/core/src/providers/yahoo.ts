@@ -22,6 +22,7 @@ export const yahoo = {
   // Get real-time quote (returns raw yahoofinance result)
   async getQuote(symbol: string) {
     const quote = await yahooFinance.quote(symbol);
+
     return quote;
   },
 
@@ -33,6 +34,7 @@ export const yahoo = {
   // Get multiple quotes (returns raw yahoofinance result)
   async getQuotes(symbols: string[]) {
     const quotes = await yahooFinance.quote(symbols);
+
     return quotes;
   },
 
@@ -43,6 +45,7 @@ export const yahoo = {
       period2,
       interval: "1d",
     });
+
     return history;
   },
 
@@ -63,12 +66,14 @@ export const yahoo = {
   // Get options for specific expiration (returns raw yahoofinance result)
   async getOptionsForExpiration(symbol: string, expiration: string) {
     const options = await yahooFinance.options(symbol, { date: new Date(expiration) });
+
     return options;
   },
 
   // Search symbols (returns raw yahoofinance result)
   async search(query: string) {
     const results = await yahooFinance.search(query);
+
     return results;
   },
 
@@ -84,6 +89,7 @@ export const yahoo = {
     const insights = await yahooFinance.quoteSummary(symbol, {
       modules: ["summaryProfile", "financialData", "recommendationTrend", "earnings"],
     });
+
     return insights;
   },
 
@@ -91,6 +97,7 @@ export const yahoo = {
   async getNews(symbol?: string) {
     if (symbol) {
       const results = await yahooFinance.search(symbol, { newsCount: 10 });
+
       return results;
     }
 
@@ -101,10 +108,14 @@ export const yahoo = {
   // Get gainers/losers (returns raw yahoofinance result)
   getMovers(type: "gainers" | "losers" | "most_actives") {
     try {
-      if (type === "losers") return Promise.resolve(yahooFinance.dailyLosers());
+      if (type === "losers") {
+        return Promise.resolve(yahooFinance.dailyLosers());
+      }
 
       // SDK doesn't expose a `mostActive()` method in types; fall back to dailyGainers
-      if (type === "most_actives") return Promise.resolve(yahooFinance.dailyGainers());
+      if (type === "most_actives") {
+        return Promise.resolve(yahooFinance.dailyGainers());
+      }
 
       return Promise.resolve(yahooFinance.dailyGainers());
     } catch {
@@ -122,6 +133,8 @@ export const yahoo = {
   },
 };
 
+// Yahoo response payloads are untrusted and are parsed by YahooQuoteSchema at this boundary.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 export function normalizeYahooQuote(raw: unknown, symbol: string): Quote {
   const parsed = YahooQuoteSchema.safeParse(raw);
 

@@ -1,9 +1,13 @@
 import { z } from "zod";
 import { TimeoutError } from "./timeout.js";
 import { AppError } from "./app-error.js";
+
 export { AppError } from "./app-error.js";
+
 export { ValidationError } from "./validation-error.js";
+
 export { ProviderError } from "./provider-error.js";
+
 export { NotFoundError } from "./not-found-error.js";
 
 export type PublicError = {
@@ -33,6 +37,8 @@ function toPublicStatus(status: number): PublicStatus {
   }
 }
 
+// Thrown JavaScript values are untrusted; this boundary classifies them before exposing a public error.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 export function toPublicError(err: unknown): PublicError {
   if (err instanceof AppError) {
     return {

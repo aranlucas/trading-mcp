@@ -32,18 +32,25 @@ const client = new finnhub.DefaultApi(apiKey);
 
 // Finnhub has no TypeScript response contract. Validate at the callback boundary.
 function promisify<T>(
+  // The SDK callback supplies untrusted payloads that the provided endpoint schema immediately parses.
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters
   fn: (callback: (err: Error | null, data?: unknown) => void) => void,
   schema: z.ZodType<T>,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     fn((err, data) => {
-      if (err) reject(err);
-      else if (data === undefined) reject(new Error("Finnhub callback returned no data"));
-      else {
+      if (err) {
+        reject(err);
+      } else if (data === undefined) {
+        reject(new Error("Finnhub callback returned no data"));
+      } else {
         const parsed = schema.safeParse(data);
 
-        if (parsed.success) resolve(parsed.data);
-        else reject(parsed.error);
+        if (parsed.success) {
+          resolve(parsed.data);
+        } else {
+          reject(parsed.error);
+        }
       }
     });
   });
@@ -58,7 +65,9 @@ export const finnhubProvider = {
 
   // Get quote
   async getQuote(symbol: string): Promise<Quote | null> {
-    if (!apiKey) return null;
+    if (!apiKey) {
+      return null;
+    }
 
     try {
       const raw = await promisify((cb) => client.quote(symbol, cb), FinnhubQuoteSchema);
@@ -83,7 +92,9 @@ export const finnhubProvider = {
 
   // Get company profile
   async getCompanyProfile(symbol: string): Promise<FinnhubCompanyProfile | null> {
-    if (!apiKey) return null;
+    if (!apiKey) {
+      return null;
+    }
 
     try {
       return await promisify(
@@ -97,7 +108,9 @@ export const finnhubProvider = {
 
   // Get company news
   async getNews(symbol: string, from: string, to: string): Promise<NewsItem[]> {
-    if (!apiKey) return [];
+    if (!apiKey) {
+      return [];
+    }
 
     try {
       const raw = await promisify(
@@ -107,7 +120,9 @@ export const finnhubProvider = {
 
       const articles = z.array(FinnhubNewsArticleSchema).safeParse(raw);
 
-      if (!articles.success) return [];
+      if (!articles.success) {
+        return [];
+      }
 
       return articles.data.map((n) => ({
         id: String(n.id),
@@ -126,7 +141,9 @@ export const finnhubProvider = {
 
   // Get market news (general)
   async getMarketNews(category = "general"): Promise<NewsItem[]> {
-    if (!apiKey) return [];
+    if (!apiKey) {
+      return [];
+    }
 
     try {
       const raw = await promisify(
@@ -136,7 +153,9 @@ export const finnhubProvider = {
 
       const articles = z.array(FinnhubNewsArticleSchema).safeParse(raw);
 
-      if (!articles.success) return [];
+      if (!articles.success) {
+        return [];
+      }
 
       return articles.data.map((n) => ({
         id: String(n.id),
@@ -153,7 +172,9 @@ export const finnhubProvider = {
 
   // Get news sentiment
   async getNewsSentiment(symbol: string): Promise<FinnhubNewsSentiment | null> {
-    if (!apiKey) return null;
+    if (!apiKey) {
+      return null;
+    }
 
     try {
       return await promisify((cb) => client.newsSentiment(symbol, cb), FinnhubNewsSentimentSchema);
@@ -164,7 +185,9 @@ export const finnhubProvider = {
 
   // Get recommendation trends
   async getRecommendations(symbol: string): Promise<FinnhubRecommendation[]> {
-    if (!apiKey) return [];
+    if (!apiKey) {
+      return [];
+    }
 
     try {
       const raw = await promisify(
@@ -180,7 +203,9 @@ export const finnhubProvider = {
 
   // Get price target
   async getPriceTarget(symbol: string): Promise<FinnhubPriceTarget | null> {
-    if (!apiKey) return null;
+    if (!apiKey) {
+      return null;
+    }
 
     try {
       return await promisify((cb) => client.priceTarget(symbol, cb), FinnhubPriceTargetSchema);
@@ -191,7 +216,9 @@ export const finnhubProvider = {
 
   // Get earnings calendar
   async getEarningsCalendar(from: string, to: string): Promise<FinnhubEarning[]> {
-    if (!apiKey) return [];
+    if (!apiKey) {
+      return [];
+    }
 
     try {
       const raw = await promisify(
@@ -209,7 +236,9 @@ export const finnhubProvider = {
 
   // Get insider transactions
   async getInsiderTransactions(symbol: string): Promise<FinnhubInsiderTransaction[]> {
-    if (!apiKey) return [];
+    if (!apiKey) {
+      return [];
+    }
 
     try {
       const raw = await promisify(
@@ -227,7 +256,9 @@ export const finnhubProvider = {
 
   // Get peers (similar companies)
   async getPeers(symbol: string): Promise<string[]> {
-    if (!apiKey) return [];
+    if (!apiKey) {
+      return [];
+    }
 
     try {
       const raw = await promisify((cb) => client.companyPeers(symbol, cb), z.array(z.string()));
@@ -240,7 +271,9 @@ export const finnhubProvider = {
 
   // Get basic financials
   async getBasicFinancials(symbol: string): Promise<FinnhubBasicFinancials | null> {
-    if (!apiKey) return null;
+    if (!apiKey) {
+      return null;
+    }
 
     try {
       return await promisify(
@@ -254,7 +287,9 @@ export const finnhubProvider = {
 
   // Get pattern recognition (technical)
   async getPatternRecognition(symbol: string, resolution: string): Promise<Signal[]> {
-    if (!apiKey) return [];
+    if (!apiKey) {
+      return [];
+    }
 
     try {
       const raw = await promisify(
@@ -264,7 +299,9 @@ export const finnhubProvider = {
 
       const result = FinnhubPatternResponseSchema.safeParse(raw);
 
-      if (!result.success) return [];
+      if (!result.success) {
+        return [];
+      }
 
       return (result.data.points ?? []).map((p) => ({
         symbol,
@@ -284,7 +321,9 @@ export const finnhubProvider = {
     symbol: string,
     resolution: string,
   ): Promise<FinnhubSupportResistance | null> {
-    if (!apiKey) return null;
+    if (!apiKey) {
+      return null;
+    }
 
     try {
       return await promisify(
@@ -298,7 +337,9 @@ export const finnhubProvider = {
 
   // Get social sentiment
   async getSocialSentiment(symbol: string): Promise<FinnhubSocialSentiment | null> {
-    if (!apiKey) return null;
+    if (!apiKey) {
+      return null;
+    }
 
     try {
       return await promisify(

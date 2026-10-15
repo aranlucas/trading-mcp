@@ -15,7 +15,10 @@ type TimeFrameString = ReturnType<typeof timeFrame>;
 let alpacaClient: Alpaca | null = null;
 
 function getAlpaca(): Alpaca {
-  if (alpacaClient) return alpacaClient;
+  if (alpacaClient) {
+    return alpacaClient;
+  }
+
   const keyId = config.alpaca.apiKey || "test-key-id";
   const secret = config.alpaca.apiSecret || "test-secret";
   alpacaClient = new Alpaca({ keyId, secret, paper: config.alpaca.paper });
@@ -131,7 +134,10 @@ export async function getBars(
 export function parseTimeframe(value: string): TimeFrameString {
   const match = /^(\d+)(Min|Hour|Day|Week|Month)$/.exec(value);
 
-  if (!match) throw new ValidationError("Invalid Alpaca timeframe");
+  if (!match) {
+    throw new ValidationError("Invalid Alpaca timeframe");
+  }
+
   const amount = Number(match[1]);
   const unit = z.enum(TimeFrameUnit).parse(match[2]);
 

@@ -70,7 +70,9 @@ class YahooMarketDataClient implements MarketDataClient {
   async getSnapshots(symbols: string[]): Promise<Map<string, Quote>> {
     const results = new Map<string, Quote>();
 
-    if (symbols.length === 0) return results;
+    if (symbols.length === 0) {
+      return results;
+    }
 
     let list: YahooQuotePayload[];
 
@@ -81,6 +83,7 @@ class YahooMarketDataClient implements MarketDataClient {
       const settled = await Promise.allSettled(
         symbols.map(async (s) => {
           const quote = await this.source.getQuote(s);
+
           return quote;
         }),
       );
@@ -93,7 +96,9 @@ class YahooMarketDataClient implements MarketDataClient {
     for (const item of list) {
       const parsed = YahooQuoteSchema.safeParse(item);
 
-      if (!parsed.success) continue;
+      if (!parsed.success) {
+        continue;
+      }
 
       const q = parsed.data;
       const price = clampNumber(q.regularMarketPrice);
@@ -124,7 +129,10 @@ class YahooMarketDataClient implements MarketDataClient {
   }
 
   async getBars(symbol: string, limit: number): Promise<PriceBar[]> {
-    if (!Number.isInteger(limit) || limit < 1) return [];
+    if (!Number.isInteger(limit) || limit < 1) {
+      return [];
+    }
+
     // `limit` counts observations, not calendar days. Allow for weekends and
     // holidays; newly listed/suspended symbols can still return fewer bars.
     const days = Math.min(Math.ceil((limit * 7) / 5) + 14, 3650);
@@ -134,7 +142,9 @@ class YahooMarketDataClient implements MarketDataClient {
     const raw = await this.source.getHistory(symbol, period1);
     const parsed = YahooChartSchema.safeParse(raw);
 
-    if (!parsed.success) return [];
+    if (!parsed.success) {
+      return [];
+    }
 
     const quotes = parsed.data.quotes ?? [];
     const bars: PriceBar[] = [];
@@ -142,10 +152,15 @@ class YahooMarketDataClient implements MarketDataClient {
     for (const q of quotes) {
       const date = q.date?.toISOString();
 
-      if (!date) continue;
+      if (!date) {
+        continue;
+      }
+
       const c = q.close ?? null;
 
-      if (c === null || !Number.isFinite(c)) continue;
+      if (c === null || !Number.isFinite(c)) {
+        continue;
+      }
 
       bars.push({
         t: date,
@@ -170,7 +185,9 @@ export function getMarketDataClient(source: YahooMarketDataSource = yahoo): Mark
   const raw = (process.env.SCREENER_PROVIDER ?? "").trim().toLowerCase();
   const provider = (raw === "yahoo" || raw === "alpaca" ? raw : "yahoo") satisfies ScreenerProvider;
 
-  if (provider === "yahoo") return { provider, client: new YahooMarketDataClient(source) };
+  if (provider === "yahoo") {
+    return { provider, client: new YahooMarketDataClient(source) };
+  }
 
   return { provider: "alpaca", client: new AlpacaMarketDataClient() };
 }

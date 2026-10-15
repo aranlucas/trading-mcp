@@ -23,5 +23,28 @@
     "**/.pi/**",
     "**/.roo/**",
     "**/.windsurf/**"
+  ],
+  "overrides": [
+    {
+      "files": ["src/index.ts"],
+      "rules": {
+        "eslint/no-console": [
+          "error",
+          {
+            "allow": ["error"]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "test/mcp-test-client.ts",
+        "test/technicals.tools.test.ts",
+        "test/tools.integration.test.ts"
+      ],
+      "rules": {
+        "typescript/no-non-null-assertion": "off"
+      }
+    }
   ]
 }

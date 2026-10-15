@@ -57,7 +57,10 @@ async function fetchRealData(symbol: string, days: number): Promise<Bar[]> {
 
     for (const q of result.quotes) {
       // Keep this opt-in harness's existing truthy-field selection semantics.
-      if (!q.open || !q.high || !q.low || !q.close || !q.volume) continue;
+      if (!q.open || !q.high || !q.low || !q.close || !q.volume) {
+        continue;
+      }
+
       bars.push({
         t: new Date(q.date).toISOString().slice(0, 10),
         o: q.open,
@@ -78,7 +81,9 @@ async function fetchRealData(symbol: string, days: number): Promise<Bar[]> {
 
 // RSI calculation
 function calculateRsi(closes: number[], period = 14): number {
-  if (closes.length < period + 1) return 50;
+  if (closes.length < period + 1) {
+    return 50;
+  }
 
   const changes: number[] = [];
 
@@ -92,7 +97,10 @@ function calculateRsi(closes: number[], period = 14): number {
   const avgGain = gains.reduce((a, b) => a + b, 0) / period;
   const avgLoss = losses.reduce((a, b) => a + b, 0) / period;
 
-  if (avgLoss === 0) return 100;
+  if (avgLoss === 0) {
+    return 100;
+  }
+
   const rs = avgGain / avgLoss;
 
   return 100 - 100 / (1 + rs);
@@ -100,7 +108,10 @@ function calculateRsi(closes: number[], period = 14): number {
 
 // SMA calculation
 function sma(data: number[], period: number): number {
-  if (data.length < period) return 0;
+  if (data.length < period) {
+    return 0;
+  }
+
   const slice = data.slice(-period);
 
   return slice.reduce((a, b) => a + b, 0) / period;
@@ -275,10 +286,15 @@ class RealDataBacktester {
     for (const trade of trades) {
       cumulative += trade.pnlPercent;
 
-      if (cumulative > peak) peak = cumulative;
+      if (cumulative > peak) {
+        peak = cumulative;
+      }
+
       const drawdown = peak - cumulative;
 
-      if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+      if (drawdown > maxDrawdown) {
+        maxDrawdown = drawdown;
+      }
     }
 
     // Sharpe ratio (simplified - annualized)
@@ -334,6 +350,7 @@ function aggregateResults(results: BacktestResult[]): AggregateResult {
 
   if (validResults.length === 0) {
     const strategy = results[0]?.strategy ?? "";
+
     return {
       strategy: strategy.length > 0 ? strategy : "Unknown",
       totalTrades: 0,
@@ -383,9 +400,13 @@ const STOCK_UNIVERSE = [
 // Keep provider requests sequential to avoid increasing pressure on Yahoo's rate limits.
 async function loadHistoricalData(symbols: string[], dataCache: Map<string, Bar[]>): Promise<void> {
   const [symbol, ...remaining] = symbols;
-  if (!symbol) return;
+
+  if (!symbol) {
+    return;
+  }
 
   const bars = await fetchRealData(symbol, 730);
+
   if (bars.length > 0) {
     dataCache.set(symbol, bars);
     console.log(
@@ -407,7 +428,9 @@ liveSuite("Real Data Backtest - Yahoo Finance", () => {
 
   // Fetch data for all symbols once
   async function ensureDataLoaded(): Promise<void> {
-    if (dataCache.size > 0) return;
+    if (dataCache.size > 0) {
+      return;
+    }
 
     console.log("\n📊 Fetching 2 years of real market data from Yahoo Finance...\n");
 

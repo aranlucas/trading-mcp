@@ -1,5 +1,17 @@
 import { describe, it, expect } from "vitest";
 
+const avg = (arr: number[]) => (arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+
+const std = (arr: number[]) => {
+  if (arr.length < 2) {
+    return 0;
+  }
+
+  const mean = avg(arr);
+
+  return Math.sqrt(arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length);
+};
+
 // Backtesting framework for screener signals
 
 interface Bar {
@@ -39,7 +51,9 @@ interface BacktestResult {
 
 // Simple RSI calculation
 function calculateRsi(closes: number[], period = 14): number {
-  if (closes.length < period + 1) return 50;
+  if (closes.length < period + 1) {
+    return 50;
+  }
 
   const changes: number[] = [];
 
@@ -53,7 +67,10 @@ function calculateRsi(closes: number[], period = 14): number {
   const avgGain = gains.reduce((a, b) => a + b, 0) / period;
   const avgLoss = losses.reduce((a, b) => a + b, 0) / period;
 
-  if (avgLoss === 0) return 100;
+  if (avgLoss === 0) {
+    return 100;
+  }
+
   const rs = avgGain / avgLoss;
 
   return 100 - 100 / (1 + rs);
@@ -61,7 +78,10 @@ function calculateRsi(closes: number[], period = 14): number {
 
 // Simple Moving Average
 function sma(data: number[], period: number): number {
-  if (data.length < period) return 0;
+  if (data.length < period) {
+    return 0;
+  }
+
   const slice = data.slice(-period);
 
   return slice.reduce((a, b) => a + b, 0) / period;
@@ -84,7 +104,9 @@ function generateHistoricalData(
     date.setDate(date.getDate() + i);
 
     // Skip weekends
-    if (date.getDay() === 0 || date.getDay() === 6) continue;
+    if (date.getDay() === 0 || date.getDay() === 6) {
+      continue;
+    }
 
     // Random walk with drift
     const dailyReturn = drift / 252 + volatility * Math.sqrt(1 / 252) * (Math.random() * 2 - 1);
@@ -321,10 +343,15 @@ class Backtester {
     for (const trade of trades) {
       cumulative += trade.pnlPercent;
 
-      if (cumulative > peak) peak = cumulative;
+      if (cumulative > peak) {
+        peak = cumulative;
+      }
+
       const drawdown = peak - cumulative;
 
-      if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+      if (drawdown > maxDrawdown) {
+        maxDrawdown = drawdown;
+      }
     }
 
     // Calculate Sharpe ratio (simplified)
@@ -486,22 +513,18 @@ describe("Backtesting Framework", () => {
         const overbought = backtester.backtestRsiOverbought(70, 5);
         const ma = backtester.backtestMaBullishAlignment(10);
 
-        if (oversold.totalTrades > 0) oversoldResults.push(oversold.avgPnlPercent);
+        if (oversold.totalTrades > 0) {
+          oversoldResults.push(oversold.avgPnlPercent);
+        }
 
-        if (overbought.totalTrades > 0) overboughtResults.push(overbought.avgPnlPercent);
+        if (overbought.totalTrades > 0) {
+          overboughtResults.push(overbought.avgPnlPercent);
+        }
 
-        if (ma.totalTrades > 0) maResults.push(ma.avgPnlPercent);
+        if (ma.totalTrades > 0) {
+          maResults.push(ma.avgPnlPercent);
+        }
       }
-
-      const avg = (arr: number[]) =>
-        arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-
-      const std = (arr: number[]) => {
-        if (arr.length < 2) return 0;
-        const mean = avg(arr);
-
-        return Math.sqrt(arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length);
-      };
 
       console.log(
         `RSI Oversold: Avg PnL: ${avg(oversoldResults).toFixed(2)}% ± ${std(oversoldResults).toFixed(2)}%`,

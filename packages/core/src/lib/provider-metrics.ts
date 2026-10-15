@@ -83,18 +83,26 @@ class RollingWindowCounter {
     while (this.head < this.events.length) {
       const t = this.events[this.head];
 
-      if (t !== undefined && t >= cutoff) break;
+      if (t !== undefined && t >= cutoff) {
+        break;
+      }
+
       this.head += 1;
     }
   }
 
   private compactIfNeeded() {
-    if (this.head < 1000) return;
+    if (this.head < 1000) {
+      return;
+    }
+
     this.events = this.events.slice(this.head);
     this.head = 0;
   }
 }
 
+// The metrics boundary parses untrusted error payloads before redacting their messages.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 function normalizeErrorMessage(err: unknown): string {
   const parsed = z
     .union([z.string(), z.object({ message: z.string() }).transform((value) => value.message)])

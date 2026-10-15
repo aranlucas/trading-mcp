@@ -49,7 +49,9 @@ export const fred = {
 
   // Get series observations
   async getSeries(seriesId: string, limit = 10): Promise<SeriesObservation[]> {
-    if (!apiKey) return [];
+    if (!apiKey) {
+      return [];
+    }
 
     try {
       const url = `${FRED_BASE}/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=${limit}`;
@@ -58,7 +60,9 @@ export const fred = {
 
       const result = FredObservationsResponseSchema.safeParse(raw);
 
-      if (!result.success) return [];
+      if (!result.success) {
+        return [];
+      }
 
       return (result.data.observations ?? []).map((o) => ({
         date: o.date,
@@ -71,7 +75,9 @@ export const fred = {
 
   // Get series info
   async getSeriesInfo(seriesId: string): Promise<FredSeries | null> {
-    if (!apiKey) return null;
+    if (!apiKey) {
+      return null;
+    }
 
     try {
       const url = `${FRED_BASE}/series?series_id=${seriesId}&api_key=${apiKey}&file_type=json`;
@@ -80,7 +86,9 @@ export const fred = {
 
       const result = FredSeriesResponseSchema.safeParse(raw);
 
-      if (!result.success) return null;
+      if (!result.success) {
+        return null;
+      }
 
       const series = result.data.seriess;
 
@@ -92,7 +100,9 @@ export const fred = {
 
   // Get latest value for a series
   async getLatest(seriesId: string): Promise<EconomicSeries | null> {
-    if (!apiKey) return null;
+    if (!apiKey) {
+      return null;
+    }
 
     try {
       const [obs, info] = await Promise.all([
@@ -100,7 +110,9 @@ export const fred = {
         this.getSeriesInfo(seriesId),
       ]);
 
-      if (!obs[0] || !info) return null;
+      if (!obs[0] || !info) {
+        return null;
+      }
 
       return {
         id: seriesId,
@@ -118,14 +130,18 @@ export const fred = {
   async getMacroSnapshot(): Promise<Map<string, EconomicSeries>> {
     const results = new Map<string, EconomicSeries>();
 
-    if (!apiKey) return results;
+    if (!apiKey) {
+      return results;
+    }
 
     const entries = Object.entries(INDICATORS);
 
     const promises = entries.map(async ([key, seriesId]) => {
       const data = await this.getLatest(seriesId);
 
-      if (data) results.set(key, data);
+      if (data) {
+        results.set(key, data);
+      }
     });
 
     await Promise.allSettled(promises);
@@ -135,7 +151,9 @@ export const fred = {
 
   // Search for series
   async search(query: string, limit = 20): Promise<FredSeries[]> {
-    if (!apiKey) return [];
+    if (!apiKey) {
+      return [];
+    }
 
     try {
       const url = `${FRED_BASE}/series/search?search_text=${encodeURIComponent(query)}&api_key=${apiKey}&file_type=json&limit=${limit}`;
@@ -152,7 +170,9 @@ export const fred = {
 
   // Get releases (economic calendar)
   async getReleases(limit = 20): Promise<FredRelease[]> {
-    if (!apiKey) return [];
+    if (!apiKey) {
+      return [];
+    }
 
     try {
       const url = `${FRED_BASE}/releases?api_key=${apiKey}&file_type=json&limit=${limit}`;
