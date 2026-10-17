@@ -19,6 +19,8 @@ const excluded = [
   "packages/core/.env",
   "packages/core/.env.production",
   ".git/config",
+  "nested/clone/.git/config",
+  "nested/worktree/.git",
   "node_modules/host-marker",
   "packages/core/node_modules/host-marker",
   "dist/host-marker",
@@ -71,7 +73,7 @@ try {
   }
 
   process.stdout.write(
-    "Docker context: 13 host/private markers excluded; 5 required markers kept.\n",
+    "Docker context: 15 host/private markers excluded; 5 required markers kept.\n",
   );
 } finally {
   await rm(temporary, { recursive: true, force: true });

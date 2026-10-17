@@ -8,6 +8,7 @@ coverage
 
 # Keep local credentials and repository metadata out of image layers.
 .git
+**/.git
 .env
 .env.*
 **/.env
