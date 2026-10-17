@@ -21,7 +21,8 @@
     "syncpack:lint": "syncpack lint",
     "prepare": "husky",
     "test:providers": "pnpm --filter @trading/core build && RUN_REAL_PROVIDER_TESTS=1 pnpm --filter @trading/screener exec vitest run test/backtest-real.test.ts",
-    "test:deployment": "RUN_DEPLOYMENT_E2E=1 vitest run --config vitest.vercel.config.ts"
+    "test:deployment": "RUN_DEPLOYMENT_E2E=1 vitest run --config vitest.vercel.config.ts",
+    "test:docker-context": "node scripts/check-docker-context.mjs"
   },
   "devDependencies": {
     "@aranlucas/oxforge": "^0.2.2",
