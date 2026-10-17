@@ -42,7 +42,7 @@ jobs:
           - name: Test
             run: pnpm -r test && pnpm exec vitest run
 
-          - name: Docker build
+          - name: Docker context integration tests and build
             run: |
               pnpm test:docker-context
               docker build -t trading-mcp:ci .
