@@ -125,6 +125,22 @@ pnpm secretlint
 backtests. Live Yahoo backtests and deployment E2E are skipped by default.
 Credentials, CI mode, or a deployment URL alone do not enable them.
 
+Run the Docker build-context integration tests separately with a running Docker daemon:
+
+```bash
+pnpm test:docker-context
+# Native runner equivalent:
+pnpm exec vitest run --config vitest.docker.config.ts
+```
+
+Vitest reports 15 host/private exclusions and five required inclusions using synthetic
+files and Docker's own matcher (`FROM scratch`, no build networking, local export).
+Fixture hooks remove temporary inputs and exports after success or failure. Docker
+has a 120-second subprocess limit and a 4 MiB output limit; only this integration
+config extends the hook budget to 130 seconds. The default offline unit command
+does not discover these tests. CI runs this explicit command before building the
+production image in its existing Docker step.
+
 Only run these separate commands when you intentionally want external requests:
 
 ```bash

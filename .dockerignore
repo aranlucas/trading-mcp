@@ -1,0 +1,19 @@
+# Preserve dependencies installed for the container instead of copying host builds.
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+**/coverage
+
+# Keep local credentials and repository metadata out of image layers.
+.git
+**/.git
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+*.log
+**/.DS_Store
