@@ -1,4 +1,4 @@
-FROM node:24-alpine AS builder
+FROM node:24.22.1-alpine AS builder
 
 # Install pnpm without Corepack or npm
 ENV PNPM_HOME=/pnpm
@@ -26,7 +26,7 @@ COPY . .
 RUN pnpm -r build
 
 # Production image
-FROM node:24-alpine
+FROM node:24.22.1-alpine
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME/bin:$PATH
