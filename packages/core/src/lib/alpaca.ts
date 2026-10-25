@@ -1,9 +1,9 @@
-// Alpaca API client using official SDK (v4)
+// Alpaca API client using the official SDK.
 
 import { z } from "zod";
 import { config } from "../config.js";
 import type { Quote, Position, Portfolio, Order, MarketStatus } from "../types/index.js";
-import { ValidationError } from "./errors.js";
+import { NotFoundError, ProviderError, ValidationError } from "./errors.js";
 import { Alpaca, TimeFrame, TimeFrameUnit, timeFrame } from "@alpacahq/alpaca-trade-api";
 
 type BrokerOrder = Awaited<ReturnType<Alpaca["trading"]["orders"]["submit"]>>;
@@ -37,6 +37,23 @@ type AccountSummary = {
 
 type PriceBar = { t: string; o: number; h: number; l: number; c: number; v: number };
 
+const BrokerAmountSchema = z.string().regex(z.regexes.number).transform(Number).pipe(z.number());
+
+function parseBrokerAmount(value: string): number {
+  const parsed = BrokerAmountSchema.safeParse(value);
+
+  if (!parsed.success) {
+    throw new ProviderError({
+      provider: "alpaca",
+      operation: "normalize",
+      message: "Invalid numeric value in Alpaca response",
+      cause: parsed.error,
+    });
+  }
+
+  return parsed.data;
+}
+
 export async function getAccount(): Promise<AccountSummary> {
   const raw = await getAlpaca().trading.account.getAccount();
 
@@ -54,12 +71,12 @@ export async function getPositions(): Promise<Position[]> {
 
   return positions.map((p) => ({
     symbol: p.symbol,
-    quantity: parseFloat(p.qty ?? "0"),
-    avgCost: parseFloat(p.avgEntryPrice ?? "0"),
-    currentPrice: parseFloat(p.currentPrice ?? "0"),
-    marketValue: parseFloat(p.marketValue ?? "0"),
-    unrealizedPL: parseFloat(p.unrealizedPl ?? "0"),
-    unrealizedPLPercent: parseFloat(p.unrealizedPlpc ?? "0") * 100,
+    quantity: parseBrokerAmount(p.qty ?? "0"),
+    avgCost: parseBrokerAmount(p.avgEntryPrice ?? "0"),
+    currentPrice: parseBrokerAmount(p.currentPrice ?? "0"),
+    marketValue: parseBrokerAmount(p.marketValue ?? "0"),
+    unrealizedPL: parseBrokerAmount(p.unrealizedPl ?? "0"),
+    unrealizedPLPercent: parseBrokerAmount(p.unrealizedPlpc ?? "0") * 100,
   }));
 }
 
@@ -67,46 +84,42 @@ export async function getPortfolio(): Promise<Portfolio> {
   const [account, positions] = await Promise.all([getAccount(), getPositions()]);
 
   return {
-    equity: parseFloat(account.equity),
-    cash: parseFloat(account.cash),
-    buyingPower: parseFloat(account.buying_power),
+    equity: parseBrokerAmount(account.equity),
+    cash: parseBrokerAmount(account.cash),
+    buyingPower: parseBrokerAmount(account.buying_power),
     dayChange: 0,
     dayChangePercent: 0,
     positions,
   };
 }
 
-// Market Data — uses v4 MarketDataClient facades
+// Market Data
 export async function getQuote(symbol: string): Promise<Quote> {
-  const bars = await getAlpaca().marketData.getStockBarsFor(symbol, {
-    timeframe: TimeFrame.Day,
-    limit: 2,
-  });
+  const bars = await getBars(symbol, TimeFrame.Day, 2);
+  const prevBar = bars.at(-2);
+  const lastBar = bars.at(-1);
 
-  const sorted = bars.toSorted(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-  );
+  if (!lastBar) {
+    throw new NotFoundError("No Alpaca bars available for symbol");
+  }
 
-  const prevBar = sorted.length >= 2 ? sorted.at(-2) : null;
-  const lastBar = sorted.length >= 1 ? sorted.at(-1) : null;
-
-  const price = lastBar?.close ?? 0;
-  const prevClose = prevBar?.close ?? price;
+  const price = lastBar.c;
+  const prevClose = prevBar?.c ?? price;
   const change = price - prevClose;
   const changePercent = prevClose !== 0 ? (change / prevClose) * 100 : 0;
 
   return {
     symbol,
     price,
-    open: lastBar?.open ?? 0,
-    high: lastBar?.high ?? 0,
-    low: lastBar?.low ?? 0,
+    open: lastBar.o,
+    high: lastBar.h,
+    low: lastBar.l,
     // Align with Yahoo snapshots: `close` is previous close.
     close: prevClose,
-    volume: lastBar?.volume ?? 0,
+    volume: lastBar.v,
     change,
     changePercent,
-    timestamp: lastBar ? new Date(lastBar.timestamp).toISOString() : new Date().toISOString(),
+    timestamp: lastBar.t,
   };
 }
 
@@ -115,19 +128,38 @@ export async function getBars(
   timeframe = "1Day",
   limit = 100,
 ): Promise<PriceBar[]> {
-  const bars = await getAlpaca().marketData.getStockBarsFor(symbol, {
-    timeframe: parseTimeframe(timeframe),
-    limit,
-  });
+  const count = z.number().int().min(1).max(10000).safeParse(limit);
 
-  return bars.map((b) => ({
-    t: new Date(b.timestamp).toISOString(),
-    o: b.open,
-    h: b.high,
-    l: b.low,
-    c: b.close,
-    v: b.volume,
-  }));
+  if (!count.success) {
+    throw new ValidationError(
+      "Bar limit must be an integer between 1 and 10000",
+      count.error.issues,
+    );
+  }
+
+  const bars = await getAlpaca().marketData.getStockBarsFor(
+    symbol,
+    {
+      timeframe: parseTimeframe(timeframe),
+      // The API defaults to today's start and ascending order. Select recent history instead.
+      start: new Date(0),
+      sort: "desc",
+      limit: count.data,
+    },
+    // The request limit is a page size; the SDK otherwise collects every available page.
+    { maxPerSymbol: count.data },
+  );
+
+  return bars
+    .toSorted((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+    .map((b) => ({
+      t: new Date(b.timestamp).toISOString(),
+      o: b.open,
+      h: b.high,
+      l: b.low,
+      c: b.close,
+      v: b.volume,
+    }));
 }
 
 // Validate the public string input through the SDK's own timeframe constructor.
@@ -141,7 +173,11 @@ export function parseTimeframe(value: string): TimeFrameString {
   const amount = Number(match[1]);
   const unit = z.enum(TimeFrameUnit).parse(match[2]);
 
-  return timeFrame(amount, unit);
+  try {
+    return timeFrame(amount, unit);
+  } catch {
+    throw new ValidationError("Invalid Alpaca timeframe");
+  }
 }
 
 // Orders
@@ -184,7 +220,7 @@ export async function placeOrder(params: z.input<typeof AlpacaOrderRequestSchema
     throw new ValidationError("Invalid order parameters", parsed.error.issues);
   }
 
-  // Map to v4 submit shape; use generic submit for all order types
+  // Use generic submit for all order types.
   const raw = await getAlpaca().trading.orders.submit({
     symbol: parsed.data.symbol,
     qty: String(parsed.data.qty),
@@ -224,10 +260,17 @@ export function mapOrder(raw: BrokerOrderFields, fallback?: OrderFallback): Orde
     symbol: raw.symbol ?? fallback?.symbol ?? "",
     side: raw.side ?? fallback?.side ?? "buy",
     type: raw.type ?? raw.orderType ?? fallback?.type ?? "market",
-    quantity: parseFloat(raw.qty ?? String(fallback?.qty ?? 0)),
-    filledQuantity: parseFloat(raw.filledQty ?? "0"),
-    limitPrice: raw.limitPrice ? parseFloat(raw.limitPrice) : undefined,
-    stopPrice: raw.stopPrice ? parseFloat(raw.stopPrice) : undefined,
+    quantity:
+      raw.qty === undefined || raw.qty === null ? (fallback?.qty ?? 0) : parseBrokerAmount(raw.qty),
+    filledQuantity: parseBrokerAmount(raw.filledQty ?? "0"),
+    limitPrice:
+      raw.limitPrice === undefined || raw.limitPrice === null
+        ? undefined
+        : parseBrokerAmount(raw.limitPrice),
+    stopPrice:
+      raw.stopPrice === undefined || raw.stopPrice === null
+        ? undefined
+        : parseBrokerAmount(raw.stopPrice),
     status: raw.status ?? "new",
     timeInForce: raw.timeInForce ?? fallback?.time_in_force ?? "day",
     createdAt: raw.createdAt ? String(raw.createdAt) : new Date().toISOString(),
