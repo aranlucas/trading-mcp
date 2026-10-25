@@ -1,5 +1,6 @@
-// FRED (Federal Reserve Economic Data) provider - FREE, no API key needed for basic
+// FRED (Federal Reserve Economic Data) provider; requests require an API key.
 
+import { z } from "zod";
 import {
   type FredSeries,
   type FredRelease,
@@ -13,6 +14,12 @@ const FRED_BASE = "https://api.stlouisfed.org/fred";
 const apiKey = process.env.FRED_API_KEY ?? "";
 
 type SeriesObservation = { date: string; value: number };
+
+const ObservationValueSchema = z
+  .string()
+  .regex(z.regexes.number)
+  .transform(Number)
+  .pipe(z.number());
 
 export interface EconomicSeries {
   id: string;
@@ -56,6 +63,11 @@ export const fred = {
     try {
       const url = `${FRED_BASE}/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=${limit}`;
       const response = await fetch(url);
+
+      if (!response.ok) {
+        return [];
+      }
+
       const raw = await response.json();
 
       const result = FredObservationsResponseSchema.safeParse(raw);
@@ -64,10 +76,12 @@ export const fred = {
         return [];
       }
 
-      return (result.data.observations ?? []).map((o) => ({
-        date: o.date,
-        value: parseFloat(o.value) || 0,
-      }));
+      return (result.data.observations ?? []).flatMap((o) => {
+        const value = ObservationValueSchema.safeParse(o.value);
+
+        // Missing observations (".") are unavailable, not measured zeroes.
+        return value.success ? [{ date: o.date, value: value.data }] : [];
+      });
     } catch {
       return [];
     }
@@ -82,6 +96,11 @@ export const fred = {
     try {
       const url = `${FRED_BASE}/series?series_id=${seriesId}&api_key=${apiKey}&file_type=json`;
       const response = await fetch(url);
+
+      if (!response.ok) {
+        return null;
+      }
+
       const raw = await response.json();
 
       const result = FredSeriesResponseSchema.safeParse(raw);
@@ -158,6 +177,11 @@ export const fred = {
     try {
       const url = `${FRED_BASE}/series/search?search_text=${encodeURIComponent(query)}&api_key=${apiKey}&file_type=json&limit=${limit}`;
       const response = await fetch(url);
+
+      if (!response.ok) {
+        return [];
+      }
+
       const raw = await response.json();
 
       const result = FredSeriesResponseSchema.safeParse(raw);
@@ -177,6 +201,11 @@ export const fred = {
     try {
       const url = `${FRED_BASE}/releases?api_key=${apiKey}&file_type=json&limit=${limit}`;
       const response = await fetch(url);
+
+      if (!response.ok) {
+        return [];
+      }
+
       const raw = await response.json();
 
       const result = FredReleasesResponseSchema.safeParse(raw);

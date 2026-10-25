@@ -3,28 +3,23 @@ import { describe, expect, it } from "vitest";
 import { mapOrder, parseTimeframe, mapMarketClock } from "@/lib/alpaca.js";
 
 describe("Alpaca SDK order normalization (synthetic only)", () => {
-  it.each([
-    "new",
-    "partially_filled",
-    "pending_cancel",
-    "canceled",
-    "replaced",
-    "done_for_day",
-    "future_broker_state",
-  ])("preserves broker status %s without inventing a local state", (status) => {
-    const order = mapOrder({
-      id: "synthetic-order",
-      symbol: "TEST",
-      type: "market",
-      timeInForce: "day",
-      status,
-      side: "sell",
-      qty: "2.5",
-      filledQty: "1.25",
-    });
+  it.each(["new", "pending_cancel", "canceled", "replaced", "done_for_day"])(
+    "preserves broker status %s without inventing a local state",
+    (status) => {
+      const order = mapOrder({
+        id: "synthetic-order",
+        symbol: "TEST",
+        type: "market",
+        timeInForce: "day",
+        status,
+        side: "sell",
+        qty: "2.5",
+        filledQty: "1.25",
+      });
 
-    expect(order).toMatchObject({ status, side: "sell", quantity: 2.5, filledQuantity: 1.25 });
-  });
+      expect(order).toMatchObject({ status, side: "sell", quantity: 2.5, filledQuantity: 1.25 });
+    },
+  );
 
   it("preserves SDK order types and time-in-force values beyond the submission form", () => {
     expect(

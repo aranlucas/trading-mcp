@@ -125,6 +125,48 @@ pnpm secretlint
 backtests. Live Yahoo backtests and deployment E2E are skipped by default.
 Credentials, CI mode, or a deployment URL alone do not enable them.
 
+To measure the core package's offline suite using its installed V8 provider:
+
+```bash
+pnpm --filter @trading/core exec vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reportsDirectory=/tmp/trading-core-coverage-before
+```
+
+This report covers `packages/core/src/**/*.ts`, not the MCP or screener packages.
+When evaluating redundant tests, repeat with a separate output directory after
+the test edit and compare covered and total statement, branch, function, and line
+counts. Keep the source scope and configuration unchanged, and retain assertions
+for distinct behavior even when they hit the same lines. Source changes alter the
+coverage denominator, so report covered and total counts alongside percentages;
+those comparisons alone do not prove a removed test was redundant.
+
+The core transport regressions run the installed Alpaca SDK against in-memory
+responses and FRED against a fake `fetch`. They exercise pagination, numeric
+normalization, order validation, and request failures without broker credentials
+or real account/order operations:
+
+```bash
+pnpm --filter @trading/core exec vitest run test/alpaca.transport.test.ts test/fred.provider.test.ts
+```
+
+Alpaca history requests return at most `limit` recent bars in chronological order
+(an integer from 1 to 10,000). The adapter sets a historical start and descending
+request order, then uses the SDK's `maxPerSymbol` cap: the API's `limit` is only a
+page size, and its default start otherwise restricts results to today. See the
+[Alpaca historical-bars contract](https://docs.alpaca.markets/us/reference/stockbars).
+Quotes use the latest two available daily bars and report unavailable data when
+there are none; they are daily-bar snapshots, not real-time trade ticks. A failure
+while fetching a required page rejects the whole history request.
+
+Portfolio, position, and order normalization rejects malformed money/quantity
+strings as provider errors rather than returning partial numbers or `NaN`.
+Missing optional fields retain their existing
+fallbacks, and valid fractional and signed amounts are preserved. Domain numbers
+still use JavaScript floating point; these conversions do not provide exact
+decimal accounting. FRED omits missing or malformed observations, preserves real
+zeroes, and returns unavailable results for non-success HTTP responses. Its latest
+value is unavailable when the most recent observation is missing; it does not
+substitute an older observation.
+
 Run the Docker build-context integration tests separately with a running Docker daemon:
 
 ```bash
