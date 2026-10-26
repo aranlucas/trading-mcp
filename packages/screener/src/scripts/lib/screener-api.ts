@@ -8,12 +8,22 @@ type MoversOptions = {
   limit: number;
 };
 
-// Re-export the correct service schemas
-export {
-  ScanCriteria,
-  ScanResultSchema,
-  MoverResultSchema,
-} from "../../services/screener.js";
+// Keep own ScanCriteriaSchema for parsing JSON config
+export const ScanCriteriaSchema = z.object({
+  minPrice: z.number().optional(),
+  maxPrice: z.number().optional(),
+  minVolume: z.number().optional(),
+  minRsi: z.number().optional(),
+  maxRsi: z.number().optional(),
+  aboveSma20: z.boolean().optional(),
+  aboveSma50: z.boolean().optional(),
+  symbols: z.array(z.string()).optional(),
+});
+
+export type ScanCriteria = z.infer<typeof ScanCriteriaSchema>;
+
+// Re-export the correct result schemas from services
+export { ScanResultSchema, MoverResultSchema } from "../../services/screener.js";
 
 const SignalSchema = z.object({
   symbol: z.string(),
@@ -35,7 +45,7 @@ async function appJson<T>(path: string, schema: z.ZodType<T>, init?: RequestInit
   return schema.parse(await res.json());
 }
 
-export async function getMovers(opts: MoversOptions): Promise<z.infer<typeof ScanResultSchema>[]> {
+export async function getMovers(opts: MoversOptions): Promise<z.infer<typeof MoverResultSchema>[]> {
   const data = await appJson(
     `/api/screener/movers/${opts.direction}?limit=${opts.limit}`,
     z.object({ movers: z.array(MoverResultSchema) }),
@@ -44,7 +54,7 @@ export async function getMovers(opts: MoversOptions): Promise<z.infer<typeof Sca
   return data.movers;
 }
 
-export async function scan(criteria: z.infer<typeof ScanCriteria>>): Promise<z.infer<typeof ScanResultSchema>[]> {
+export async function scan(criteria: ScanCriteria): Promise<z.infer<typeof ScanResultSchema>[]> {
   const data = await appJson(
     "/api/screener/scan",
     z.object({ results: z.array(ScanResultSchema) }),
