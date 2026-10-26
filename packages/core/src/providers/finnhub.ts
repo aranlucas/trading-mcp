@@ -24,6 +24,7 @@ import {
   FinnhubInsiderResponseSchema,
 } from "../schemas/index.js";
 import * as finnhub from "finnhub";
+import { parseQuote } from "../lib/quote.js";
 
 const apiKey = process.env.FINNHUB_API_KEY ?? "";
 
@@ -71,20 +72,24 @@ export const finnhubProvider = {
 
     try {
       const raw = await promisify((cb) => client.quote(symbol, cb), FinnhubQuoteSchema);
-      const data = FinnhubQuoteSchema.parse(raw);
 
-      return {
+      return parseQuote(
+        {
+          symbol,
+          price: raw.c,
+          open: raw.o,
+          high: raw.h,
+          low: raw.l,
+          close: raw.pc,
+          change: raw.d,
+          changePercent: raw.dp,
+          timestamp: raw.t,
+          source: "finnhub",
+          kind: "market_snapshot",
+          retrievedAt: new Date().toISOString(),
+        },
         symbol,
-        price: data.c ?? 0,
-        open: data.o ?? 0,
-        high: data.h ?? 0,
-        low: data.l ?? 0,
-        close: data.pc ?? 0,
-        volume: 0,
-        change: data.d ?? 0,
-        changePercent: data.dp ?? 0,
-        timestamp: new Date().toISOString(),
-      };
+      );
     } catch {
       return null;
     }

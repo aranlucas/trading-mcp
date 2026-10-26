@@ -17,7 +17,10 @@ const dependencies = {
       volume: 50000000,
       change: 1.5,
       changePercent: 0.86,
-      timestamp: "2024-01-15T16:00:00Z",
+      timestamp: "2024-01-15T16:00:00.000Z",
+      source: "alpaca",
+      kind: "daily_bar",
+      retrievedAt: "2024-01-15T16:01:00.000Z",
     }),
     getBars: vi.fn<ToolDependencies["alpaca"]["getBars"]>().mockResolvedValue([
       {

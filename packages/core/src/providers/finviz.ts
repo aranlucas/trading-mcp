@@ -1,6 +1,9 @@
 // Finviz scraper - FREE, no API key (rate limited)
 
 import type { Quote, Signal } from "../types/index.js";
+import { z } from "zod";
+import { load } from "cheerio";
+import { parseQuote, quoteChange } from "../lib/quote.js";
 import {
   FinvizScreenerResultSchema,
   FinvizScreenFiltersSchema,
@@ -10,32 +13,94 @@ import {
 
 const FINVIZ_BASE = "https://finviz.com";
 
-// Parse value with suffix (K, M, B, %)
-function parseValue(str: string | undefined): number {
-  if (!str || str === "-") {
-    return 0;
+const FinvizNumberSchema = z
+  .string()
+  .trim()
+  .regex(/^[+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?$/)
+  .transform((value) => Number(value.replaceAll(",", "")))
+  .pipe(z.number());
+
+const FinvizPriceSchema = FinvizNumberSchema.pipe(z.number().positive());
+
+const optionalPrice = FinvizPriceSchema.nullable().catch(null);
+
+const optionalPercent = z
+  .string()
+  .trim()
+  .regex(/%$/)
+  .transform((value) => value.slice(0, -1))
+  .pipe(FinvizNumberSchema)
+  .nullable()
+  .catch(null);
+
+const volumeMultipliers = new Map([
+  ["K", 1e3],
+  ["M", 1e6],
+  ["B", 1e9],
+  ["T", 1e12],
+]);
+
+function parseVolume(value = ""): number | null {
+  const multiplier = volumeMultipliers.get(value.slice(-1).toUpperCase());
+
+  const parsed = FinvizNumberSchema.safeParse(
+    multiplier === undefined ? value : value.slice(0, -1),
+  );
+
+  if (!parsed.success) {
+    return null;
   }
 
-  str = str.replaceAll(",", "").replaceAll("%", "");
+  const result = z
+    .number()
+    .nonnegative()
+    .safeParse(parsed.data * (multiplier ?? 1));
 
-  const multipliers = new Map([
-    ["K", 1e3],
-    ["M", 1e6],
-    ["B", 1e9],
-    ["T", 1e12],
-  ]);
+  return result.success ? result.data : null;
+}
 
-  const match = str.match(/^(-?[\d.]+)([KMBT])?$/i);
+function snapshotFields(html: string) {
+  const $ = load(html);
+  const fields = new Map<string, string>();
+  $("table.snapshot-table2 tr").each((_index, row) => {
+    const cells = $(row).children("td");
 
-  if (match?.[1]) {
-    const num = parseFloat(match[1]);
-    const suffix = match[2];
-    const mult = suffix ? (multipliers.get(suffix.toUpperCase()) ?? 1) : 1;
+    for (let index = 0; index + 1 < cells.length; index += 2) {
+      fields.set(
+        cells.eq(index).text().trim(),
+        cells
+          .eq(index + 1)
+          .text()
+          .trim(),
+      );
+    }
+  });
 
-    return num * mult;
-  }
+  return fields;
+}
 
-  return parseFloat(str) || 0;
+function parseSnapshot(html: string, symbol: string): Quote {
+  const fields = snapshotFields(html);
+  const price = FinvizPriceSchema.parse(fields.get("Price"));
+  const close = optionalPrice.parse(fields.get("Prev Close"));
+  const changes = quoteChange(price, close);
+
+  return parseQuote(
+    {
+      symbol,
+      price,
+      open: optionalPrice.parse(fields.get("Open")),
+      close,
+      volume: parseVolume(fields.get("Volume")),
+      change: changes.change,
+      changePercent: optionalPercent.parse(fields.get("Change")) ?? changes.changePercent,
+      source: "finviz",
+      kind: "web_snapshot",
+      // The snapshot table has no trustworthy observation timestamp or day high/low fields.
+      retrievedAt: new Date().toISOString(),
+    },
+    symbol,
+  );
 }
 
 export const finviz = {
@@ -44,31 +109,18 @@ export const finviz = {
   // Get stock quote/snapshot
   async getQuote(symbol: string): Promise<Quote | null> {
     try {
-      const response = await fetch(`${FINVIZ_BASE}/quote.ashx?t=${symbol}`, {
+      const url = new URL("/quote.ashx", FINVIZ_BASE);
+      url.searchParams.set("t", symbol);
+
+      const response = await fetch(url, {
         headers: { "User-Agent": "Mozilla/5.0" },
       });
 
-      const html = await response.text();
+      if (!response.ok) {
+        return null;
+      }
 
-      // Extract price and change from snapshot table
-      const priceMatch = html.match(/class="snapshot-td2-cp"[^>]*>([^<]+)/);
-      const changeMatch = html.match(/class="snapshot-td2[^"]*"[^>]*>([+-]?\d+\.?\d*%?)/);
-
-      const price = parseValue(priceMatch?.[1]);
-      const change = parseValue(changeMatch?.[1]);
-
-      return {
-        symbol: symbol.toUpperCase(),
-        price,
-        open: 0,
-        high: 0,
-        low: 0,
-        close: price,
-        volume: 0,
-        change,
-        changePercent: change,
-        timestamp: new Date().toISOString(),
-      };
+      return parseSnapshot(await response.text(), symbol);
     } catch {
       return null;
     }

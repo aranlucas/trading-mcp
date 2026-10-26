@@ -159,6 +159,16 @@ while fetching a required page rejects the whole history request.
 
 Portfolio, position, and order normalization rejects malformed money/quantity
 strings as provider errors rather than returning partial numbers or `NaN`.
+Missing optional fields in those broker objects retain their existing fallbacks,
+and valid fractional and signed amounts are preserved. Domain numbers still use
+JavaScript floating point; these conversions do not provide exact decimal accounting.
+
+Normalized quotes require a positive finite price and expose unavailable optional
+fields as `null`. They include `source`, `kind`, provider observation `timestamp`,
+and separate `retrievedAt`; a retrieval time does not make an old observation
+current. Screening consumers handle unknown volume and change explicitly. See
+[data contracts and migration guidance](docs/data-contracts.md) for the provider
+matrix, public API boundaries, failure behavior, and offline regression checks.
 
 `cancel_order` returns `{ orderId, status: "cancel_requested", message }` when
 Alpaca accepts the request. This acknowledges the request; it does not establish
@@ -171,10 +181,7 @@ The tool does not poll or place a replacement order. See the
 [cancel endpoint](https://docs.alpaca.markets/us/reference/deleteorderbyorderid-1)
 and [order lifecycle](https://docs.alpaca.markets/us/docs/orders-at-alpaca#order-lifecycle).
 
-Missing optional fields retain their existing
-fallbacks, and valid fractional and signed amounts are preserved. Domain numbers
-still use JavaScript floating point; these conversions do not provide exact
-decimal accounting. FRED omits missing or malformed observations, preserves real
+FRED omits missing or malformed observations, preserves real
 zeroes, and returns unavailable results for non-success HTTP responses. Its latest
 value is unavailable when the most recent observation is missing; it does not
 substitute an older observation.

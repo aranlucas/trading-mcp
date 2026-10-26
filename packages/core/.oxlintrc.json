@@ -26,6 +26,12 @@
   ],
   "overrides": [
     {
+      "files": ["src/lib/quote.ts", "src/providers/yahoo.ts", "src/providers/finnhub.ts"],
+      "rules": {
+        "eslint/complexity": ["error", { "max": 9, "variant": "classic" }]
+      }
+    },
+    {
       "files": ["src/config.ts"],
       "rules": {
         "eslint/no-console": [

@@ -3,6 +3,7 @@
 
 import type { z } from "zod";
 import type { Quote, NewsItem } from "../types/index.js";
+import { parseQuote } from "../lib/quote.js";
 import {
   PolygonAggregatesResponseSchema,
   PolygonNewsResponseSchema,
@@ -57,30 +58,32 @@ export const polygon = {
       PolygonAggregatesResponseSchema,
     );
 
-    if (!raw) {
+    const bar = raw?.results?.[0];
+
+    if (!bar) {
       return null;
     }
 
-    const result = PolygonAggregatesResponseSchema.safeParse(raw);
-
-    if (!result.success || !result.data.results?.[0]) {
+    try {
+      return parseQuote(
+        {
+          symbol: bar.T ?? symbol,
+          price: bar.c,
+          open: bar.o,
+          high: bar.h,
+          low: bar.l,
+          // This endpoint supplies one session, not the preceding session's close.
+          volume: bar.v,
+          timestamp: bar.t,
+          source: "polygon",
+          kind: "previous_session_bar",
+          retrievedAt: new Date().toISOString(),
+        },
+        symbol,
+      );
+    } catch {
       return null;
     }
-
-    const bar = result.data.results[0];
-
-    return {
-      symbol: bar.T ?? symbol,
-      price: bar.c ?? 0,
-      open: bar.o ?? 0,
-      high: bar.h ?? 0,
-      low: bar.l ?? 0,
-      close: bar.c ?? 0,
-      volume: bar.v ?? 0,
-      change: 0,
-      changePercent: 0,
-      timestamp: new Date(bar.t ?? 0).toISOString(),
-    };
   },
 
   // Get aggregates (OHLCV bars)

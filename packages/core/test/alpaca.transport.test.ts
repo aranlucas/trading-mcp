@@ -164,7 +164,14 @@ describe("Alpaca history through the installed SDK", () => {
     await expect(getQuote("EMPTY")).rejects.toBeInstanceOf(NotFoundError);
     const snapshots = await getSnapshots(["TEST", "EMPTY"]);
     expect([...snapshots.keys()]).toEqual(["TEST"]);
-    expect(snapshots.get("TEST")).toMatchObject({ price: 105, close: 105, change: 0 });
+    expect(snapshots.get("TEST")).toMatchObject({
+      price: 105,
+      close: null,
+      change: null,
+      changePercent: null,
+      source: "alpaca",
+      kind: "daily_bar",
+    });
   });
 
   it("propagates a later-page failure instead of returning incomplete history", async () => {

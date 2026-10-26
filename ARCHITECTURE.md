@@ -64,6 +64,7 @@ flowchart LR
 - `packages/core/src/providers/*`: provider integrations
 - `packages/core/src/providers/index.ts`: `unified` facade combining multiple sources
 - `packages/core/src/lib/*`:
+  - `quote.ts`: normalized quote schema, observation provenance, nullable availability, and change calculation
   - `timeout.ts`: generic request timeouts
   - `cache.ts`: LRU caches + helper
   - `rate-limiter.ts`: Bottleneck limiters + wrapper
@@ -72,7 +73,7 @@ flowchart LR
 
 **Current provider strategy**
 
-- `unified.getQuote(symbol)` is sequential fallback (Yahoo → Finnhub → Polygon → Finviz).
+- `unified.getQuote(symbol)` races Yahoo, configured Finnhub/Polygon, and Finviz with `Promise.any`. Required price, symbol, and provider identity are validated before success is recorded. The winning data retains its observation kind and source timestamp.
 - `unified.getNews(symbol?)` aggregates across Yahoo + Finnhub + Polygon and dedupes by headline.
 - `unified.healthCheck()` runs a parallel “smoke test” across providers.
 
@@ -102,7 +103,8 @@ flowchart LR
 
 - `GET /health` calls `unified.healthCheck()` (deep provider checks).
 - Quote routes currently call `yahoo.*` directly (no provider fallback).
-- Screening service currently uses `alpaca.getSnapshots/getBars` (Alpaca is required for many endpoints).
+- Screening uses the injected `MarketDataClient`: Yahoo by default, or Alpaca when `SCREENER_PROVIDER=alpaca`. Both provide normalized snapshots; Yahoo normalization is shared with core. Missing required data is excluded, while unavailable optional values remain `null`.
+- `/api/openapi.json` exposes the route contracts, including nullable scan and mover fields. See [data contracts](docs/data-contracts.md) for consumer migration and raw-provider exclusions.
 
 ## Key Runtime Flows
 
@@ -114,12 +116,13 @@ flowchart LR
 
 ### 2) Screening
 
-- REST: `POST /api/screener/scan` → `ScreenerService.scan()` → Alpaca snapshots/bars → compute filters/RSI/SMA
+- REST: `POST /api/screener/scan` → `ScreenerService.scan()` → selected market-data snapshots → quote filters → history only when technical filters are requested. Helpers separate quote predicates, technical availability, and result assembly; history requests remain sequential.
 - MCP: various `get_*` screener tools → Polygon or Finviz
 
 ### 3) Trading (orders)
 
 - MCP: `place_order` tool → `alpaca.placeOrder()` → Alpaca `createOrder`
+- MCP: `cancel_order` → `alpaca.cancelOrder()` → request acknowledgment. `get_order` remains the source of current broker status; an accepted cancel can race with a fill.
 
 ## Cross-cutting Concerns (Current vs Desired)
 
@@ -154,11 +157,11 @@ flowchart LR
 
 **Current**
 
-- Errors are often returned as `String(error)` with inconsistent shapes between MCP and REST.
+- REST uses `toPublicError` in its central error handler. MCP cancellation also sanitizes errors, but several other tools still use `String(error)`; the public error contract is not yet uniform.
 
 **Desired**
 
-- A small, typed error taxonomy (e.g., `ProviderError`, `ValidationError`, `NotConfiguredError`, `UpstreamUnavailableError`)
+- Apply the existing typed errors and public-error mapper consistently across tools and provider boundaries.
 - Stable public error envelope for REST and MCP (never leak secrets; include correlation id)
 
 ### Observability
@@ -187,12 +190,12 @@ Concrete change examples:
 - REST quote routes should call `marketData.getQuote(s)` instead of `yahoo.getQuote(s)`
 - MCP “read-only” tools should use the same facade, reserving Alpaca for trading/portfolio
 
-### B) Replace sequential fallback with “first-success” and health-aware routing
+### B) Bound and cancel concurrent fallback work
 
-Today, some fallbacks are sequential. Prefer:
+Single-quote fallback already races providers and records metrics. Next steps:
 
-- parallel fan-out with timeouts
-- first-success wins
+- propagate cancellation into underlying reads and cancel losing candidates
+- prevent retries from accumulating timed-out work
 - provider scoring (healthy + low latency → preferred)
 - circuit breaker (temporarily stop calling a provider that’s failing)
 
@@ -215,7 +218,7 @@ This makes trading safer, testable, and explainable.
 ### E) Unify public API contracts
 
 - REST:
-  - add OpenAPI generated from Zod schemas
+  - replace remaining unknown/raw response schemas in the existing generated OpenAPI with explicit contracts
   - define stable error responses
 - MCP:
   - return structured JSON envelopes instead of ad-hoc strings where feasible
@@ -232,7 +235,7 @@ This makes trading safer, testable, and explainable.
 ### Phase 1 (reliability, 2–5 days)
 
 - Implement circuit breaker and provider scoring.
-- Convert sequential fallback paths to parallel first-success.
+- Normalize batch/history fallback shapes before changing their scheduling.
 - Add provider-level error rate tracking in memory (and expose in `/health`).
 
 ### Phase 2 (trading safety, 3–7 days)
@@ -242,7 +245,7 @@ This makes trading safer, testable, and explainable.
 
 ### Phase 3 (productization)
 
-- OpenAPI + examples + client snippets.
+- Expand OpenAPI examples and client migration snippets.
 - Load testing for common routes.
 - Expand test coverage:
   - contract tests per provider adapter

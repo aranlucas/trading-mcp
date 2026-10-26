@@ -1,6 +1,9 @@
 // Zod schemas for runtime validation of external API responses
 
 import { z } from "zod";
+import { SourceTimestampSchema } from "../lib/quote.js";
+
+export { QuoteSchema } from "../lib/quote.js";
 
 // ============================================
 // Yahoo Finance Schemas
@@ -8,14 +11,15 @@ import { z } from "zod";
 
 export const YahooQuoteSchema = z.object({
   symbol: z.string(),
-  regularMarketPrice: z.number().optional(),
-  regularMarketOpen: z.number().optional(),
-  regularMarketDayHigh: z.number().optional(),
-  regularMarketDayLow: z.number().optional(),
-  regularMarketPreviousClose: z.number().optional(),
-  regularMarketVolume: z.number().optional(),
-  regularMarketChange: z.number().optional(),
-  regularMarketChangePercent: z.number().optional(),
+  regularMarketPrice: z.number().nullish(),
+  regularMarketOpen: z.number().nullish(),
+  regularMarketDayHigh: z.number().nullish(),
+  regularMarketDayLow: z.number().nullish(),
+  regularMarketPreviousClose: z.number().nullish(),
+  regularMarketVolume: z.number().nullish(),
+  regularMarketChange: z.number().nullish(),
+  regularMarketChangePercent: z.number().nullish(),
+  regularMarketTime: SourceTimestampSchema,
 });
 
 export const YahooQuoteArraySchema = z.array(YahooQuoteSchema);
@@ -201,13 +205,14 @@ export const PolygonRelatedResponseSchema = z.object({
 // ============================================
 
 export const FinnhubQuoteSchema = z.object({
-  c: z.number().optional(),
-  o: z.number().optional(),
-  h: z.number().optional(),
-  l: z.number().optional(),
-  pc: z.number().optional(),
-  d: z.number().optional(),
-  dp: z.number().optional(),
+  c: z.number().nullish(),
+  o: z.number().nullish(),
+  h: z.number().nullish(),
+  l: z.number().nullish(),
+  pc: z.number().nullish(),
+  d: z.number().nullish(),
+  dp: z.number().nullish(),
+  t: SourceTimestampSchema,
 });
 
 export const FinnhubNewsArticleSchema = z.object({

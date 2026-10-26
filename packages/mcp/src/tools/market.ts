@@ -21,7 +21,8 @@ export function registerMarketTools(
     "get_quote",
     {
       title: "Get Stock Quote",
-      description: "Get current stock quote with price, volume, and change",
+      description:
+        "Get the latest available Alpaca daily-bar snapshot with observation time and data provenance. This is not a live trade tick; unavailable fields are null.",
       inputSchema: {
         symbol: z.string().describe("Stock ticker symbol (e.g., AAPL, GOOGL)"),
       },

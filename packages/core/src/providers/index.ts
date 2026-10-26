@@ -8,7 +8,7 @@ type MarketMover = {
   todaysChangePerc?: number;
 };
 
-export { yahoo } from "./yahoo.js";
+export { yahoo, normalizeYahooQuote } from "./yahoo.js";
 
 export { polygon } from "./polygon.js";
 
@@ -28,6 +28,7 @@ import { ProviderError } from "../lib/errors.js";
 import { providerLogger } from "../lib/logger.js";
 import { createProviderMetrics } from "../lib/provider-metrics.js";
 import { withRetry } from "../lib/retry.js";
+import { parseQuote } from "../lib/quote.js";
 import type { FinnhubRecommendation, FinnhubEarning } from "../schemas/index.js";
 import type { Quote, NewsItem, SentimentData } from "../types/index.js";
 
@@ -112,13 +113,23 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
             minDelayMs: opt.quoteRetryMinDelayMs,
           })
             .then((quote) => {
+              const valid = parseQuote(quote, symbol);
+
+              if (valid.source !== name) {
+                throw new ProviderError({
+                  provider: name,
+                  operation: "getQuote",
+                  message: "Quote source does not match its provider",
+                });
+              }
+
               metrics.recordSuccess({
                 provider: name,
                 operation: "getQuote",
                 latencyMs: Date.now() - startedAt,
               });
 
-              return quote;
+              return valid;
             })
             // Provider promise rejections are preserved as causes, then wrapped in a typed ProviderError.
             // oxlint-disable-next-line anti-slop/no-unknown-parameters
