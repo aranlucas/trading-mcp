@@ -4,8 +4,8 @@ import { normalizeYahooQuote } from "@/providers/yahoo.js";
 import { ProviderError } from "@/lib/errors.js";
 import { quoteChange } from "@/lib/quote.js";
 
-function snapshot(price: string, fields = "") {
-  return `<table class="snapshot-table2"><tr><td>Price</td><td class="snapshot-td2-cp"><b>${price}</b></td>${fields}</tr></table>`;
+function snapshot(price: string, fields = "", symbol = "AAPL") {
+  return `<link rel="canonical" href="https://finviz.com/quote.ashx?t=${symbol}"><h1 class="quote-header_ticker-wrapper_ticker">${symbol}</h1><table class="snapshot-table2"><tr><td>Price</td><td class="snapshot-td2-cp"><b>${price}</b></td>${fields}</tr></table>`;
 }
 
 afterEach(() => {
@@ -15,6 +15,39 @@ afterEach(() => {
 });
 
 describe("Finviz quote quality", () => {
+  it.each([
+    snapshot("500", "", "MSFT"),
+    '<table class="snapshot-table2"><tr><td>Price</td><td>500</td></tr></table>',
+    snapshot("100").replace("t=AAPL", "t=MSFT"),
+    snapshot("100").replace("t=AAPL", "t=AAPL&t=MSFT"),
+    snapshot("100").replace("https://finviz.com/", "https://finviz.com.attacker.example/"),
+  ])("rejects missing, conflicting or wrong response identity", async (html) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(html)));
+    expect(await finviz.getQuote("AAPL")).toBeNull();
+  });
+
+  it("a wrong-ticker page cannot win a race or earn provider success metrics", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(finnhub, "isConfigured").mockReturnValue(false);
+    vi.spyOn(polygon, "isConfigured").mockReturnValue(false);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(snapshot("500", "", "MSFT"))));
+    vi.spyOn(yahoo, "getQuoteNormalized").mockImplementation(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 25);
+      });
+
+      return normalizeYahooQuote({ symbol: "AAPL", regularMarketPrice: 100 });
+    });
+    const source = createUnified({ quoteRetries: 0 });
+    const result = source.getQuote("AAPL");
+    await vi.advanceTimersByTimeAsync(30);
+    await expect(result).resolves.toMatchObject({ symbol: "AAPL", source: "yahoo", price: 100 });
+    expect(source.getProviderMetrics().providers.finviz?.getQuote?.totals).toMatchObject({
+      success: 0,
+      failure: 1,
+    });
+  });
+
   it.each([403, 429, 500])(
     "rejects HTTP %s without treating its body as a quote",
     async (status) => {

@@ -41,6 +41,13 @@ Cheerio parses the HTML once; Zod validates financial fields. This replaces a
 quote-specific regex parser, while the other Finviz screening/signal parsers
 remain separate work.
 
+Finviz requires an identifiable ticker in its canonical quote link or ticker
+heading. Recognized identities must agree with one another and the request;
+missing or changed identity markup makes the snapshot unavailable. Polygon
+preserves the response's top-level ticker and result `T`, requires at least one,
+and rejects either if it conflicts with the requested symbol. The adapters do
+not label an unidentified response with the requested ticker.
+
 `normalizeYahooQuote(raw, expectedSymbol?)` validates a Yahoo snapshot and returns
 `Quote`, throwing for invalid required data or a mismatched expected symbol.
 Omit `expectedSymbol` only when validating a batch item by its own returned
@@ -79,6 +86,9 @@ with unavailable required history. Quote-only scans do not request that history.
 `getMovers` requires a known change percentage, prefers calculation from a valid
 previous close, and otherwise uses the reported percentage. Absolute change may
 still be unavailable. REST documents these fields at `/api/openapi.json`.
+The built-in reporting client shares those response schemas. Report formatting
+prints `unavailable` for missing values, preserves real zeroes, and sorts unknown
+scan changes after known percentages before applying the report limit.
 
 The REST `/api/quotes` routes, `yahoo.getQuote/getQuotes/getHistory`, and explicit
 Yahoo access through `unified.providers` still return raw Yahoo shapes.

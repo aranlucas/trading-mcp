@@ -54,6 +54,26 @@ describe("Finnhub callback-to-quote normalization", () => {
 });
 
 describe("Polygon previous-session snapshots", () => {
+  it.each([
+    { ticker: "MSFT", results: [{ c: 500 }] },
+    { ticker: "MSFT", results: [{ T: "TEST", c: 500 }] },
+    { ticker: "TEST", results: [{ T: "MSFT", c: 500 }] },
+    { results: [{ c: 500 }] },
+  ])("rejects missing or conflicting response identity in %j", async (payload) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(payload)));
+    const { polygon } = await import("@/providers/polygon.js");
+    expect(await polygon.getPreviousClose("TEST")).toBeNull();
+  });
+
+  it("uses a matching top-level ticker when the bar omits T", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(Response.json({ ticker: "TEST", results: [{ c: 123 }] })),
+    );
+    const { polygon } = await import("@/providers/polygon.js");
+    expect(await polygon.getPreviousClose("TEST")).toMatchObject({ symbol: "TEST", price: 123 });
+  });
+
   it.each([{}, { c: 0 }, { c: -1 }])("rejects a bar without a usable close: %j", async (bar) => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ results: [bar] })));
     const { polygon } = await import("@/providers/polygon.js");

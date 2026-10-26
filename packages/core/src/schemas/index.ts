@@ -112,6 +112,7 @@ export const PolygonBarSchema = z.object({
 });
 
 export const PolygonAggregatesResponseSchema = z.object({
+  ticker: z.string().optional(),
   results: z.array(PolygonBarSchema).optional(),
 });
 

@@ -2,7 +2,7 @@
 
 import type { Quote, Signal } from "../types/index.js";
 import { z } from "zod";
-import { load } from "cheerio";
+import { load, type CheerioAPI } from "cheerio";
 import { parseQuote, quoteChange } from "../lib/quote.js";
 import {
   FinvizScreenerResultSchema,
@@ -59,8 +59,7 @@ function parseVolume(value = ""): number | null {
   return result.success ? result.data : null;
 }
 
-function snapshotFields(html: string) {
-  const $ = load(html);
+function snapshotFields($: CheerioAPI) {
   const fields = new Map<string, string>();
   $("table.snapshot-table2 tr").each((_index, row) => {
     const cells = $(row).children("td");
@@ -79,15 +78,49 @@ function snapshotFields(html: string) {
   return fields;
 }
 
+function canonicalTicker(href: string): string {
+  const url = new URL(href, FINVIZ_BASE);
+
+  if (
+    url.origin !== FINVIZ_BASE ||
+    url.pathname !== "/quote.ashx" ||
+    url.username ||
+    url.password
+  ) {
+    throw new Error("Invalid Finviz canonical quote URL");
+  }
+
+  return z.tuple([z.string().trim().min(1)]).parse(url.searchParams.getAll("t"))[0];
+}
+
+function snapshotSymbol($: CheerioAPI): string {
+  const tickers = $(".quote-header_ticker-wrapper_ticker, .fullview-ticker")
+    .map((_index, element) => $(element).text())
+    .get();
+
+  $("link[rel~='canonical']").each((_index, element) => {
+    tickers.push(canonicalTicker($(element).attr("href") ?? ""));
+  });
+  const normalized = tickers.map((ticker) => ticker.trim().toUpperCase());
+  const [symbol] = normalized;
+
+  if (!symbol || normalized.some((ticker) => ticker !== symbol)) {
+    throw new Error("Missing or conflicting Finviz quote identity");
+  }
+
+  return symbol;
+}
+
 function parseSnapshot(html: string, symbol: string): Quote {
-  const fields = snapshotFields(html);
+  const $ = load(html);
+  const fields = snapshotFields($);
   const price = FinvizPriceSchema.parse(fields.get("Price"));
   const close = optionalPrice.parse(fields.get("Prev Close"));
   const changes = quoteChange(price, close);
 
   return parseQuote(
     {
-      symbol,
+      symbol: snapshotSymbol($),
       price,
       open: optionalPrice.parse(fields.get("Open")),
       close,

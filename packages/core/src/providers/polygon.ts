@@ -64,10 +64,16 @@ export const polygon = {
       return null;
     }
 
+    const ticker = raw?.ticker;
+
+    if (ticker !== undefined && ticker.trim().toUpperCase() !== symbol.trim().toUpperCase()) {
+      return null;
+    }
+
     try {
       return parseQuote(
         {
-          symbol: bar.T ?? symbol,
+          symbol: bar.T ?? ticker,
           price: bar.c,
           open: bar.o,
           high: bar.h,
