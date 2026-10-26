@@ -331,6 +331,15 @@ describe("Alpaca order request and failure contracts", () => {
     expect(transport).toHaveBeenCalledTimes(1);
   });
 
+  it("does not retry cancel DELETE after a 503 with the installed SDK default policy", async () => {
+    transport
+      .mockResolvedValueOnce(Response.json({ message: "synthetic-unavailable" }, { status: 503 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await expect(cancelOrder("synthetic-order")).rejects.toMatchObject({ status: 503 });
+    expect(transport).toHaveBeenCalledOnce();
+    expect(transport.mock.calls[0]?.[1]?.method).toBe("DELETE");
+  });
+
   it("does not turn a failed cancellation into success", async () => {
     transport.mockImplementation(
       mockFetch([
