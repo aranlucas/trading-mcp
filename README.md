@@ -159,6 +159,18 @@ while fetching a required page rejects the whole history request.
 
 Portfolio, position, and order normalization rejects malformed money/quantity
 strings as provider errors rather than returning partial numbers or `NaN`.
+
+`cancel_order` returns `{ orderId, status: "cancel_requested", message }` when
+Alpaca accepts the request. This acknowledges the request; it does not establish
+that the order is canceled or that exposure is gone. Query `get_order` for the
+broker's current status: it can remain `pending_cancel`, become `filled`, or
+become `canceled`. These broker status strings are preserved. A failed/ambiguous
+request returns `isError: true` with `cancel_request_unconfirmed`, the order ID,
+and a sanitized public error; check order state before retrying or replacing it.
+The tool does not poll or place a replacement order. See the
+[cancel endpoint](https://docs.alpaca.markets/us/reference/deleteorderbyorderid-1)
+and [order lifecycle](https://docs.alpaca.markets/us/docs/orders-at-alpaca#order-lifecycle).
+
 Missing optional fields retain their existing
 fallbacks, and valid fractional and signed amounts are preserved. Domain numbers
 still use JavaScript floating point; these conversions do not provide exact

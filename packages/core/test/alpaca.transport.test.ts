@@ -339,4 +339,13 @@ describe("Alpaca order request and failure contracts", () => {
     await expect(cancelOrder("synthetic-order")).rejects.toMatchObject({ status: 422 });
     expect(transport).toHaveBeenCalledTimes(1);
   });
+
+  it("acknowledges an accepted cancellation without reading or inventing its final status", async () => {
+    transport.mockImplementation(
+      mockFetch([{ method: "DELETE", path: "/v2/orders/synthetic-order", status: 204 }]),
+    );
+
+    await expect(cancelOrder("synthetic-order")).resolves.toBeUndefined();
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
 });

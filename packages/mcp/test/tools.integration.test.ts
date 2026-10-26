@@ -313,14 +313,62 @@ describe("MCP Tools Integration", () => {
       expect(order.id).toBe("order-123");
     });
 
-    it("cancel_order should cancel order", async () => {
+    it("cancel_order acknowledges the request without inventing a terminal broker status", async () => {
       const tool = registeredTools.get("cancel_order");
       const result = await tool!.handler({ orderId: "order-123" });
 
       expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
-      const response = z.object({ status: z.string() }).parse(JSON.parse(content));
-      expect(response.status).toBe("cancelled");
+      expect(JSON.parse(content)).toMatchObject({
+        orderId: "order-123",
+        status: "cancel_requested",
+      });
+      expect(dependencies.alpaca.cancelOrder).toHaveBeenCalledExactlyOnceWith("order-123");
+      expect(dependencies.alpaca.getOrder).not.toHaveBeenCalled();
+      expect(dependencies.alpaca.placeOrder).not.toHaveBeenCalled();
     });
+
+    it.each(["filled", "canceled"])(
+      "preserves pending_cancel and subsequent broker status %s after acknowledgement",
+      async (status) => {
+        const order = await dependencies.alpaca.getOrder("order-123");
+        dependencies.alpaca.getOrder.mockClear();
+        dependencies.alpaca.getOrder
+          .mockResolvedValueOnce({ ...order, status: "pending_cancel" })
+          .mockResolvedValueOnce({ ...order, status });
+        const cancelled = await registeredTools.get("cancel_order")!.handler({ orderId: order.id });
+        expect(JSON.parse(ToolTextSchema.parse(cancelled))).toMatchObject({
+          orderId: order.id,
+          status: "cancel_requested",
+        });
+        const pending = await registeredTools.get("get_order")!.handler({ orderId: order.id });
+        expect(JSON.parse(ToolTextSchema.parse(pending))).toMatchObject({
+          status: "pending_cancel",
+        });
+        const final = await registeredTools.get("get_order")!.handler({ orderId: order.id });
+        expect(JSON.parse(ToolTextSchema.parse(final))).toMatchObject({ status });
+        expect(dependencies.alpaca.placeOrder).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(["rejected", "timed out"])(
+      "reports an unconfirmed cancel request when %s",
+      async (reason) => {
+        dependencies.alpaca.cancelOrder.mockRejectedValueOnce(
+          new Error(`private broker detail: ${reason}`),
+        );
+        const result = await registeredTools.get("cancel_order")!.handler({ orderId: "order-123" });
+        expect(result.isError).toBe(true);
+        const text = ToolTextSchema.parse(result);
+        expect(JSON.parse(text)).toMatchObject({
+          orderId: "order-123",
+          status: "cancel_request_unconfirmed",
+        });
+        expect(text).not.toContain("private broker detail");
+        expect(dependencies.alpaca.cancelOrder).toHaveBeenCalledExactlyOnceWith("order-123");
+        expect(dependencies.alpaca.getOrder).not.toHaveBeenCalled();
+        expect(dependencies.alpaca.placeOrder).not.toHaveBeenCalled();
+      },
+    );
   });
 });

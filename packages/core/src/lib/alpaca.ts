@@ -284,6 +284,7 @@ export async function getOrder(orderId: string): Promise<Order> {
   return mapOrder(raw);
 }
 
+/** Request cancellation. Resolution acknowledges acceptance, not a terminal order state. */
 export async function cancelOrder(orderId: string): Promise<void> {
   await getAlpaca().trading.orders.deleteOrderByOrderID({ orderId });
 }
