@@ -13,7 +13,10 @@ const quote: Quote = {
   volume: 50000000,
   change: 1.5,
   changePercent: 0.86,
-  timestamp: "2024-01-15T16:00:00Z",
+  timestamp: "2024-01-15T16:00:00.000Z",
+  source: "yahoo",
+  kind: "market_snapshot",
+  retrievedAt: "2024-01-15T16:01:00.000Z",
 };
 
 describe("Unified provider with offline provider seams", () => {

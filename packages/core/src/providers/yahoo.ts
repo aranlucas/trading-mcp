@@ -3,6 +3,7 @@
 import YahooFinance from "yahoo-finance2";
 import { YahooQuoteSchema } from "../schemas/index.js";
 import type { Quote } from "../types/index.js";
+import { parseQuote, quoteChange, QuoteSchema } from "../lib/quote.js";
 
 type StockScreenQuery = {
   minPrice?: number;
@@ -16,17 +17,21 @@ export const yahooFinance = new YahooFinance({
   suppressNotices: ["yahooSurvey"],
 });
 
+const YahooSnapshotSchema = YahooQuoteSchema.extend({
+  regularMarketPrice: QuoteSchema.shape.price,
+});
+
 export const yahoo = {
   name: "yahoo" as const,
 
-  // Get real-time quote (returns raw yahoofinance result)
+  // Get the provider's quote snapshot (returns the raw Yahoo Finance result).
   async getQuote(symbol: string) {
     const quote = await yahooFinance.quote(symbol);
 
     return quote;
   },
 
-  // Get real-time quote normalized into the core `Quote` shape
+  // Normalize the provider's market snapshot without implying a live tick or fresh timestamp.
   async getQuoteNormalized(symbol: string): Promise<Quote> {
     return normalizeYahooQuote(await yahooFinance.quote(symbol), symbol);
   },
@@ -135,8 +140,8 @@ export const yahoo = {
 
 // Yahoo response payloads are untrusted and are parsed by YahooQuoteSchema at this boundary.
 // oxlint-disable-next-line anti-slop/no-unknown-parameters
-export function normalizeYahooQuote(raw: unknown, symbol: string): Quote {
-  const parsed = YahooQuoteSchema.safeParse(raw);
+export function normalizeYahooQuote(raw: unknown, symbol?: string): Quote {
+  const parsed = YahooSnapshotSchema.safeParse(raw);
 
   if (!parsed.success) {
     throw new Error("Invalid Yahoo quote response");
@@ -144,16 +149,24 @@ export function normalizeYahooQuote(raw: unknown, symbol: string): Quote {
 
   const q = parsed.data;
 
-  return {
-    symbol: (q.symbol ?? symbol).toUpperCase(),
-    price: q.regularMarketPrice ?? 0,
-    open: q.regularMarketOpen ?? 0,
-    high: q.regularMarketDayHigh ?? 0,
-    low: q.regularMarketDayLow ?? 0,
-    close: q.regularMarketPreviousClose ?? q.regularMarketPrice ?? 0,
-    volume: q.regularMarketVolume ?? 0,
-    change: q.regularMarketChange ?? 0,
-    changePercent: q.regularMarketChangePercent ?? 0,
-    timestamp: new Date().toISOString(),
-  };
+  const changes = quoteChange(q.regularMarketPrice, q.regularMarketPreviousClose);
+
+  return parseQuote(
+    {
+      symbol: q.symbol,
+      price: q.regularMarketPrice,
+      open: q.regularMarketOpen,
+      high: q.regularMarketDayHigh,
+      low: q.regularMarketDayLow,
+      close: q.regularMarketPreviousClose,
+      volume: q.regularMarketVolume,
+      change: q.regularMarketChange ?? changes.change,
+      changePercent: q.regularMarketChangePercent ?? changes.changePercent,
+      timestamp: q.regularMarketTime,
+      source: "yahoo",
+      kind: "market_snapshot",
+      retrievedAt: new Date().toISOString(),
+    },
+    symbol ?? q.symbol,
+  );
 }

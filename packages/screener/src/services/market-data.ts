@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { AlpacaMarketDataClient } from "./alpaca-market-data.js";
-import { yahoo, type alpaca, type Quote } from "@trading/core";
+import {
+  type YahooQuoteSchema,
+  yahoo,
+  normalizeYahooQuote,
+  type alpaca,
+  type Quote,
+} from "@trading/core";
 
 type PriceBar = Awaited<ReturnType<typeof alpaca.getBars>>[number];
 
@@ -14,23 +20,6 @@ export interface MarketDataClient {
 const EpochDateSchema = z
   .number()
   .transform((value) => new Date(value > 10_000_000_000 ? value : value * 1000));
-
-const YahooQuoteSchema = z.object({
-  symbol: z.string(),
-  regularMarketPrice: z.number().optional(),
-  regularMarketOpen: z.number().optional(),
-  regularMarketDayHigh: z.number().optional(),
-  regularMarketDayLow: z.number().optional(),
-  regularMarketPreviousClose: z.number().optional(),
-  regularMarketVolume: z.number().optional(),
-  regularMarketChange: z.number().optional(),
-  regularMarketChangePercent: z.number().optional(),
-  regularMarketTime: z.union([EpochDateSchema, z.date()]).optional(),
-});
-
-function toIsoTimestamp(input: Date | undefined): string {
-  return (input ?? new Date()).toISOString();
-}
 
 function clampNumber(n: number | null | undefined, fallback = 0): number {
   return n !== null && n !== undefined && Number.isFinite(n) ? n : fallback;
@@ -93,36 +82,21 @@ class YahooMarketDataClient implements MarketDataClient {
         .map((r) => r.value);
     }
 
-    for (const item of list) {
-      const parsed = YahooQuoteSchema.safeParse(item);
+    const requested = new Set(symbols.map((symbol) => symbol.toUpperCase()));
 
-      if (!parsed.success) {
+    for (const item of list) {
+      try {
+        const quote = normalizeYahooQuote(item);
+
+        if (!requested.has(quote.symbol)) {
+          continue;
+        }
+
+        results.set(quote.symbol, quote);
+      } catch {
+        // Invalid required data cannot become a synthetic zero-price screening candidate.
         continue;
       }
-
-      const q = parsed.data;
-      const price = clampNumber(q.regularMarketPrice);
-      const prevClose = clampNumber(q.regularMarketPreviousClose, price);
-      const open = clampNumber(q.regularMarketOpen, prevClose);
-      const change = clampNumber(q.regularMarketChange, price - prevClose);
-
-      const changePercent = clampNumber(
-        q.regularMarketChangePercent,
-        prevClose !== 0 ? (change / prevClose) * 100 : 0,
-      );
-
-      results.set(q.symbol.toUpperCase(), {
-        symbol: q.symbol.toUpperCase(),
-        price,
-        open,
-        high: clampNumber(q.regularMarketDayHigh, price),
-        low: clampNumber(q.regularMarketDayLow, price),
-        close: prevClose,
-        volume: clampNumber(q.regularMarketVolume),
-        change,
-        changePercent,
-        timestamp: toIsoTimestamp(q.regularMarketTime),
-      });
     }
 
     return results;

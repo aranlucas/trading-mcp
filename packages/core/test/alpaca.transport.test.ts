@@ -164,7 +164,14 @@ describe("Alpaca history through the installed SDK", () => {
     await expect(getQuote("EMPTY")).rejects.toBeInstanceOf(NotFoundError);
     const snapshots = await getSnapshots(["TEST", "EMPTY"]);
     expect([...snapshots.keys()]).toEqual(["TEST"]);
-    expect(snapshots.get("TEST")).toMatchObject({ price: 105, close: 105, change: 0 });
+    expect(snapshots.get("TEST")).toMatchObject({
+      price: 105,
+      close: null,
+      change: null,
+      changePercent: null,
+      source: "alpaca",
+      kind: "daily_bar",
+    });
   });
 
   it("propagates a later-page failure instead of returning incomplete history", async () => {
@@ -324,6 +331,15 @@ describe("Alpaca order request and failure contracts", () => {
     expect(transport).toHaveBeenCalledTimes(1);
   });
 
+  it("does not retry cancel DELETE after a 503 with the installed SDK default policy", async () => {
+    transport
+      .mockResolvedValueOnce(Response.json({ message: "synthetic-unavailable" }, { status: 503 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await expect(cancelOrder("synthetic-order")).rejects.toMatchObject({ status: 503 });
+    expect(transport).toHaveBeenCalledOnce();
+    expect(transport.mock.calls[0]?.[1]?.method).toBe("DELETE");
+  });
+
   it("does not turn a failed cancellation into success", async () => {
     transport.mockImplementation(
       mockFetch([
@@ -337,6 +353,15 @@ describe("Alpaca order request and failure contracts", () => {
     );
 
     await expect(cancelOrder("synthetic-order")).rejects.toMatchObject({ status: 422 });
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it("acknowledges an accepted cancellation without reading or inventing its final status", async () => {
+    transport.mockImplementation(
+      mockFetch([{ method: "DELETE", path: "/v2/orders/synthetic-order", status: 204 }]),
+    );
+
+    await expect(cancelOrder("synthetic-order")).resolves.toBeUndefined();
     expect(transport).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,19 +1,13 @@
-import type { FinnhubNewsSentiment, FinnhubSocialSentiment } from "../schemas/index.js";
+import type { z } from "zod";
+import type {
+  FinnhubNewsSentiment,
+  FinnhubSocialSentiment,
+  QuoteSchema,
+} from "../schemas/index.js";
 
 // Common types for trading MCP
 
-export interface Quote {
-  symbol: string;
-  price: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-  change: number;
-  changePercent: number;
-  timestamp: string;
-}
+export type Quote = z.infer<typeof QuoteSchema>;
 
 export interface Position {
   symbol: string;

@@ -42,3 +42,36 @@ describe("Yahoo market data history", () => {
     expect(yahoo.getHistory).not.toHaveBeenCalled();
   });
 });
+
+describe("Yahoo screening snapshots", () => {
+  it("uses the shared quote contract and excludes unusable prices and unrequested symbols", async () => {
+    vi.stubEnv("SCREENER_PROVIDER", "yahoo");
+    yahoo.getQuotes.mockResolvedValueOnce([
+      { symbol: "MISSING" },
+      { symbol: "ZERO", regularMarketPrice: 0 },
+      { symbol: "UNREQUESTED", regularMarketPrice: 2 },
+      { symbol: "AAPL", regularMarketPrice: 100, regularMarketVolume: 0, regularMarketChange: 0 },
+    ]);
+
+    const snapshots = await getMarketDataClient(yahoo).client.getSnapshots([
+      "MISSING",
+      "ZERO",
+      "AAPL",
+    ]);
+
+    expect([...snapshots.keys()]).toEqual(["AAPL"]);
+    expect(snapshots.get("AAPL")).toMatchObject({
+      price: 100,
+      close: null,
+      open: null,
+      high: null,
+      low: null,
+      timestamp: null,
+      volume: 0,
+      change: 0,
+      changePercent: null,
+      source: "yahoo",
+      kind: "market_snapshot",
+    });
+  });
+});

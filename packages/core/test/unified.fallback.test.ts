@@ -45,6 +45,9 @@ describe("unified.getQuote fallback", () => {
           change: 0,
           changePercent: 0,
           timestamp: new Date().toISOString(),
+          source: "yahoo",
+          kind: "market_snapshot",
+          retrievedAt: new Date().toISOString(),
         };
       });
 
@@ -62,6 +65,9 @@ describe("unified.getQuote fallback", () => {
         change: 0,
         changePercent: 0,
         timestamp: new Date().toISOString(),
+        source: "finviz",
+        kind: "web_snapshot",
+        retrievedAt: new Date().toISOString(),
       };
     });
 
@@ -111,6 +117,9 @@ describe("unified.getQuote fallback", () => {
           change: 0,
           changePercent: 0,
           timestamp: new Date().toISOString(),
+          source: "yahoo",
+          kind: "market_snapshot",
+          retrievedAt: new Date().toISOString(),
         };
       });
 

@@ -5,6 +5,7 @@ import { config } from "../config.js";
 import type { Quote, Position, Portfolio, Order, MarketStatus } from "../types/index.js";
 import { NotFoundError, ProviderError, ValidationError } from "./errors.js";
 import { Alpaca, TimeFrame, TimeFrameUnit, timeFrame } from "@alpacahq/alpaca-trade-api";
+import { parseQuote, quoteChange } from "./quote.js";
 
 type BrokerOrder = Awaited<ReturnType<Alpaca["trading"]["orders"]["submit"]>>;
 
@@ -104,23 +105,26 @@ export async function getQuote(symbol: string): Promise<Quote> {
   }
 
   const price = lastBar.c;
-  const prevClose = prevBar?.c ?? price;
-  const change = price - prevClose;
-  const changePercent = prevClose !== 0 ? (change / prevClose) * 100 : 0;
+  const prevClose = prevBar?.c;
 
-  return {
+  return parseQuote(
+    {
+      symbol,
+      price,
+      open: lastBar.o,
+      high: lastBar.h,
+      low: lastBar.l,
+      // Align with Yahoo snapshots: `close` is previous close.
+      close: prevClose,
+      volume: lastBar.v,
+      ...quoteChange(price, prevClose),
+      timestamp: lastBar.t,
+      source: "alpaca",
+      kind: "daily_bar",
+      retrievedAt: new Date().toISOString(),
+    },
     symbol,
-    price,
-    open: lastBar.o,
-    high: lastBar.h,
-    low: lastBar.l,
-    // Align with Yahoo snapshots: `close` is previous close.
-    close: prevClose,
-    volume: lastBar.v,
-    change,
-    changePercent,
-    timestamp: lastBar.t,
-  };
+  );
 }
 
 export async function getBars(
@@ -284,6 +288,7 @@ export async function getOrder(orderId: string): Promise<Order> {
   return mapOrder(raw);
 }
 
+/** Request cancellation. Resolution acknowledges acceptance, not a terminal order state. */
 export async function cancelOrder(orderId: string): Promise<void> {
   await getAlpaca().trading.orders.deleteOrderByOrderID({ orderId });
 }

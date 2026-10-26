@@ -31,4 +31,6 @@ export * from "./lib/provider-metrics.js";
 
 export * from "./lib/technicals.js";
 
+export { quoteChange } from "./lib/quote.js";
+
 export * from "./lib/sequential.js";

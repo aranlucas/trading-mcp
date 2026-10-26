@@ -2,7 +2,7 @@
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { alpaca as alpacaProvider } from "@trading/core";
+import { alpaca as alpacaProvider, toPublicError } from "@trading/core";
 
 export type OrderDependencies = {
   alpaca: Pick<typeof alpacaProvider, "cancelOrder" | "getOrder" | "getOrders" | "placeOrder">;
@@ -151,7 +151,8 @@ export function registerOrderTools(
     "cancel_order",
     {
       title: "Cancel Order",
-      description: "Cancel an open order by ID",
+      description:
+        "Request cancellation of an open order. Acceptance does not confirm cancellation; use get_order to check broker status. The order may still fill.",
       inputSchema: {
         orderId: z.string().describe("Order ID to cancel"),
       },
@@ -164,13 +165,29 @@ export function registerOrderTools(
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify({ orderId, status: "cancelled" }),
+              text: JSON.stringify({
+                orderId,
+                status: "cancel_requested",
+                message:
+                  "Request accepted. Use get_order to check broker status; the order may still fill.",
+              }),
             },
           ],
         };
       } catch (error) {
         return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                orderId,
+                status: "cancel_request_unconfirmed",
+                error: toPublicError(error),
+                message:
+                  "Request outcome is unconfirmed. Use get_order before retrying or placing a replacement.",
+              }),
+            },
+          ],
           isError: true,
         };
       }

@@ -85,7 +85,7 @@ function generateBarsForSmaAlignment(
 }
 
 // Mock data for different scenarios
-const mockSnapshots = new Map([
+const mockSnapshots = new Map<string, Quote>([
   [
     "AAPL",
     {
@@ -98,7 +98,10 @@ const mockSnapshots = new Map([
       volume: 50000000,
       change: 1.5,
       changePercent: 0.86,
-      timestamp: "2024-01-15T16:00:00Z",
+      timestamp: "2024-01-15T16:00:00.000Z",
+      source: "yahoo",
+      kind: "market_snapshot",
+      retrievedAt: "2024-01-15T16:01:00.000Z",
     },
   ],
   [
@@ -113,7 +116,10 @@ const mockSnapshots = new Map([
       volume: 25000000,
       change: 2.25,
       changePercent: 0.6,
-      timestamp: "2024-01-15T16:00:00Z",
+      timestamp: "2024-01-15T16:00:00.000Z",
+      source: "yahoo",
+      kind: "market_snapshot",
+      retrievedAt: "2024-01-15T16:01:00.000Z",
     },
   ],
   [
@@ -128,7 +134,10 @@ const mockSnapshots = new Map([
       volume: 18000000,
       change: 1.3,
       changePercent: 0.92,
-      timestamp: "2024-01-15T16:00:00Z",
+      timestamp: "2024-01-15T16:00:00.000Z",
+      source: "yahoo",
+      kind: "market_snapshot",
+      retrievedAt: "2024-01-15T16:01:00.000Z",
     },
   ],
   [
@@ -143,7 +152,10 @@ const mockSnapshots = new Map([
       volume: 35000000,
       change: 10.0,
       changePercent: 1.85,
-      timestamp: "2024-01-15T16:00:00Z",
+      timestamp: "2024-01-15T16:00:00.000Z",
+      source: "yahoo",
+      kind: "market_snapshot",
+      retrievedAt: "2024-01-15T16:01:00.000Z",
     },
   ],
   [
@@ -158,7 +170,10 @@ const mockSnapshots = new Map([
       volume: 28000000,
       change: -0.5,
       changePercent: -1.09,
-      timestamp: "2024-01-15T16:00:00Z",
+      timestamp: "2024-01-15T16:00:00.000Z",
+      source: "yahoo",
+      kind: "market_snapshot",
+      retrievedAt: "2024-01-15T16:01:00.000Z",
     },
   ],
 ]);
@@ -207,6 +222,37 @@ import type { MarketDataClient } from "@/services/market-data.js";
 
 describe("ScreenerService", () => {
   let screener: ScreenerService;
+
+  it("requires known volume for a requested volume filter, including a zero threshold", async () => {
+    const base = mockSnapshots.get("AAPL")!;
+    alpaca.getSnapshots.mockResolvedValueOnce(new Map([["AAPL", { ...base, volume: null }]]));
+    expect(await screener.scan({ symbols: ["AAPL"], minVolume: 0 })).toEqual([]);
+    alpaca.getSnapshots.mockResolvedValueOnce(new Map([["AAPL", { ...base, volume: 0 }]]));
+    expect(await screener.scan({ symbols: ["AAPL"], minVolume: 0 })).toHaveLength(1);
+  });
+
+  it("preserves unavailable scan fields when no matching predicate was requested", async () => {
+    const base = mockSnapshots.get("AAPL")!;
+    alpaca.getSnapshots.mockResolvedValueOnce(
+      new Map([["AAPL", { ...base, volume: null, change: null, changePercent: null }]]),
+    );
+    expect(await screener.scan({ symbols: ["AAPL"] })).toMatchObject([
+      { symbol: "AAPL", price: base.price, volume: null, change: null, changePercent: null },
+    ]);
+  });
+
+  it("uses reported mover changes when a previous close is unavailable and skips wholly unavailable changes", async () => {
+    const base = mockSnapshots.get("AAPL")!;
+    alpaca.getSnapshots.mockResolvedValueOnce(
+      new Map([
+        ["AAPL", { ...base, close: null, change: null, changePercent: 2 }],
+        ["UNKNOWN", { ...base, symbol: "UNKNOWN", close: null, change: null, changePercent: null }],
+      ]),
+    );
+    expect(await screener.getMovers("gainers")).toMatchObject([
+      { symbol: "AAPL", change: null, changePercent: 2 },
+    ]);
+  });
 
   describe.each([
     { criteria: { minRsi: 0 }, required: 15 },
@@ -310,7 +356,7 @@ describe("ScreenerService", () => {
       const results = await screener.scan(criteria);
 
       // Should filter out MSFT (25M), GOOGL (18M)
-      expect(results.every((r) => r.volume >= 30000000)).toBe(true);
+      expect(results.every((r) => r.volume !== null && r.volume >= 30000000)).toBe(true);
       expect(results.map((r) => r.symbol)).toContain("AAPL");
     });
 

@@ -6,11 +6,11 @@ describe("Yahoo quote response parser", () => {
     expect(() => normalizeYahooQuote(123, "AAPL")).toThrow("Invalid Yahoo quote response");
   });
 
-  it("normalizes a valid SDK quote and preserves the previous-close fallback", () => {
+  it("normalizes a valid SDK price while preserving unavailable previous close", () => {
     expect(normalizeYahooQuote({ symbol: "aapl", regularMarketPrice: 123 }, "AAPL")).toMatchObject({
       symbol: "AAPL",
       price: 123,
-      close: 123,
+      close: null,
     });
   });
 });

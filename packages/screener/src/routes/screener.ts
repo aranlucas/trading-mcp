@@ -1,5 +1,5 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
-import { ScreenerService } from "../services/screener.js";
+import { ScreenerService, ScanResultSchema, MoverResultSchema } from "../services/screener.js";
 import { publicErrorResponses } from "../openapi/error-responses.js";
 
 export const screenerRoutes = new OpenAPIHono();
@@ -53,7 +53,7 @@ const scanRoute = createRoute({
       description: "Scan results",
       content: {
         "application/json": {
-          schema: z.object({ results: z.unknown() }),
+          schema: z.object({ results: z.array(ScanResultSchema) }),
         },
       },
     },
@@ -82,7 +82,7 @@ const moversRoute = createRoute({
       description: "Top movers",
       content: {
         "application/json": {
-          schema: z.object({ movers: z.unknown() }),
+          schema: z.object({ movers: z.array(MoverResultSchema) }),
         },
       },
     },

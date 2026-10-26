@@ -2,22 +2,14 @@ import type { Signal } from "@trading/core";
 import { app } from "../../app.js";
 
 import { z } from "zod";
+import { ScanResultSchema, MoverResultSchema } from "../../services/screener.js";
 
 type MoversOptions = {
   direction: "gainers" | "losers";
   limit: number;
 };
 
-export const ScreenerScanResultSchema = z.object({
-  symbol: z.string(),
-  price: z.number(),
-  volume: z.number(),
-  change: z.number(),
-  changePercent: z.number(),
-  rsi: z.number().optional(),
-  aboveSma20: z.boolean().optional(),
-  aboveSma50: z.boolean().optional(),
-});
+export const ScreenerScanResultSchema = ScanResultSchema;
 
 export type ScreenerScanResult = z.infer<typeof ScreenerScanResultSchema>;
 
@@ -54,10 +46,10 @@ async function appJson<T>(path: string, schema: z.ZodType<T>, init?: RequestInit
   return schema.parse(await res.json());
 }
 
-export async function getMovers(opts: MoversOptions): Promise<ScreenerScanResult[]> {
+export async function getMovers(opts: MoversOptions): Promise<z.infer<typeof MoverResultSchema>[]> {
   const data = await appJson(
     `/api/screener/movers/${opts.direction}?limit=${opts.limit}`,
-    z.object({ movers: z.array(ScreenerScanResultSchema) }),
+    z.object({ movers: z.array(MoverResultSchema) }),
   );
 
   return data.movers;
