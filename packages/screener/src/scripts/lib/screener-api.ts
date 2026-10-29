@@ -1,6 +1,6 @@
 import type { Signal } from "@trading/core";
-import { app } from "../../app.js";
-import { MoverResultSchema, ScanResultSchema } from "../../services/screener.js";
+import { app } from "@trading/screener/app";
+import { MoverResultSchema, ScanResultSchema } from "@trading/screener/services/screener";
 
 import { z } from "zod";
 
@@ -24,7 +24,7 @@ export const ScanCriteriaSchema = z.object({
 export type ScanCriteria = z.infer<typeof ScanCriteriaSchema>;
 
 // Re-export the correct result schemas from services
-export { ScanResultSchema, MoverResultSchema } from "../../services/screener.js";
+export { ScanResultSchema, MoverResultSchema };
 
 // Type alias for report compatibility
 export type ScreenerScanResult = z.infer<typeof ScanResultSchema>;
