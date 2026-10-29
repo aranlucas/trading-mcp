@@ -19,6 +19,10 @@
     "./app": {
       "types": "./dist/app.d.ts",
       "import": "./dist/app.js"
+    },
+    "./services/screener": {
+      "types": "./dist/services/screener.d.ts",
+      "import": "./dist/services/screener.js"
     }
   },
   "scripts": {

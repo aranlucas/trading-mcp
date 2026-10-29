@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ScreenerService, type ScanResult } from "@/services/screener.js";
+import { ScreenerService, type ScanResult } from "@trading/screener/services/screener";
 import { scan, getMovers } from "@/scripts/lib/screener-api.js";
 import { formatMoversBlock, formatScanBlock } from "@/scripts/lib/report.js";
 
