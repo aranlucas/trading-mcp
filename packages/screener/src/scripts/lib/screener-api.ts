@@ -1,5 +1,6 @@
 import type { Signal } from "@trading/core";
 import { app } from "../../app.js";
+import { MoverResultSchema, ScanResultSchema } from "../../services/screener.js";
 
 import { z } from "zod";
 
