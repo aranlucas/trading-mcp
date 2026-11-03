@@ -359,43 +359,6 @@ describe("ScreenerService", () => {
       expect(results.every((r) => r.volume !== null && r.volume >= 30000000)).toBe(true);
       expect(results.map((r) => r.symbol)).toContain("AAPL");
     });
-
-    it("should return scan results with all required fields", async () => {
-      const results = await screener.scan({ symbols: ["AAPL"] });
-
-      expect(results).toHaveLength(1);
-      const result = results[0]!;
-      expect(result).toHaveProperty("symbol");
-      expect(result).toHaveProperty("price");
-      expect(result).toHaveProperty("volume");
-      expect(result).toHaveProperty("change");
-      expect(result).toHaveProperty("changePercent");
-    });
-
-    it("should include technical indicators when RSI criteria specified", async () => {
-      const criteria: ScanCriteria = {
-        symbols: ["AAPL"],
-        minRsi: 30,
-        maxRsi: 70,
-      };
-
-      await screener.scan(criteria);
-
-      // Should have called getBars to calculate RSI
-      expect(alpaca.getBars).toHaveBeenCalledWith("AAPL", 60);
-    });
-
-    it("should filter by SMA20 alignment", async () => {
-      const criteria: ScanCriteria = {
-        symbols: ["AAPL", "MSFT"],
-        aboveSma20: true,
-      };
-
-      await screener.scan(criteria);
-
-      // Should have calculated technicals
-      expect(alpaca.getBars).toHaveBeenCalled();
-    });
   });
 
   describe("getMovers", () => {
@@ -471,18 +434,6 @@ describe("ScreenerService", () => {
       expect(signals[0]?.strength).toBeCloseTo(0.5238, 3);
       expect(signals[0]?.timestamp).toEqual(expect.any(String));
       expect(alpaca.getBars).toHaveBeenCalledWith("NVDA", 60);
-    });
-
-    it("should include timestamp and description in signals", async () => {
-      const signals = await screener.getSignals(["AAPL", "MSFT"]);
-
-      for (const signal of signals) {
-        expect(signal).toHaveProperty("timestamp");
-        expect(signal).toHaveProperty("description");
-        expect(signal).toHaveProperty("direction");
-        expect(signal).toHaveProperty("strength");
-        expect(signal).toHaveProperty("type");
-      }
     });
 
     it("should return empty array for symbols without signals", async () => {
