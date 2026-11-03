@@ -88,14 +88,14 @@ pnpm --filter @trading/core exec vitest run test/alpaca.transport.test.ts test/f
 Only run these opt-in checks when external requests are intended:
 
 ```bash
-pnpm test:providers
+pnpm exec tsx packages/screener/src/scripts/run-backtest.ts
 VERCEL_DEPLOY_URL=https://your-preview.vercel.app pnpm test:deployment
 ```
 
-`test:providers` enables live Yahoo history with `RUN_REAL_PROVIDER_TESTS=1`.
+The backtest script is exploratory and requests live Yahoo historical data.
 `test:deployment` enables read-only requests to the supplied HTTPS preview with
-`RUN_DEPLOYMENT_E2E=1`. Direct Vitest invocations require the same exact `1` flags;
-credentials or a URL alone do not enable them. Keep these flags out of default CI.
+`RUN_DEPLOYMENT_E2E=1`. Direct Vitest invocations require the same exact `1` flag;
+credentials or a URL alone do not enable them. Keep this flag out of default CI.
 
 The [Dockerfile](Dockerfile) builds the REST service. To build locally, use
 `docker build -t trading-mcp:ci .`; `.dockerignore` excludes local credentials,
