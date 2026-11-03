@@ -1,22 +1,29 @@
 name: Dependabot auto-merge
 
-on:
+# This workflow never checks out PR code or downloads artifacts. It only merges
+# same-repository Dependabot PRs after CI passes at their exact head SHA.
+on: # zizmor: ignore[dangerous-triggers]
   workflow_run:
     workflows: [CI]
     types: [completed]
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
+
+concurrency:
+  group: dependabot-automerge-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
 
 jobs:
   merge:
+    permissions:
+      contents: write # squash-merge the PR and delete its branch
+      pull-requests: write # read and merge the Dependabot PR
     if: >-
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.actor.login == 'dependabot[bot]' &&
       github.event.workflow_run.head_repository.full_name == github.repository
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
       - name: Merge Dependabot PR after CI passes

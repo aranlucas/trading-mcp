@@ -186,21 +186,16 @@ zeroes, and returns unavailable results for non-success HTTP responses. Its late
 value is unavailable when the most recent observation is missing; it does not
 substitute an older observation.
 
-Run the Docker build-context integration tests separately with a running Docker daemon:
+CI builds the production Docker image with Docker's official build action and
+GitHub Actions layer caching. The real Docker build validates the required build
+inputs; `.dockerignore` controls which host files are sent to the builder. Pull
+requests restore cached layers, while trusted pushes and manual runs populate
+them. CI does not load or push an image that no later step consumes. To build
+and load the same image locally:
 
 ```bash
-pnpm test:docker-context
-# Native runner equivalent:
-pnpm exec vitest run --config vitest.docker.config.ts
+docker build -t trading-mcp:ci .
 ```
-
-Vitest reports 15 host/private exclusions and five required inclusions using synthetic
-files and Docker's own matcher (`FROM scratch`, no build networking, local export).
-Fixture hooks remove temporary inputs and exports after success or failure. Docker
-has a 120-second subprocess limit and a 4 MiB output limit; only this integration
-config extends the hook budget to 130 seconds. The default offline unit command
-does not discover these tests. CI runs this explicit command before building the
-production image in its existing Docker step.
 
 Only run these separate commands when you intentionally want external requests:
 
