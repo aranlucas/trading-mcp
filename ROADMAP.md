@@ -6,12 +6,6 @@ Updated 2026-10-26. Proposed release order, not delivery dates or evidence of cu
 
 A research-oriented user who wants to explain a watchlist, rehearse decisions in paper mode and review what happened.
 
-## Current baseline
-
-MCP and REST already provide market data, indicators, screening, portfolio and order tools. The next feature work should join these capabilities into a reproducible paper-research workflow.
-
-Planning evidence: [README](README.md) and [architecture](ARCHITECTURE.md) at `801815510d85`. This focused product pass does not claim a complete new code audit or live-provider validation.
-
 ## Prioritized releases
 
 | Order | Feature                                        | User value and scope                                                                                                                 | Release acceptance                                                                                                                           |
@@ -33,6 +27,6 @@ Add persisted research snapshots and a comparison view using existing quote/scre
 
 ## Dependencies and deliberate limits
 
-Before journal automation, verify integration of the truthful-cancellation and quote-identity fixes. Keep paper mode the product default. Autonomous live execution, promised returns and more signal types are outside the first milestones.
+Before journal automation, verify the [cancellation and quote-identity contracts](docs/data-contracts.md) through the complete workflow. Keep paper mode the product default. Autonomous live execution, promised returns and more signal types are outside the first milestones.
 
-Engineering work belongs in the milestone only when it enables that acceptance criterion. Prefer existing native libraries and test runners. Update this roadmap when a user-visible increment ships, recording the outcome and remaining limits rather than checking off implementation activity alone.
+Engineering work belongs in the milestone only when it enables that acceptance criterion. Update this roadmap when a user-visible increment ships, recording the outcome and remaining limits rather than checking off implementation activity alone.
