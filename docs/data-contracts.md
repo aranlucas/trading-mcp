@@ -36,10 +36,7 @@ callers must decide which observation kinds and ages their use case accepts.
 
 The unified boundary validates the requested symbol, positive price, and provider
 identity before recording success. Finviz rejects non-success HTTP responses
-without parsing their bodies, and rejects missing/invalid snapshot prices.
-Cheerio parses the HTML once; Zod validates financial fields. This replaces a
-quote-specific regex parser, while the other Finviz screening/signal parsers
-remain separate work.
+and missing/invalid snapshot prices.
 
 Finviz requires an identifiable ticker in its canonical quote link or ticker
 heading. Recognized identities must agree with one another and the request;
@@ -94,8 +91,7 @@ The REST `/api/quotes` routes, `yahoo.getQuote/getQuotes/getHistory`, and explic
 Yahoo access through `unified.providers` still return raw Yahoo shapes.
 `unified.getQuotes` and `getBars` still have different success/fallback shapes;
 they are not covered by this normalized contract. Do not treat them as `Quote[]`
-without a separate adapter. Other Finviz APIs and portfolio day-change defaults
-also remain outside this fix.
+without a separate adapter. Other Finviz APIs remain outside this contract.
 
 ## Cancellation acknowledgment
 
@@ -114,32 +110,32 @@ and [order lifecycle](https://docs.alpaca.markets/us/docs/orders-at-alpaca#order
 Submission idempotency and reconciliation after ambiguous placement remain
 separate work.
 
-## Offline verification
+## History, indicators and broker amounts
 
-Use the repository's native commands:
+Alpaca history returns at most `limit` recent bars, oldest first (`limit` is an
+integer from 1 to 10,000). Pagination failures reject the whole request. Quotes
+use the latest two available daily bars; no bars means unavailable data. These
+are daily-bar snapshots, not real-time trades.
 
-```bash
-pnpm install --frozen-lockfile --ignore-scripts
-pnpm typecheck
-pnpm test
-pnpm lint
-pnpm format:check
-pnpm secretlint
-pnpm syncpack:lint
-```
+MCP technicals and REST screening share `analyzeHistory`. Unavailable indicators
+are `null`: RSI14 needs 15 closes, SMA/EMA and Bollinger Bands need their period,
+and MACD(12,26,9) needs 34 closes to seed its signal EMA. RSI uses the simple
+trailing-14-change calculation; flat history returns 50. `get_technicals`
+requires 26 closes, so a successful response can still have unavailable SMA50,
+SMA200 and MACD. Signals skip unavailable indicators. Yahoo screening counts
+observations rather than calendar days; newly listed or suspended symbols can
+return fewer than requested.
 
-Vitest covers malformed prices, non-success HTML, fast invalid/slow valid provider
-races, requested-symbol and provenance mismatches, true zeroes, unknown fields,
-provider timestamps, screening behavior, generated OpenAPI, and cancellation
-acknowledgment followed by both fill and cancellation. Transport tests use mocked
-responses, including the installed Alpaca SDK's 204 response handling. Default
-tests do not place orders or call live providers. Provider and deployment checks
-require their separate opt-in commands documented in the README.
+Portfolio, position and order normalization rejects malformed money/quantity
+strings as provider errors. Missing optional broker fields retain their
+fallbacks; valid fractional and signed amounts are preserved. Domain numbers
+use JavaScript floating point, not exact decimal accounting. Portfolio
+`dayChange` and `dayChangePercent` are currently placeholder zeroes.
 
-No custom runner or validator is needed. Quote validation uses the existing Zod
-dependency; HTML parsing uses pinned Cheerio 1.2.0 instead of general-purpose
-parsing code. The remaining custom functions express provider mappings and
-screening rules and are covered through the existing Vitest runner.
-Native Oxlint enforces classic complexity at most 9 for the quote contract,
-Yahoo, and Finnhub modules. Other modules still contain recorded hotspots; this
-scoped gate does not claim the whole repository is below 10.
+FRED omits missing/malformed observations while preserving real zeroes.
+Non-success HTTP responses yield unavailable results. The latest value remains
+unavailable when the most recent observation is missing; it is not replaced by
+an older one.
+
+See [verification commands](../README.md#verification) for offline tests and the
+separate opt-in provider/deployment checks.
