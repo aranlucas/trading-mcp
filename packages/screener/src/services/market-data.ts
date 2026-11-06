@@ -19,7 +19,8 @@ export interface MarketDataClient {
 
 const EpochDateSchema = z
   .number()
-  .transform((value) => new Date(value > 10_000_000_000 ? value : value * 1000));
+  .transform((value) => new Date(value > 10_000_000_000 ? value : value * 1000))
+  .pipe(z.date());
 
 function clampNumber(n: number | null | undefined, fallback = 0): number {
   return n !== null && n !== undefined && Number.isFinite(n) ? n : fallback;

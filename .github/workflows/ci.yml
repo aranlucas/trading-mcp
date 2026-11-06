@@ -24,12 +24,44 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Set up pnpm, Node.js, and dependencies
         uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
         with:
           cache: true
           require-lockfile: true
+
+      - name: Prove audit regressions against pre-fix sources
+        shell: bash
+        run: |
+          # Native git restoration isolates this repository's pre-fix behavior; Vitest owns assertions.
+          snapshot=$(mktemp -d)
+          files=(packages/core/src/lib/timeout.ts packages/screener/src/services/market-data.ts packages/screener/src/app.ts)
+          for file in "${files[@]}"; do
+            mkdir -p "$snapshot/$(dirname "$file")"
+            cp "$file" "$snapshot/$file"
+          done
+          restore() { for file in "${files[@]}"; do cp "$snapshot/$file" "$file"; done; }
+          trap restore EXIT
+          for file in "${files[@]}"; do
+            git show b85cb574a151ffcf127df2dae2ed79296e4fa71c:"$file" > "$file"
+          done
+          pnpm run build
+          mkdir -p audit-evidence
+          if pnpm --filter @trading/core exec vitest run test/async-control.test.ts -t 'first available provider' > audit-evidence/core-before.log 2>&1; then
+            cat audit-evidence/core-before.log
+            exit 1
+          fi
+          cat audit-evidence/core-before.log
+          if pnpm --filter @trading/screener exec vitest run test/market-data.test.ts test/screener.routes.test.ts -t 'out-of-range numeric dates|malformed JSON' > audit-evidence/rest-before.log 2>&1; then
+            cat audit-evidence/rest-before.log
+            exit 1
+          fi
+          cat audit-evidence/rest-before.log
+          grep -E 'FAIL.*returns a usable result' audit-evidence/core-before.log
+          grep -E 'FAIL.*out-of-range numeric dates' audit-evidence/rest-before.log
+          grep -E 'FAIL.*malformed JSON' audit-evidence/rest-before.log
 
       - name: Build packages
         run: pnpm run build
@@ -58,3 +90,16 @@ jobs:
               # PRs only restore; pushes and manual runs populate the layer cache.
               cache-from: type=gha,scope=trading-mcp
               cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,scope=trading-mcp,mode=max,timeout=2m,ignore-error=true' || '' }}
+
+      - name: End-to-end REST and stdio journeys
+        run: pnpm exec e2e run
+
+      - name: Upload audit and e2e evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reliability-evidence
+          path: |
+            .e2e/
+            audit-evidence/
+          include-hidden-files: true

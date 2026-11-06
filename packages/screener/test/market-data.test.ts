@@ -35,6 +35,22 @@ describe("Yahoo market data history", () => {
     expect((Date.now() - new Date(from!).getTime()) / 86_400_000).toBeGreaterThanOrEqual(84);
   });
 
+  it("skips out-of-range numeric dates without losing valid history", async () => {
+    vi.stubEnv("SCREENER_PROVIDER", "yahoo");
+    yahoo.getHistory.mockResolvedValueOnce({
+      quotes: [
+        { date: 1e20, close: 999 },
+        { date: 1767225600, close: 100 },
+        { date: 1767312000000, close: 101 },
+      ],
+    });
+    const bars = await getMarketDataClient(yahoo).client.getBars("AAPL", 10);
+    expect(bars.map(({ t, c }) => ({ t, c }))).toEqual([
+      { t: "2026-01-01T00:00:00.000Z", c: 100 },
+      { t: "2026-01-02T00:00:00.000Z", c: 101 },
+    ]);
+  });
+
   it("does not turn a request for no observations into a provider call", async () => {
     vi.stubEnv("SCREENER_PROVIDER", "yahoo");
     vi.mocked(yahoo.getHistory).mockClear();

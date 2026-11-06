@@ -101,3 +101,17 @@ it("documents the signals response as an array of complete signal objects", asyn
     },
   });
 });
+
+it.each(["/api/screener/scan", "/api/quotes/batch"])(
+  "returns a sanitized client error for malformed JSON at %s",
+  async (path) => {
+    const response = await app.request(`http://test${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{",
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid request", code: "VALIDATION_ERROR" });
+  },
+);
