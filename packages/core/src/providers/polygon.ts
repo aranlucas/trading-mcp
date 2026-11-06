@@ -92,7 +92,6 @@ export const polygon = {
     }
   },
 
-  // Get aggregates (OHLCV bars)
   async getAggregates(
     symbol: string,
     multiplier: number,
@@ -125,7 +124,6 @@ export const polygon = {
     }));
   },
 
-  // Get ticker details
   async getTickerDetails(symbol: string): Promise<PolygonTickerDetails | null> {
     const raw = await polygonFetch(
       `/v3/reference/tickers/${symbol}`,
@@ -141,7 +139,6 @@ export const polygon = {
     return result.success ? (result.data.results ?? null) : null;
   },
 
-  // Get news
   async getNews(symbol?: string, limit = 10): Promise<NewsItem[]> {
     const tickerParam = symbol ? `&ticker=${symbol}` : "";
 
@@ -172,7 +169,6 @@ export const polygon = {
     }));
   },
 
-  // Get market status
   async getMarketStatus(): Promise<z.infer<typeof PolygonMarketStatusResponseSchema> | null> {
     const raw = await polygonFetch(`/v1/marketstatus/now`, PolygonMarketStatusResponseSchema);
 
@@ -185,7 +181,6 @@ export const polygon = {
     return result.success ? result.data : null;
   },
 
-  // Get stock splits
   async getSplits(symbol: string): Promise<PolygonSplit[]> {
     const raw = await polygonFetch(
       `/v3/reference/splits?ticker=${symbol}`,
@@ -201,7 +196,6 @@ export const polygon = {
     return result.success ? (result.data.results ?? []) : [];
   },
 
-  // Get dividends
   async getDividends(symbol: string): Promise<PolygonDividend[]> {
     const raw = await polygonFetch(
       `/v3/reference/dividends?ticker=${symbol}`,
@@ -233,7 +227,6 @@ export const polygon = {
     return result.success ? (result.data.tickers ?? []) : [];
   },
 
-  // Get gainers/losers
   async getGainersLosers(direction: "gainers" | "losers"): Promise<PolygonTickerSnapshot[]> {
     const raw = await polygonFetch(
       `/v2/snapshot/locale/us/markets/stocks/${direction}`,
@@ -265,7 +258,6 @@ export const polygon = {
     return result.success ? (result.data.ticker ?? null) : null;
   },
 
-  // Get related companies
   async getRelatedCompanies(symbol: string): Promise<PolygonRelatedCompany[]> {
     const raw = await polygonFetch(`/v1/related-companies/${symbol}`, PolygonRelatedResponseSchema);
 

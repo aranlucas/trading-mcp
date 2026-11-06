@@ -1,3 +1,4 @@
+import { toolError } from "./result.js";
 // Market data tools
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -16,7 +17,6 @@ export function registerMarketTools(
 ) {
   const { alpaca } = dependencies;
 
-  // Get stock quote
   server.registerTool(
     "get_quote",
     {
@@ -36,15 +36,11 @@ export function registerMarketTools(
           content: [{ type: "text" as const, text: JSON.stringify(quote, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get price history
   server.registerTool(
     "get_bars",
     {
@@ -68,15 +64,11 @@ export function registerMarketTools(
           content: [{ type: "text" as const, text: JSON.stringify(bars, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get market status
   server.registerTool(
     "get_market_status",
     {
@@ -93,10 +85,7 @@ export function registerMarketTools(
           content: [{ type: "text" as const, text: JSON.stringify(status, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );

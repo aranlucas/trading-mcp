@@ -1,31 +1,20 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
-import { ScreenerService, ScanResultSchema, MoverResultSchema } from "../services/screener.js";
+import { ScreenerService } from "../services/screener.js";
+import {
+  ScanCriteriaSchema,
+  ScanResultSchema,
+  MoverResultSchema,
+  SignalSchema,
+  SymbolSchema,
+} from "../contracts.js";
 import { publicErrorResponses } from "../openapi/error-responses.js";
 
 export const screenerRoutes = new OpenAPIHono();
 
 const screener = new ScreenerService();
 
-// Validation schemas
-const symbolSchema = z
-  .string()
-  .min(1)
-  .max(10)
-  .regex(/^[A-Z0-9.]+$/i, "Invalid symbol format");
-
-const scanSchema = z.object({
-  minPrice: z.number().min(0).optional(),
-  maxPrice: z.number().min(0).optional(),
-  minVolume: z.number().min(0).optional(),
-  minRsi: z.number().min(0).max(100).optional(),
-  maxRsi: z.number().min(0).max(100).optional(),
-  aboveSma20: z.boolean().optional(),
-  aboveSma50: z.boolean().optional(),
-  symbols: z.array(symbolSchema).max(100).optional(),
-});
-
 const signalsSchema = z.object({
-  symbols: z.array(symbolSchema).min(1).max(100),
+  symbols: z.array(SymbolSchema).min(1).max(100),
 });
 
 const directionSchema = z.object({
@@ -43,7 +32,7 @@ const scanRoute = createRoute({
     body: {
       content: {
         "application/json": {
-          schema: scanSchema,
+          schema: ScanCriteriaSchema,
         },
       },
     },
@@ -90,7 +79,6 @@ const moversRoute = createRoute({
   },
 });
 
-// Get top movers
 screenerRoutes.openapi(moversRoute, async (c) => {
   const { direction } = c.req.valid("param");
   const { limit } = c.req.valid("query");
@@ -117,7 +105,7 @@ const signalsRoute = createRoute({
       description: "Watchlist signals",
       content: {
         "application/json": {
-          schema: z.object({ signals: z.unknown() }),
+          schema: z.object({ signals: z.array(SignalSchema) }),
         },
       },
     },
@@ -125,7 +113,6 @@ const signalsRoute = createRoute({
   },
 });
 
-// Get signals for watchlist
 screenerRoutes.openapi(signalsRoute, async (c) => {
   const { symbols } = c.req.valid("json");
 

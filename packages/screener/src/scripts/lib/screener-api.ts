@@ -1,6 +1,12 @@
 import type { Signal } from "@trading/core";
 import { app } from "@trading/screener/app";
-import { MoverResultSchema, ScanResultSchema } from "@trading/screener/services/screener";
+import {
+  MoverResultSchema,
+  ScanResultSchema,
+  ScanCriteriaSchema,
+  SignalSchema,
+  type ScanCriteria,
+} from "@trading/screener/contracts";
 
 import { z } from "zod";
 
@@ -9,34 +15,11 @@ type MoversOptions = {
   limit: number;
 };
 
-// Keep own ScanCriteriaSchema for parsing JSON config
-export const ScanCriteriaSchema = z.object({
-  minPrice: z.number().optional(),
-  maxPrice: z.number().optional(),
-  minVolume: z.number().optional(),
-  minRsi: z.number().optional(),
-  maxRsi: z.number().optional(),
-  aboveSma20: z.boolean().optional(),
-  aboveSma50: z.boolean().optional(),
-  symbols: z.array(z.string()).optional(),
-});
+export { ScanCriteriaSchema, ScanResultSchema, MoverResultSchema };
 
-export type ScanCriteria = z.infer<typeof ScanCriteriaSchema>;
+export type { ScanCriteria };
 
-// Re-export the correct result schemas from services
-export { ScanResultSchema, MoverResultSchema };
-
-// Type alias for report compatibility
 export type ScreenerScanResult = z.infer<typeof ScanResultSchema>;
-
-const SignalSchema = z.object({
-  symbol: z.string(),
-  type: z.string(),
-  direction: z.enum(["bullish", "bearish", "neutral"]),
-  strength: z.number(),
-  timestamp: z.string(),
-  description: z.string(),
-});
 
 async function appJson<T>(path: string, schema: z.ZodType<T>, init?: RequestInit): Promise<T> {
   const res = await app.request(path, init);
