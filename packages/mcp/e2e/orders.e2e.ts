@@ -42,7 +42,9 @@ test("submit once, look up, request cancellation, then reconcile a fill over std
       const result = ResultSchema.parse(await client.callTool({ name, arguments: args }));
       expect(result.isError).not.toBe(true);
 
-      return z.json().parse(JSON.parse(result.content[0].text));
+      return z
+        .json()
+        .parse(JSON.parse(z.object({ text: z.string() }).parse(result.content[0]).text));
     };
 
     expect(

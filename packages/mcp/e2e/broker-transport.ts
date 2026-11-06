@@ -11,7 +11,11 @@ export function createBrokerTransport(): typeof fetch {
 
   return (input, init) => {
     const url = new URL(input instanceof Request ? input.url : input);
-    assert.equal(url.origin, "https://paper-api.alpaca.markets");
+    assert.equal(
+      url.origin,
+      "https://paper-api.alpaca.markets",
+      "Only the paper broker fixture is allowed",
+    );
 
     if (init?.method === "POST") {
       assert.equal(order, undefined, "submission must not be duplicated");

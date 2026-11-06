@@ -114,3 +114,5 @@ install hook, test, benchmark or build ran. Static lint/format inspection is
 allowed; TypeScript workspace imports require CI-built dist artifacts.
 CI run URLs, head SHA and final outcome are tracked in the portfolio status and
 PR. Pending CI is not a claim that verification passed.
+
+Initial CI run [42306920030](https://github.com/aranlucas/trading-mcp/actions/runs/42306920030) demonstrated all three pre-fix failures, then passed 298 fixed-version tests and the container build. Typecheck caught an unchecked e2e content index and lint caught fixture style/binding issues; corrected before rerunning CI. End-to-end execution was gated by those failures and is still pending.

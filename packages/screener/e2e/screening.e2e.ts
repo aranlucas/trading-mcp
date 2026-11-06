@@ -7,8 +7,8 @@ type ApiFixture = { url: string };
 
 const testApi = test.extend<ApiFixture>({
   url: async (_fixtures, use) => {
-    const originalQuotes = yahoo.getQuotes;
-    const originalHistory = yahoo.getHistory;
+    const originalQuotes = yahoo.getQuotes.bind(yahoo);
+    const originalHistory = yahoo.getHistory.bind(yahoo);
     const originalFetch = globalThis.fetch;
     const originalProvider = process.env.SCREENER_PROVIDER;
     process.env.SCREENER_PROVIDER = "yahoo";
@@ -52,6 +52,7 @@ const testApi = test.extend<ApiFixture>({
           server.once("listening", resolve);
         });
       }
+
       const address = server.address();
       const bound = z.object({ port: z.number() }).parse(address);
       await use(`http://127.0.0.1:${bound.port}`);
@@ -62,6 +63,7 @@ const testApi = test.extend<ApiFixture>({
       yahoo.getQuotes = originalQuotes;
       yahoo.getHistory = originalHistory;
       globalThis.fetch = originalFetch;
+
       if (originalProvider === undefined) {
         delete process.env.SCREENER_PROVIDER;
       } else {
