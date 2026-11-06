@@ -65,6 +65,7 @@ it("documents unavailable screening fields and the required mover percentage in 
 
 it("documents the signals response as an array of complete signal objects", async () => {
   const response = await app.request("http://test/api/openapi.json");
+
   expect(await response.json()).toMatchObject({
     paths: {
       "/api/screener/signals": {

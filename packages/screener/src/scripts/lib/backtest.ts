@@ -234,5 +234,3 @@ export class Backtester {
     };
   }
 }
-
-// Aggregate results
