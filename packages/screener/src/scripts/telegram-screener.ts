@@ -1,3 +1,5 @@
+import { getScreenerProvider } from "../services/market-data.js";
+
 type ReportOptions = {
   kind: ReportKind;
   limit: number;
@@ -19,18 +21,6 @@ function requireEnv(name: string): string {
   }
 
   return v.trim();
-}
-
-type ScreenerProvider = "yahoo" | "alpaca";
-
-function getProvider(): ScreenerProvider {
-  const raw = (
-    process.env.SCREENER_PROVIDER === "" ? "yahoo" : (process.env.SCREENER_PROVIDER ?? "yahoo")
-  )
-    .trim()
-    .toLowerCase();
-
-  return raw === "alpaca" ? "alpaca" : "yahoo";
 }
 
 function envInt(name: string, fallback: number): number {
@@ -118,7 +108,7 @@ async function buildReport(opts: ReportOptions): Promise<string> {
 }
 
 async function main(): Promise<void> {
-  const provider = getProvider();
+  const provider = getScreenerProvider();
 
   const report = process.env.SCREENER_REPORT?.trim();
 

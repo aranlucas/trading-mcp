@@ -23,6 +23,10 @@
     "./services/screener": {
       "types": "./dist/services/screener.d.ts",
       "import": "./dist/services/screener.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js"
     }
   },
   "scripts": {

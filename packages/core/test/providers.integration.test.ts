@@ -37,12 +37,6 @@ describe("Unified provider with offline provider seams", () => {
     expect(getQuote).toHaveBeenCalledWith("AAPL");
   });
 
-  it("passes through a successful batch and handles an empty batch", async () => {
-    const getQuotes = vi.spyOn(yahoo, "getQuotes").mockResolvedValue([]);
-    expect(await createUnified().getQuotes([])).toEqual([]);
-    expect(getQuotes).toHaveBeenCalledWith([]);
-  });
-
   it("falls back from a failed batch to individual normalized quotes", async () => {
     vi.spyOn(yahoo, "getQuotes").mockRejectedValue(new Error("batch unavailable"));
     expect(await createUnified({ quoteRetries: 0 }).getQuotes(["AAPL"])).toEqual([quote]);

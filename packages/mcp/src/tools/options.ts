@@ -1,3 +1,4 @@
+import { toolError } from "./result.js";
 // Options tools - get options chain data
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -21,7 +22,6 @@ export function registerOptionsTools(
 ) {
   const { yahoo } = dependencies;
 
-  // Get options chain
   server.registerTool(
     "get_options_chain",
     {
@@ -37,7 +37,6 @@ export function registerOptionsTools(
       try {
         const options = await yahoo.getOptions(symbol.toUpperCase());
 
-        // Format the response
         const result = {
           symbol: symbol.toUpperCase(),
           expirationDates: options.expirationDates,
@@ -72,15 +71,11 @@ export function registerOptionsTools(
           content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get specific expiration options
   server.registerTool(
     "get_options_expiration",
     {
@@ -100,10 +95,7 @@ export function registerOptionsTools(
           content: [{ type: "text" as const, text: JSON.stringify(options, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
@@ -180,15 +172,11 @@ export function registerOptionsTools(
           ],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get unusual options activity
   server.registerTool(
     "get_options_activity",
     {
@@ -268,15 +256,11 @@ export function registerOptionsTools(
           ],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Calculate options summary stats
   server.registerTool(
     "get_options_summary",
     {
@@ -387,10 +371,7 @@ export function registerOptionsTools(
           content: [{ type: "text" as const, text: JSON.stringify(summary, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );

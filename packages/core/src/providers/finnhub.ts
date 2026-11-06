@@ -28,7 +28,6 @@ import { parseQuote } from "../lib/quote.js";
 
 const apiKey = process.env.FINNHUB_API_KEY ?? "";
 
-// Configure clientb
 const client = new finnhub.DefaultApi(apiKey);
 
 // Finnhub has no TypeScript response contract. Validate at the callback boundary.
@@ -64,7 +63,6 @@ export const finnhubProvider = {
     return !!apiKey;
   },
 
-  // Get quote
   async getQuote(symbol: string): Promise<Quote | null> {
     if (!apiKey) {
       return null;
@@ -95,7 +93,6 @@ export const finnhubProvider = {
     }
   },
 
-  // Get company profile
   async getCompanyProfile(symbol: string): Promise<FinnhubCompanyProfile | null> {
     if (!apiKey) {
       return null;
@@ -111,7 +108,6 @@ export const finnhubProvider = {
     }
   },
 
-  // Get company news
   async getNews(symbol: string, from: string, to: string): Promise<NewsItem[]> {
     if (!apiKey) {
       return [];
@@ -144,7 +140,6 @@ export const finnhubProvider = {
     }
   },
 
-  // Get market news (general)
   async getMarketNews(category = "general"): Promise<NewsItem[]> {
     if (!apiKey) {
       return [];
@@ -175,7 +170,6 @@ export const finnhubProvider = {
     }
   },
 
-  // Get news sentiment
   async getNewsSentiment(symbol: string): Promise<FinnhubNewsSentiment | null> {
     if (!apiKey) {
       return null;
@@ -188,7 +182,6 @@ export const finnhubProvider = {
     }
   },
 
-  // Get recommendation trends
   async getRecommendations(symbol: string): Promise<FinnhubRecommendation[]> {
     if (!apiKey) {
       return [];
@@ -206,7 +199,6 @@ export const finnhubProvider = {
     }
   },
 
-  // Get price target
   async getPriceTarget(symbol: string): Promise<FinnhubPriceTarget | null> {
     if (!apiKey) {
       return null;
@@ -219,7 +211,6 @@ export const finnhubProvider = {
     }
   },
 
-  // Get earnings calendar
   async getEarningsCalendar(from: string, to: string): Promise<FinnhubEarning[]> {
     if (!apiKey) {
       return [];
@@ -239,7 +230,6 @@ export const finnhubProvider = {
     }
   },
 
-  // Get insider transactions
   async getInsiderTransactions(symbol: string): Promise<FinnhubInsiderTransaction[]> {
     if (!apiKey) {
       return [];
@@ -259,7 +249,6 @@ export const finnhubProvider = {
     }
   },
 
-  // Get peers (similar companies)
   async getPeers(symbol: string): Promise<string[]> {
     if (!apiKey) {
       return [];
@@ -274,7 +263,6 @@ export const finnhubProvider = {
     }
   },
 
-  // Get basic financials
   async getBasicFinancials(symbol: string): Promise<FinnhubBasicFinancials | null> {
     if (!apiKey) {
       return null;
@@ -290,7 +278,6 @@ export const finnhubProvider = {
     }
   },
 
-  // Get pattern recognition (technical)
   async getPatternRecognition(symbol: string, resolution: string): Promise<Signal[]> {
     if (!apiKey) {
       return [];
@@ -321,7 +308,6 @@ export const finnhubProvider = {
     }
   },
 
-  // Get support/resistance levels
   async getSupportResistance(
     symbol: string,
     resolution: string,
@@ -340,7 +326,6 @@ export const finnhubProvider = {
     }
   },
 
-  // Get social sentiment
   async getSocialSentiment(symbol: string): Promise<FinnhubSocialSentiment | null> {
     if (!apiKey) {
       return null;

@@ -162,7 +162,6 @@ export const finviz = {
   // Screen stocks with Finviz screener
   async screen(filters: FinvizScreenFilters): Promise<FinvizScreenerResult[]> {
     try {
-      // Validate filters with Zod
       const validatedFilters = FinvizScreenFiltersSchema.parse(filters);
 
       const params = new URLSearchParams();
@@ -187,7 +186,6 @@ export const finviz = {
 
       const html = await response.text();
 
-      // Extract screener results from table rows
       const results: FinvizScreenerResult[] = [];
 
       const rowMatches = [
@@ -201,7 +199,6 @@ export const finviz = {
           continue;
         }
 
-        // Extract ticker from href or tab-link
         const tickerMatch =
           row.match(/href="quote\.ashx\?t=([A-Za-z0-9.-]+)/i) ??
           row.match(/class="tab-link">([A-Za-z0-9.-]+)</i);
@@ -214,27 +211,21 @@ export const finviz = {
 
         const symbol = ticker.toUpperCase();
 
-        // Extract company name (third td)
         const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
         const companyCell = cells[2]?.[1]?.replaceAll(/<[^>]+>/g, "").trim() ?? "";
 
-        // Extract change percentage
         const changeMatch = row.match(/([+-]?\d+\.?\d*)%/);
         const changePercent = changeMatch?.[1] ? parseFloat(changeMatch[1]) : 0;
 
-        // Extract price (look for number in span with is-positive/is-negative class)
         const priceMatch = row.match(/is-(?:positive|negative)">([0-9.]+)</);
         const price = priceMatch?.[1] ? parseFloat(priceMatch[1]) : 0;
 
-        // Extract volume (usually last numeric td)
         const volumeMatch = row.match(/([0-9,]+)<\/a><\/td>\s*$/);
         const volume = volumeMatch?.[1] ? parseInt(volumeMatch[1].replaceAll(",", ""), 10) : 0;
 
-        // Extract market cap
         const mcMatch = row.match(/>([0-9.]+[BMK])</);
         const marketCap = mcMatch?.[1] ?? "";
 
-        // Validate with Zod schema
         const parsed = FinvizScreenerResultSchema.safeParse({
           symbol,
           company: companyCell,
@@ -257,7 +248,6 @@ export const finviz = {
     }
   },
 
-  // Build filter string for screener
   buildFilterString(filters: FinvizScreenFilters): string {
     const parts: string[] = [];
 
@@ -289,63 +279,54 @@ export const finviz = {
     return parts.join(",");
   },
 
-  // Get top gainers
   async getGainers(limit = 20): Promise<FinvizScreenerResult[]> {
     const results = await this.screen({ signal: "ta_topgainers" });
 
     return results.slice(0, limit);
   },
 
-  // Get top losers
   async getLosers(limit = 20): Promise<FinvizScreenerResult[]> {
     const results = await this.screen({ signal: "ta_toplosers" });
 
     return results.slice(0, limit);
   },
 
-  // Get oversold stocks (RSI < 30)
   async getOversold(): Promise<FinvizScreenerResult[]> {
     const results = await this.screen({ signal: "ta_oversold" });
 
     return results;
   },
 
-  // Get overbought stocks (RSI > 70)
   async getOverbought(): Promise<FinvizScreenerResult[]> {
     const results = await this.screen({ signal: "ta_overbought" });
 
     return results;
   },
 
-  // Get new highs
   async getNewHighs(): Promise<FinvizScreenerResult[]> {
     const results = await this.screen({ signal: "ta_newhigh" });
 
     return results;
   },
 
-  // Get new lows
   async getNewLows(): Promise<FinvizScreenerResult[]> {
     const results = await this.screen({ signal: "ta_newlow" });
 
     return results;
   },
 
-  // Get unusual volume
   async getUnusualVolume(): Promise<FinvizScreenerResult[]> {
     const results = await this.screen({ signal: "ta_unusualvolume" });
 
     return results;
   },
 
-  // Get most volatile
   async getMostVolatile(): Promise<FinvizScreenerResult[]> {
     const results = await this.screen({ signal: "ta_mostvolatile" });
 
     return results;
   },
 
-  // Get signals for a stock
   async getSignals(symbol: string): Promise<Signal[]> {
     const signals: Signal[] = [];
 
@@ -356,7 +337,6 @@ export const finviz = {
 
       const html = await response.text();
 
-      // Check for pattern signals in the page
       if (html.includes("Oversold")) {
         signals.push({
           symbol,
@@ -378,9 +358,7 @@ export const finviz = {
           description: "RSI indicates overbought conditions",
         });
       }
-    } catch {
-      // Silently fail
-    }
+    } catch {}
 
     return signals;
   },

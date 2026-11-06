@@ -54,7 +54,6 @@ export const fred = {
     return !!apiKey;
   },
 
-  // Get series observations
   async getSeries(seriesId: string, limit = 10): Promise<SeriesObservation[]> {
     if (!apiKey) {
       return [];
@@ -87,7 +86,6 @@ export const fred = {
     }
   },
 
-  // Get series info
   async getSeriesInfo(seriesId: string): Promise<FredSeries | null> {
     if (!apiKey) {
       return null;
@@ -117,7 +115,6 @@ export const fred = {
     }
   },
 
-  // Get latest value for a series
   async getLatest(seriesId: string): Promise<EconomicSeries | null> {
     if (!apiKey) {
       return null;
@@ -192,7 +189,6 @@ export const fred = {
     }
   },
 
-  // Get releases (economic calendar)
   async getReleases(limit = 20): Promise<FredRelease[]> {
     if (!apiKey) {
       return [];

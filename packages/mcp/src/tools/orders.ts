@@ -1,3 +1,4 @@
+import { toolError } from "./result.js";
 // Order management tools
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -16,7 +17,6 @@ export function registerOrderTools(
 ) {
   const { alpaca } = dependencies;
 
-  // Place order
   server.registerTool(
     "place_order",
     {
@@ -44,7 +44,6 @@ export function registerOrderTools(
       },
     },
     async ({ symbol, side, quantity, type, limitPrice, stopPrice, timeInForce }) => {
-      // Validate price requirements
       if ((type === "limit" || type === "stop_limit") && !limitPrice) {
         return {
           content: [
@@ -84,15 +83,11 @@ export function registerOrderTools(
           content: [{ type: "text" as const, text: JSON.stringify(order, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get order status
   server.registerTool(
     "get_order",
     {
@@ -111,15 +106,11 @@ export function registerOrderTools(
           content: [{ type: "text" as const, text: JSON.stringify(order, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // List orders
   server.registerTool(
     "list_orders",
     {
@@ -138,15 +129,11 @@ export function registerOrderTools(
           content: [{ type: "text" as const, text: JSON.stringify(orders, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Cancel order
   server.registerTool(
     "cancel_order",
     {

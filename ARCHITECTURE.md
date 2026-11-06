@@ -25,12 +25,10 @@ warns at import time. `validateEnv()` exists in
 [`lib/env.ts`](packages/core/src/lib/env.ts) but entrypoints do not invoke it.
 Changing environment variables after imports may not reconfigure clients.
 
-MCP stdout must carry only protocol messages. The MCP entrypoint writes startup
-messages to stderr, but the shared [Pino logger](packages/core/src/lib/logger.ts)
-currently targets stdout. Review shared logging paths before exposing them to
-stdio tool calls; the repository does not yet guarantee stderr-only diagnostics.
-REST sanitizes central-handler errors with `toPublicError`; cancellation does
-likewise, while several other MCP tools still return `String(error)`.
+MCP stdout carries only protocol messages. Startup diagnostics and the shared
+Pino logger write to stderr. REST and generic MCP tool failures use
+`toPublicError`; cancellation retains its specialized unconfirmed-state payload.
+Provider health checks require available data, not merely a resolved request.
 
 ## Engineering prerequisites
 

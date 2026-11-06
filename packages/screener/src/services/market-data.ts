@@ -155,9 +155,15 @@ export interface MarketDataSelection {
   client: MarketDataClient;
 }
 
-export function getMarketDataClient(source: YahooMarketDataSource = yahoo): MarketDataSelection {
+export function getScreenerProvider(): ScreenerProvider {
   const raw = (process.env.SCREENER_PROVIDER ?? "").trim().toLowerCase();
   const provider = (raw === "yahoo" || raw === "alpaca" ? raw : "yahoo") satisfies ScreenerProvider;
+
+  return provider;
+}
+
+export function getMarketDataClient(source: YahooMarketDataSource = yahoo): MarketDataSelection {
+  const provider = getScreenerProvider();
 
   if (provider === "yahoo") {
     return { provider, client: new YahooMarketDataClient(source) };

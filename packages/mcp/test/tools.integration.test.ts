@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BarSchema } from "@trading/core";
+import { BarSchema, TimeoutError } from "@trading/core";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { connectTestTools, ToolTextSchema } from "@test/mcp-test-client.js";
 import type { ToolDependencies } from "@/tools/index.js";
@@ -173,12 +173,22 @@ describe("MCP Tools Integration", () => {
     });
   });
 
+  it.each([
+    ["get_quote", { symbol: "AAPL" }, dependencies.alpaca.getQuote],
+    ["get_account", {}, dependencies.alpaca.getAccount],
+    ["get_order", { orderId: "order-123" }, dependencies.alpaca.getOrder],
+  ] as const)("sanitizes provider failures for %s over MCP", async (name, args, operation) => {
+    operation.mockRejectedValueOnce(new Error("private broker credential"));
+    const result = await registeredTools.get(name)!.handler(args);
+    expect(result.isError).toBe(true);
+    expect(ToolTextSchema.parse(result)).toBe("Error: Internal server error");
+  });
+
   describe("Market Tools", () => {
     it("get_quote should return quote data", async () => {
       const tool = registeredTools.get("get_quote");
       const result = await tool!.handler({ symbol: "AAPL" });
 
-      expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
       const quote = z.object({ symbol: z.string(), price: z.number() }).parse(JSON.parse(content));
       expect(quote.symbol).toBe("AAPL");
@@ -194,7 +204,6 @@ describe("MCP Tools Integration", () => {
         limit: 10,
       });
 
-      expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
       const bars = z.array(BarSchema).parse(JSON.parse(content));
       expect(bars).toHaveLength(1);
@@ -205,7 +214,6 @@ describe("MCP Tools Integration", () => {
       const tool = registeredTools.get("get_market_status");
       const result = await tool!.handler({});
 
-      expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
       const status = z.object({ isOpen: z.boolean() }).parse(JSON.parse(content));
       expect(status.isOpen).toBe(true);
@@ -217,7 +225,6 @@ describe("MCP Tools Integration", () => {
       const tool = registeredTools.get("get_account");
       const result = await tool!.handler({});
 
-      expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
       const account = z.object({ equity: z.string(), cash: z.string() }).parse(JSON.parse(content));
       expect(account.equity).toBe("100000.00");
@@ -228,7 +235,6 @@ describe("MCP Tools Integration", () => {
       const tool = registeredTools.get("get_positions");
       const result = await tool!.handler({});
 
-      expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
 
       const positions = z
@@ -310,7 +316,6 @@ describe("MCP Tools Integration", () => {
       const tool = registeredTools.get("get_order");
       const result = await tool!.handler({ orderId: "order-123" });
 
-      expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
       const order = z.object({ id: z.string(), symbol: z.string() }).parse(JSON.parse(content));
       expect(order.id).toBe("order-123");
@@ -320,7 +325,6 @@ describe("MCP Tools Integration", () => {
       const tool = registeredTools.get("cancel_order");
       const result = await tool!.handler({ orderId: "order-123" });
 
-      expect(result).toHaveProperty("content");
       const content = ToolTextSchema.parse(result);
       expect(JSON.parse(content)).toMatchObject({
         orderId: "order-123",
@@ -354,12 +358,10 @@ describe("MCP Tools Integration", () => {
       },
     );
 
-    it.each(["rejected", "timed out"])(
+    it.each([new Error("private broker detail"), new TimeoutError(100)])(
       "reports an unconfirmed cancel request when %s",
       async (reason) => {
-        dependencies.alpaca.cancelOrder.mockRejectedValueOnce(
-          new Error(`private broker detail: ${reason}`),
-        );
+        dependencies.alpaca.cancelOrder.mockRejectedValueOnce(reason);
         const result = await registeredTools.get("cancel_order")!.handler({ orderId: "order-123" });
         expect(result.isError).toBe(true);
         const text = ToolTextSchema.parse(result);

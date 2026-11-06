@@ -6,35 +6,12 @@ import {
   type Signal,
 } from "@trading/core";
 import { getMarketDataClient, type MarketDataClient } from "./market-data.js";
-import { z } from "zod";
 
-export interface ScanCriteria {
-  minPrice?: number;
-  maxPrice?: number;
-  minVolume?: number;
-  minRsi?: number;
-  maxRsi?: number;
-  aboveSma20?: boolean;
-  aboveSma50?: boolean;
-  symbols?: string[];
-}
+import type { ScanCriteria, ScanResult, MoverResult } from "../contracts.js";
 
-export const ScanResultSchema = z.object({
-  symbol: z.string(),
-  price: z.number().positive(),
-  volume: z.number().nonnegative().nullable(),
-  change: z.number().nullable(),
-  changePercent: z.number().nullable(),
-  rsi: z.number().optional(),
-  aboveSma20: z.boolean().optional(),
-  aboveSma50: z.boolean().optional(),
-});
+export { ScanCriteriaSchema, ScanResultSchema, MoverResultSchema } from "../contracts.js";
 
-export type ScanResult = z.infer<typeof ScanResultSchema>;
-
-export const MoverResultSchema = ScanResultSchema.extend({ changePercent: z.number() });
-
-type MoverResult = z.infer<typeof MoverResultSchema>;
+export type { ScanCriteria, ScanResult } from "../contracts.js";
 
 type ScanTechnicals = {
   rsi: number | undefined;
@@ -133,7 +110,6 @@ export class ScreenerService {
     const symbols = criteria.symbols ?? this.defaultUniverse;
     const results: ScanResult[] = [];
 
-    // Get snapshots for all symbols
     const quotes = await this.marketData.getSnapshots(symbols);
 
     await forEachSequential([...quotes], async ([symbol, quote]) => {
@@ -216,7 +192,6 @@ export class ScreenerService {
       results.push({ symbol, price: quote.price, volume: quote.volume, change, changePercent });
     }
 
-    // Sort by change percent
     const sorted = results.toSorted((a, b) => {
       if (direction === "gainers") {
         return b.changePercent - a.changePercent;
@@ -243,7 +218,6 @@ export class ScreenerService {
         const currentPrice = closes.at(-1) ?? 0;
         const { rsi14: rsi, sma20, sma50 } = analyzeHistory(closes);
 
-        // RSI signals
         if (rsi !== null && rsi < 30) {
           signals.push({
             symbol,
@@ -264,7 +238,6 @@ export class ScreenerService {
           });
         }
 
-        // MA signals
         if (sma20 !== null && sma50 !== null && currentPrice > sma20 && sma20 > sma50) {
           signals.push({
             symbol,
@@ -275,9 +248,7 @@ export class ScreenerService {
             description: "Price > SMA20 > SMA50",
           });
         }
-      } catch {
-        // Skip symbol on error
-      }
+      } catch {}
     });
 
     return signals;

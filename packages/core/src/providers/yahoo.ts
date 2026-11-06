@@ -54,10 +54,9 @@ export const yahoo = {
     return history;
   },
 
-  // Get options chain - flattens the structure for easier use
   async getOptions(symbol: string) {
     const result = await yahooFinance.options(symbol);
-    // Flatten options array into calls/puts for easier access
+
     const calls = result.options?.flatMap((o) => o.calls ?? []) ?? [];
     const puts = result.options?.flatMap((o) => o.puts ?? []) ?? [];
 
@@ -82,7 +81,6 @@ export const yahoo = {
     return results;
   },
 
-  // Get trending tickers - returns quotes array
   async getTrending(count = 10) {
     const result = await yahooFinance.trendingSymbols("US", { count });
 

@@ -1,3 +1,4 @@
+import { toolError } from "./result.js";
 // Portfolio and account tools
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -16,7 +17,6 @@ export function registerPortfolioTools(
 ) {
   const { alpaca } = dependencies;
 
-  // Get account info
   server.registerTool(
     "get_account",
     {
@@ -33,15 +33,11 @@ export function registerPortfolioTools(
           content: [{ type: "text" as const, text: JSON.stringify(account, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get portfolio
   server.registerTool(
     "get_portfolio",
     {
@@ -58,15 +54,11 @@ export function registerPortfolioTools(
           content: [{ type: "text" as const, text: JSON.stringify(portfolio, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get positions
   server.registerTool(
     "get_positions",
     {
@@ -89,10 +81,7 @@ export function registerPortfolioTools(
           content: [{ type: "text" as const, text: JSON.stringify(positions, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );

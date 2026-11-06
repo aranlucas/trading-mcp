@@ -24,7 +24,7 @@ import { finnhubProvider as finnhub } from "./finnhub.js";
 import { fred } from "./fred.js";
 import { finviz } from "./finviz.js";
 import { withTimeout } from "../lib/timeout.js";
-import { ProviderError } from "../lib/errors.js";
+import { ProviderError, toPublicError } from "../lib/errors.js";
 import { providerLogger } from "../lib/logger.js";
 import { createProviderMetrics } from "../lib/provider-metrics.js";
 import { withRetry } from "../lib/retry.js";
@@ -102,7 +102,6 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
 
   // Unified data fetcher that tries multiple sources
   return {
-    // Get quote - parallel providers with first-success semantics
     async getQuote(symbol: string) {
       const wrapped = quoteProviders.map(({ name, get }) => {
         const startedAt = Date.now();
@@ -212,21 +211,17 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       },
     },
 
-    // Get multiple quotes
     async getQuotes(symbols: string[]) {
       try {
         return await yahoo.getQuotes(symbols);
       } catch {
-        // Fallback to individual requests
         const results: Quote[] = [];
         await Promise.all(
           symbols.map(async (s) => {
             try {
               const q = await this.getQuote(s);
               results.push(q);
-            } catch {
-              // Skip failed quotes
-            }
+            } catch {}
           }),
         );
 
@@ -305,7 +300,6 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
         // Skip failed source
       }
 
-      // Dedupe by headline
       const seen = new Set<string>();
 
       return allNews.filter((n) => {
@@ -319,7 +313,6 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       });
     },
 
-    // Get movers
     async getMovers(direction: "gainers" | "losers"): Promise<Array<MarketMover>> {
       try {
         // Try Polygon first
@@ -350,7 +343,6 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       }
     },
 
-    // Get sentiment data
     async getSentiment(symbol: string): Promise<SentimentData> {
       const results: SentimentData = {};
 
@@ -369,14 +361,12 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       return results;
     },
 
-    // Get macro/economic data
     async getMacro() {
       const snapshot = await fred.getMacroSnapshot();
 
       return snapshot;
     },
 
-    // Get recommendations/ratings
     async getRecommendations(symbol: string): Promise<FinnhubRecommendation[]> {
       try {
         return await finnhub.getRecommendations(symbol);
@@ -385,7 +375,6 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       }
     },
 
-    // Get earnings calendar
     async getEarningsCalendar(days = 7): Promise<FinnhubEarning[]> {
       const from = new Date().toISOString().slice(0, 10);
       const to = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -412,18 +401,26 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       const testSymbol = "AAPL";
       const healthCheckTimeoutMs = 3000;
 
-      const check = async (fn: () => Promise<void>): Promise<ProviderHealth> => {
+      const check = async (fn: () => Promise<boolean>): Promise<ProviderHealth> => {
         const start = Date.now();
 
         try {
-          await withTimeout(fn(), healthCheckTimeoutMs);
+          const available = await withTimeout(fn(), healthCheckTimeoutMs);
+
+          if (!available) {
+            return {
+              healthy: false,
+              latencyMs: Date.now() - start,
+              error: "Provider data unavailable",
+            };
+          }
 
           return { healthy: true, latencyMs: Date.now() - start };
         } catch (err) {
           return {
             healthy: false,
             latencyMs: Date.now() - start,
-            error: err instanceof Error ? err.message : String(err),
+            error: toPublicError(err).message,
           };
         }
       };
@@ -431,25 +428,25 @@ export function createUnified(options?: Partial<UnifiedOptions>) {
       const [yahooHealth, polygonHealth, finnhubHealth, fredHealth, finvizHealth] =
         await Promise.all([
           check(async () => {
-            await yahoo.getQuote(testSymbol);
+            return Boolean(await yahoo.getQuoteNormalized(testSymbol));
           }),
           polygon.isConfigured()
             ? check(async () => {
-                await polygon.getPreviousClose(testSymbol);
+                return Boolean(await polygon.getPreviousClose(testSymbol));
               })
             : Promise.resolve({ healthy: false, error: "Not configured" } satisfies ProviderHealth),
           finnhub.isConfigured()
             ? check(async () => {
-                await finnhub.getQuote(testSymbol);
+                return Boolean(await finnhub.getQuote(testSymbol));
               })
             : Promise.resolve({ healthy: false, error: "Not configured" } satisfies ProviderHealth),
           fred.isConfigured()
             ? check(async () => {
-                await fred.getSeries("SP500", 1);
+                return (await fred.getSeries("SP500", 1)).length > 0;
               })
             : Promise.resolve({ healthy: false, error: "Not configured" } satisfies ProviderHealth),
           check(async () => {
-            await finviz.getQuote(testSymbol);
+            return Boolean(await finviz.getQuote(testSymbol));
           }),
         ]);
 

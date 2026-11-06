@@ -31,7 +31,6 @@ function chunkText(text: string, maxLen: number): string[] {
   let remaining = normalized;
 
   while (remaining.length > maxLen) {
-    // Try to split on a newline near the end of the chunk.
     const candidate = remaining.slice(0, maxLen);
     const lastNewline = candidate.lastIndexOf("\n");
     const splitAt = lastNewline > maxLen * 0.6 ? lastNewline : maxLen;

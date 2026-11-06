@@ -27,7 +27,6 @@ function getAlpaca(): Alpaca {
   return alpacaClient;
 }
 
-// Account & Portfolio
 type AccountSummary = {
   id: string;
   status: string;
@@ -94,7 +93,6 @@ export async function getPortfolio(): Promise<Portfolio> {
   };
 }
 
-// Market Data
 export async function getQuote(symbol: string): Promise<Quote> {
   const bars = await getBars(symbol, TimeFrame.Day, 2);
   const prevBar = bars.at(-2);
@@ -184,7 +182,6 @@ export function parseTimeframe(value: string): TimeFrameString {
   }
 }
 
-// Orders
 export const AlpacaOrderRequestSchema = z
   .object({
     symbol: z
@@ -301,7 +298,6 @@ export async function getOrders(status = "open"): Promise<Order[]> {
   return raw.map((order) => mapOrder(order));
 }
 
-// Market Status
 export async function getMarketClock(): Promise<MarketStatus> {
   return mapMarketClock(await getAlpaca().trading.clock.legacyClock());
 }
@@ -320,15 +316,12 @@ export function mapMarketClock(
 export async function getSnapshots(symbols: string[]): Promise<Map<string, Quote>> {
   const results = new Map<string, Quote>();
 
-  // Get bars for each symbol
   await Promise.all(
     symbols.map(async (symbol) => {
       try {
         const quote = await getQuote(symbol);
         results.set(symbol, quote);
-      } catch {
-        // Skip symbols that fail
-      }
+      } catch {}
     }),
   );
 

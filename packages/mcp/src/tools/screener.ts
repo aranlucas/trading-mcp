@@ -1,3 +1,4 @@
+import { toolError } from "./result.js";
 // Screener tools - find stocks by criteria
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -48,7 +49,6 @@ export function registerScreenerTools(
 ) {
   const { yahoo, finviz, polygon } = dependencies;
 
-  // Get top gainers
   server.registerTool(
     "get_gainers",
     {
@@ -99,15 +99,11 @@ export function registerScreenerTools(
           content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get top losers
   server.registerTool(
     "get_losers",
     {
@@ -158,15 +154,11 @@ export function registerScreenerTools(
           content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get oversold stocks (RSI < 30)
   server.registerTool(
     "get_oversold",
     {
@@ -197,15 +189,11 @@ export function registerScreenerTools(
           ],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get overbought stocks (RSI > 70)
   server.registerTool(
     "get_overbought",
     {
@@ -236,15 +224,11 @@ export function registerScreenerTools(
           ],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get unusual volume
   server.registerTool(
     "get_unusual_volume",
     {
@@ -275,15 +259,11 @@ export function registerScreenerTools(
           ],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get new highs
   server.registerTool(
     "get_new_highs",
     {
@@ -314,15 +294,11 @@ export function registerScreenerTools(
           ],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get new lows
   server.registerTool(
     "get_new_lows",
     {
@@ -353,15 +329,11 @@ export function registerScreenerTools(
           ],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get most volatile
   server.registerTool(
     "get_volatile",
     {
@@ -392,15 +364,11 @@ export function registerScreenerTools(
           ],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get trending tickers
   server.registerTool(
     "get_trending",
     {
@@ -431,10 +399,7 @@ export function registerScreenerTools(
           ],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
@@ -458,10 +423,7 @@ export function registerScreenerTools(
           content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );

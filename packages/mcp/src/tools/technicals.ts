@@ -1,3 +1,4 @@
+import { toolError } from "./result.js";
 // Technical analysis tools
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -21,7 +22,6 @@ export function registerTechnicalTools(
 ) {
   const { alpaca } = dependencies;
 
-  // Get technical indicators
   server.registerTool(
     "get_technicals",
     {
@@ -65,15 +65,11 @@ export function registerTechnicalTools(
           ],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );
 
-  // Get signals
   server.registerTool(
     "get_signals",
     {
@@ -103,7 +99,6 @@ export function registerTechnicalTools(
           };
         }
 
-        // RSI signals
         const analysis = analyzeHistory(closes);
         const rsiValue = analysis.rsi14;
 
@@ -216,10 +211,7 @@ export function registerTechnicalTools(
           content: [{ type: "text" as const, text: JSON.stringify(signals, null, 2) }],
         };
       } catch (error) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${String(error)}` }],
-          isError: true,
-        };
+        return toolError(error);
       }
     },
   );

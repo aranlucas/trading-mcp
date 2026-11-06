@@ -7,7 +7,6 @@ import { quotesRoutes } from "./routes/quotes.js";
 
 export const app = new OpenAPIHono().basePath("/api");
 
-// Middleware
 app.use("*", secureHeaders());
 
 app.use("*", cors());
@@ -92,7 +91,6 @@ app.openapi(healthRoute, async (c) => {
   return c.json(health, statusCode);
 });
 
-// Routes
 app.route("/screener", screenerRoutes);
 
 app.route("/quotes", quotesRoutes);

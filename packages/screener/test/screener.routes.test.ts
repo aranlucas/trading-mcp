@@ -62,3 +62,42 @@ it("documents unavailable screening fields and the required mover percentage in 
     },
   });
 });
+
+it("documents the signals response as an array of complete signal objects", async () => {
+  const response = await app.request("http://test/api/openapi.json");
+
+  expect(await response.json()).toMatchObject({
+    paths: {
+      "/api/screener/signals": {
+        post: {
+          responses: {
+            "200": {
+              content: {
+                "application/json": {
+                  schema: {
+                    properties: {
+                      signals: {
+                        type: "array",
+                        items: {
+                          required: [
+                            "symbol",
+                            "type",
+                            "direction",
+                            "strength",
+                            "timestamp",
+                            "description",
+                          ],
+                          properties: { direction: { enum: ["bullish", "bearish", "neutral"] } },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+});

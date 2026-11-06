@@ -7,7 +7,6 @@ import type { YahooMarketDataSource } from "../services/market-data.js";
 export function createQuotesRoutes(source: YahooMarketDataSource = yahoo) {
   const quotesRoutes = new OpenAPIHono();
 
-  // Validation schemas
   const symbolSchema = z
     .string()
     .min(1)
@@ -45,7 +44,6 @@ export function createQuotesRoutes(source: YahooMarketDataSource = yahoo) {
     },
   });
 
-  // Get single quote
   quotesRoutes.openapi(getSingleQuoteRoute, async (c) => {
     const { symbol } = c.req.valid("param");
 
@@ -79,7 +77,6 @@ export function createQuotesRoutes(source: YahooMarketDataSource = yahoo) {
     },
   });
 
-  // Get multiple quotes
   quotesRoutes.openapi(getBatchQuotesRoute, async (c) => {
     const { symbols } = c.req.valid("json");
 
@@ -108,7 +105,6 @@ export function createQuotesRoutes(source: YahooMarketDataSource = yahoo) {
     },
   });
 
-  // Get price bars
   quotesRoutes.openapi(getPriceBarsRoute, async (c) => {
     const { symbol } = c.req.valid("param");
     const { limit } = c.req.valid("query");
