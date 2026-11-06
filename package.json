@@ -27,6 +27,7 @@
     "@secretlint/secretlint-rule-preset-recommend": "^13.0.7",
     "@types/node": "^26.6.5",
     "@vitest/coverage-v8": "^5.0.5",
+    "e2e": "0.23.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
     "oxfmt": "^0.74.0",

@@ -1,4 +1,5 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { HTTPException } from "hono/http-exception";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 import { toPublicError, unified } from "@trading/core";
@@ -12,6 +13,10 @@ app.use("*", secureHeaders());
 app.use("*", cors());
 
 app.onError((err, c) => {
+  if (err instanceof HTTPException && err.status === 400) {
+    return c.json({ error: "Invalid request", code: "VALIDATION_ERROR" }, 400);
+  }
+
   const pub = toPublicError(err);
 
   return c.json({ error: pub.message, code: pub.code }, pub.status);

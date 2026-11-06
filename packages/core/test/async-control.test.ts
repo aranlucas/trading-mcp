@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { withRetry } from "@/lib/retry.js";
 import { forEachSequential } from "@/lib/sequential.js";
-import { TimeoutError, withTimeout } from "@/lib/timeout.js";
+import { raceToSuccess, TimeoutError, withTimeout } from "@/lib/timeout.js";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -113,5 +113,28 @@ describe("timeouts", () => {
     expect(await rejection).toEqual(new TimeoutError(100));
     expect(vi.getTimerCount()).toBe(0);
     deferred.resolve();
+  });
+});
+
+describe("first available provider", () => {
+  it("returns a usable result while another provider is still pending", async () => {
+    const slow = Promise.withResolvers<string>();
+    const fast = Promise.withResolvers<string>();
+    const result = raceToSuccess([slow.promise, fast.promise]);
+    fast.resolve("fast");
+    await expect(result).resolves.toBe("fast");
+    slow.resolve("slow");
+  });
+
+  it("ignores null results and preserves every failure when no provider succeeds", async () => {
+    const failure = new Error("Unavailable");
+    await expect(
+      raceToSuccess([Promise.resolve(null), Promise.reject(failure)]),
+    ).rejects.toMatchObject({
+      message: "All providers failed",
+      errors: [expect.any(Error), failure],
+    });
+    await expect(raceToSuccess([])).rejects.toMatchObject({ errors: [] });
+    await expect(raceToSuccess([Promise.resolve(null), Promise.resolve(0)])).resolves.toBe(0);
   });
 });
