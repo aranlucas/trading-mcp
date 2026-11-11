@@ -11,6 +11,7 @@ it("forbids requests outside the paper broker fixture and duplicate submissions"
     transport("https://paper-api.alpaca.markets/v2/orders", {
       method: "POST",
       body: JSON.stringify({
+        client_order_id: "fixture-client-order",
         symbol: "TEST",
         qty: "2",
         side: "buy",

@@ -42,7 +42,8 @@ These are proposed improvements, not implemented guarantees. The
 - **Trading policy:** before journal automation or live execution, introduce
   deterministic order previews (market hours, notional/quantity limits, symbol
   policy, extended-hours limits), short-lived preview IDs with exact parameter
-  matching, idempotency and a durable audit/reconciliation trail. Cancellation
+  matching and a durable audit/reconciliation trail. Submissions already carry
+  client order IDs, so a preview ID can map to exactly one broker order. Cancellation
   acknowledgment alone cannot prove exposure is gone.
 - **Startup and errors:** validate configuration once at each composition root;
   construct clients explicitly, sanitize errors consistently and propagate

@@ -9,7 +9,7 @@ const ResultSchema = z.object({
   isError: z.boolean().optional(),
 });
 
-test("submit once, look up, request cancellation, then reconcile a fill over stdio", async () => {
+test("submit once, reconcile by client order ID, request cancellation, then observe a fill over stdio", async () => {
   const transport = new StdioClientTransport({
     command: "pnpm",
     args: ["exec", "tsx", "e2e/broker-fixture.ts"],
@@ -54,8 +54,18 @@ test("submit once, look up, request cancellation, then reconcile a fill over std
         quantity: 2,
         type: "limit",
         limitPrice: 100,
+        clientOrderId: "e2e-journey-1",
       }),
-    ).toMatchObject({ id: "fixture-order", quantity: 2, status: "new" });
+    ).toMatchObject({
+      id: "fixture-order",
+      clientOrderId: "e2e-journey-1",
+      quantity: 2,
+      status: "new",
+    });
+    expect(await call("get_order_by_client_id", { clientOrderId: "e2e-journey-1" })).toMatchObject({
+      id: "fixture-order",
+      status: "new",
+    });
     expect(await call("get_order", { orderId: "fixture-order" })).toMatchObject({
       status: "new",
       filledQuantity: 0,

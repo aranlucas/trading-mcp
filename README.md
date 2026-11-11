@@ -12,7 +12,9 @@ API, backed by a shared TypeScript core.
 This is research infrastructure, not investment advice. Data can be delayed or
 unavailable. Order tools can reach a real brokerage account when configured;
 keep paper trading enabled until an explicit, separately reviewed safety policy
-exists. There is no preview/execute policy or submission-idempotency layer yet.
+exists. There is no preview/execute policy yet. Order submissions carry a
+client order ID so an ambiguous result can be reconciled rather than replayed;
+see [data contracts](docs/data-contracts.md#order-submission).
 
 ## Run locally
 

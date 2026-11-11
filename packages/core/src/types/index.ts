@@ -37,6 +37,8 @@ export interface Portfolio {
 
 export interface Order {
   id: string;
+  // Caller-chosen idempotency key echoed by the broker; reuse it to reconcile an ambiguous submission.
+  clientOrderId?: string;
   symbol: string;
   side: "buy" | "sell";
   // Response values are broker-owned; request schemas constrain submitted orders.
