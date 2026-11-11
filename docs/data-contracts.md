@@ -1,6 +1,7 @@
 # Quotes, screening, and cancellation
 
-This describes the normalized quote contract and the order-cancellation response.
+This describes the normalized quote contract and the order submission and
+cancellation responses.
 Raw provider APIs retain their upstream shapes; the table below identifies each
 boundary. These contracts do not promise live market data or order execution.
 
@@ -107,8 +108,32 @@ message to check order state before retrying or replacing the order. The tool
 does not poll, retry cancellation, or place a replacement. This follows Alpaca's
 [cancel endpoint](https://docs.alpaca.markets/us/reference/deleteorderbyorderid-1)
 and [order lifecycle](https://docs.alpaca.markets/us/docs/orders-at-alpaca#order-lifecycle).
-Submission idempotency and reconciliation after ambiguous placement remain
-separate work.
+
+## Order submission
+
+Every `alpaca.placeOrder` request sends a `client_order_id`: the caller's
+(1–128 characters of letters, digits, `.`, `_`, `:` or `-`) or a generated
+UUID. The returned `Order` carries it as `clientOrderId`. Alpaca rejects a
+reused client order ID, so retrying with the same ID cannot create a second
+order. MCP `place_order` resolves the ID before submitting and submits exactly
+once per call; it never retries.
+
+Failures return `isError: true` and a JSON payload containing `clientOrderId`,
+a sanitized `error`, a `message`, and one of these statuses:
+
+| `status`             | Cause                                                                     | Meaning                                                         |
+| -------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `submit_rejected`    | Local validation, or a broker 4xx (including a duplicate client order ID) | No order was created by this call; the broker reason is exposed |
+| `submit_unconfirmed` | Transport failure, timeout, 5xx, or anything unclassified                 | The order may exist; details are not exposed                    |
+
+After `submit_unconfirmed`, call `get_order_by_client_id`
+(`alpaca.getOrderByClientOrderId`) before anything else. It returns the order,
+or a `NOT_FOUND` error when Alpaca has no order with that ID. Only then retry,
+with the same `clientOrderId`. Library callers that need to reconcile must pass
+their own `client_order_id`, because a generated one is not returned when
+`placeOrder` throws; use `alpaca.describeOrderSubmissionFailure` to classify
+the thrown value. This provides idempotent submission, not an order preview or
+trading policy.
 
 ## History, indicators and broker amounts
 

@@ -19,7 +19,12 @@ export function createBrokerTransport(): typeof fetch {
 
     if (init?.method === "POST") {
       assert.equal(order, undefined, "submission must not be duplicated");
-      const body = z.record(z.string(), z.string()).parse(JSON.parse(z.string().parse(init.body)));
+
+      const { client_order_id: clientOrderId, ...body } = z
+        .object({ client_order_id: z.string().min(1) })
+        .catchall(z.string())
+        .parse(JSON.parse(z.string().parse(init.body)));
+
       assert.deepEqual(body, {
         symbol: "TEST",
         qty: "2",
@@ -28,12 +33,27 @@ export function createBrokerTransport(): typeof fetch {
         time_in_force: "day",
         limit_price: "100",
       });
-      order = { id: "fixture-order", ...body, status: "new", filled_qty: "0" };
+      order = {
+        id: "fixture-order",
+        client_order_id: clientOrderId,
+        ...body,
+        status: "new",
+        filled_qty: "0",
+      };
 
       return Promise.resolve(Response.json(order));
     }
 
     assert.ok(order, "an order must exist before lookup/cancel");
+
+    if (url.pathname === "/v2/orders:by_client_order_id") {
+      return Promise.resolve(
+        url.searchParams.get("client_order_id") === order.client_order_id
+          ? Response.json(order)
+          : Response.json({ message: "order not found" }, { status: 404 }),
+      );
+    }
+
     assert.equal(url.pathname, "/v2/orders/fixture-order");
 
     if (init?.method === "DELETE") {

@@ -6,7 +6,10 @@ import { z } from "zod";
 import { alpaca as alpacaProvider, toPublicError } from "@trading/core";
 
 export type OrderDependencies = {
-  alpaca: Pick<typeof alpacaProvider, "cancelOrder" | "getOrder" | "getOrders" | "placeOrder">;
+  alpaca: Pick<
+    typeof alpacaProvider,
+    "cancelOrder" | "getOrder" | "getOrderByClientOrderId" | "getOrders" | "placeOrder"
+  >;
 };
 
 const defaultDependencies: OrderDependencies = { alpaca: alpacaProvider };
@@ -21,7 +24,8 @@ export function registerOrderTools(
     "place_order",
     {
       title: "Place Order",
-      description: "Place a buy or sell order for a stock",
+      description:
+        "Place a buy or sell order for a stock. Every order carries a clientOrderId (generated when omitted). If the result is submit_unconfirmed, the order may exist: check get_order_by_client_id before retrying, and retry only with the same clientOrderId.",
       inputSchema: {
         symbol: z.string().describe("Stock ticker symbol"),
         side: z.enum(["buy", "sell"]).describe("Order side"),
@@ -41,9 +45,21 @@ export function registerOrderTools(
           .optional()
           .describe("Stop price (required for stop/stop_limit)"),
         timeInForce: z.enum(["day", "gtc", "ioc", "fok"]).default("day").describe("Time in force"),
+        clientOrderId: alpacaProvider.ClientOrderIdSchema.optional().describe(
+          "Unique ID for this order (letters, digits, . _ : -; max 128). Reuse it when retrying: the broker rejects a duplicate ID, so a retry cannot create a second order. Generated when omitted.",
+        ),
       },
     },
-    async ({ symbol, side, quantity, type, limitPrice, stopPrice, timeInForce }) => {
+    async ({
+      symbol,
+      side,
+      quantity,
+      type,
+      limitPrice,
+      stopPrice,
+      timeInForce,
+      clientOrderId: requestedClientOrderId,
+    }) => {
       if ((type === "limit" || type === "stop_limit") && !limitPrice) {
         return {
           content: [
@@ -68,8 +84,12 @@ export function registerOrderTools(
         };
       }
 
+      // Resolve the ID before submitting so it can be reported even when the outcome is unknown.
+      const clientOrderId = requestedClientOrderId ?? crypto.randomUUID();
+
       try {
         const order = await alpaca.placeOrder({
+          client_order_id: clientOrderId,
           symbol: symbol.toUpperCase(),
           qty: quantity,
           side,
@@ -78,6 +98,47 @@ export function registerOrderTools(
           limit_price: limitPrice,
           stop_price: stopPrice,
         });
+
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(order, null, 2) }],
+        };
+      } catch (error) {
+        const failure = alpacaProvider.describeOrderSubmissionFailure(error);
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                clientOrderId,
+                ...failure,
+                message:
+                  failure.status === "submit_rejected"
+                    ? "The order was not accepted. Correct the request before submitting again."
+                    : "Submission outcome is unconfirmed; the order may exist. Call get_order_by_client_id with this clientOrderId before anything else. Only if it reports no order, retry with the same clientOrderId.",
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  server.registerTool(
+    "get_order_by_client_id",
+    {
+      title: "Get Order by Client Order ID",
+      description:
+        "Look up an order by the clientOrderId it was submitted with, e.g. to reconcile a submit_unconfirmed result before retrying",
+      inputSchema: {
+        clientOrderId: alpacaProvider.ClientOrderIdSchema.describe("Client order ID"),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ clientOrderId }) => {
+      try {
+        const order = await alpaca.getOrderByClientOrderId(clientOrderId);
 
         return {
           content: [{ type: "text" as const, text: JSON.stringify(order, null, 2) }],

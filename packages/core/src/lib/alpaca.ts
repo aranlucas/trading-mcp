@@ -3,8 +3,15 @@
 import { z } from "zod";
 import { config } from "../config.js";
 import type { Quote, Position, Portfolio, Order, MarketStatus } from "../types/index.js";
-import { NotFoundError, ProviderError, ValidationError } from "./errors.js";
-import { Alpaca, TimeFrame, TimeFrameUnit, timeFrame } from "@alpacahq/alpaca-trade-api";
+import {
+  AppError,
+  NotFoundError,
+  ProviderError,
+  ValidationError,
+  toPublicError,
+  type PublicError,
+} from "./errors.js";
+import { Alpaca, TimeFrame, TimeFrameUnit, errors, timeFrame } from "@alpacahq/alpaca-trade-api";
 import { parseQuote, quoteChange } from "./quote.js";
 
 type BrokerOrder = Awaited<ReturnType<Alpaca["trading"]["orders"]["submit"]>>;
@@ -182,6 +189,13 @@ export function parseTimeframe(value: string): TimeFrameString {
   }
 }
 
+// Alpaca accepts up to 128 characters; a conservative charset keeps IDs safe to echo and log.
+export const ClientOrderIdSchema = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[A-Za-z0-9._:-]+$/, "Invalid client order ID");
+
 export const AlpacaOrderRequestSchema = z
   .object({
     symbol: z
@@ -195,6 +209,7 @@ export const AlpacaOrderRequestSchema = z
     time_in_force: z.enum(["day", "gtc", "ioc", "fok"]),
     limit_price: z.number().finite().positive().optional(),
     stop_price: z.number().finite().positive().optional(),
+    client_order_id: ClientOrderIdSchema.optional(),
   })
   .superRefine((val, ctx) => {
     if ((val.type === "limit" || val.type === "stop_limit") && val.limit_price === undefined) {
@@ -221,8 +236,12 @@ export async function placeOrder(params: z.input<typeof AlpacaOrderRequestSchema
     throw new ValidationError("Invalid order parameters", parsed.error.issues);
   }
 
+  // Always send an ID so an ambiguous failure can be reconciled; the SDK's submitAndWait does the same.
+  const clientOrderId = parsed.data.client_order_id ?? crypto.randomUUID();
+
   // Use generic submit for all order types.
   const raw = await getAlpaca().trading.orders.submit({
+    clientOrderId,
     symbol: parsed.data.symbol,
     qty: String(parsed.data.qty),
     side: parsed.data.side,
@@ -232,7 +251,40 @@ export async function placeOrder(params: z.input<typeof AlpacaOrderRequestSchema
     stopPrice: parsed.data.stop_price !== undefined ? String(parsed.data.stop_price) : undefined,
   });
 
-  return mapOrder(raw, parsed.data);
+  return mapOrder(raw, { ...parsed.data, client_order_id: clientOrderId });
+}
+
+export type OrderSubmissionFailure = {
+  // Rejected: the broker (or local validation) refused it. Unconfirmed: the order may exist.
+  status: "submit_rejected" | "submit_unconfirmed";
+  error: PublicError;
+};
+
+const BROKER_MESSAGE_LIMIT = 300;
+
+// Thrown JavaScript values are untrusted; only definite refusals expose a reason.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
+export function describeOrderSubmissionFailure(error: unknown): OrderSubmissionFailure {
+  if (error instanceof ValidationError) {
+    return { status: "submit_rejected", error: toPublicError(error) };
+  }
+
+  // A 4xx response means Alpaca processed and refused the request; no order was created.
+  if (error instanceof errors.ApiError && error.status >= 400 && error.status < 500) {
+    return {
+      status: "submit_rejected",
+      error: toPublicError(
+        new AppError({
+          status: error.status,
+          code: "ORDER_REJECTED",
+          message: error.message.slice(0, BROKER_MESSAGE_LIMIT),
+          expose: true,
+        }),
+      ),
+    };
+  }
+
+  return { status: "submit_unconfirmed", error: toPublicError(error) };
 }
 
 // The SDK owns deserialization. Preserve broker status strings, including future states.
@@ -240,6 +292,7 @@ export async function placeOrder(params: z.input<typeof AlpacaOrderRequestSchema
 type BrokerOrderFields = Pick<
   BrokerOrder,
   | "id"
+  | "clientOrderId"
   | "symbol"
   | "side"
   | "type"
@@ -258,6 +311,7 @@ type OrderFallback = z.infer<typeof AlpacaOrderRequestSchema>;
 export function mapOrder(raw: BrokerOrderFields, fallback?: OrderFallback): Order {
   return {
     id: raw.id ?? "",
+    clientOrderId: raw.clientOrderId ?? fallback?.client_order_id,
     symbol: raw.symbol ?? fallback?.symbol ?? "",
     side: raw.side ?? fallback?.side ?? "buy",
     type: raw.type ?? raw.orderType ?? fallback?.type ?? "market",
@@ -283,6 +337,27 @@ export async function getOrder(orderId: string): Promise<Order> {
   const raw = await getAlpaca().trading.orders.getOrderByOrderID({ orderId });
 
   return mapOrder(raw);
+}
+
+/** Reconcile a submission by the client order ID sent with it. */
+export async function getOrderByClientOrderId(clientOrderId: string): Promise<Order> {
+  const parsed = ClientOrderIdSchema.safeParse(clientOrderId);
+
+  if (!parsed.success) {
+    throw new ValidationError("Invalid client order ID", parsed.error.issues);
+  }
+
+  try {
+    return mapOrder(
+      await getAlpaca().trading.orders.getOrderByClientOrderId({ clientOrderId: parsed.data }),
+    );
+  } catch (error) {
+    if (error instanceof errors.ApiError && error.status === 404) {
+      throw new NotFoundError("No order found for this client order ID");
+    }
+
+    throw error;
+  }
 }
 
 /** Request cancellation. Resolution acknowledges acceptance, not a terminal order state. */

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BarSchema, TimeoutError } from "@trading/core";
+import { BarSchema, TimeoutError, ValidationError } from "@trading/core";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { connectTestTools, ToolTextSchema } from "@test/mcp-test-client.js";
 import type { ToolDependencies } from "@/tools/index.js";
@@ -87,6 +87,21 @@ const dependencies = {
       timeInForce: "day",
       createdAt: "2024-01-15T10:00:00Z",
     }),
+    getOrderByClientOrderId: vi
+      .fn<ToolDependencies["alpaca"]["getOrderByClientOrderId"]>()
+      .mockResolvedValue({
+        id: "order-123",
+        clientOrderId: "client-123",
+        symbol: "AAPL",
+        side: "buy",
+        type: "limit",
+        quantity: 10,
+        filledQuantity: 10,
+        limitPrice: 175.0,
+        status: "filled",
+        timeInForce: "day",
+        createdAt: "2024-01-15T10:00:00Z",
+      }),
     getOrders: vi.fn<ToolDependencies["alpaca"]["getOrders"]>().mockResolvedValue([]),
     cancelOrder: vi.fn<ToolDependencies["alpaca"]["cancelOrder"]>().mockResolvedValue(),
   },
@@ -163,6 +178,7 @@ describe("MCP Tools Integration", () => {
         "get_positions",
         "place_order",
         "get_order",
+        "get_order_by_client_id",
         "list_orders",
         "cancel_order",
       ];
@@ -310,6 +326,96 @@ describe("MCP Tools Integration", () => {
       });
 
       expect(result).not.toHaveProperty("isError");
+    });
+
+    it("place_order sends the caller's client order ID, or a generated one", async () => {
+      const tool = registeredTools.get("place_order")!;
+      const order = { symbol: "AAPL", side: "buy", quantity: 10, type: "market" };
+
+      await tool.handler({ ...order, clientOrderId: "client-123" });
+      await tool.handler(order);
+
+      const sent = dependencies.alpaca.placeOrder.mock.calls.map(([req]) => req.client_order_id);
+      expect(sent[0]).toBe("client-123");
+      expect(z.uuid().parse(sent[1])).not.toBe(sent[0]);
+    });
+
+    it.each([new Error("synthetic-private-reset"), new TimeoutError(100)])(
+      "reports an unconfirmed submission with its client order ID when %s, without retrying",
+      async (reason) => {
+        dependencies.alpaca.placeOrder.mockRejectedValueOnce(reason);
+
+        const result = await registeredTools.get("place_order")!.handler({
+          symbol: "AAPL",
+          side: "buy",
+          quantity: 10,
+          clientOrderId: "client-123",
+        });
+
+        expect(result.isError).toBe(true);
+        const text = ToolTextSchema.parse(result);
+        expect(JSON.parse(text)).toMatchObject({
+          clientOrderId: "client-123",
+          status: "submit_unconfirmed",
+        });
+        expect(text).toContain("get_order_by_client_id");
+        expect(text).not.toContain("synthetic-private-reset");
+        expect(dependencies.alpaca.placeOrder).toHaveBeenCalledOnce();
+        expect(dependencies.alpaca.getOrderByClientOrderId).not.toHaveBeenCalled();
+      },
+    );
+
+    it("reports a definite rejection with its reason and the generated client order ID", async () => {
+      dependencies.alpaca.placeOrder.mockRejectedValueOnce(
+        new ValidationError("Invalid order parameters"),
+      );
+
+      const result = await registeredTools.get("place_order")!.handler({
+        symbol: "AAPL",
+        side: "buy",
+        quantity: 10,
+      });
+
+      expect(result.isError).toBe(true);
+
+      const payload = z
+        .object({
+          clientOrderId: z.uuid(),
+          status: z.literal("submit_rejected"),
+          error: z.object({ message: z.literal("Invalid order parameters") }),
+        })
+        .parse(JSON.parse(ToolTextSchema.parse(result)));
+
+      expect(dependencies.alpaca.placeOrder.mock.calls[0]?.[0].client_order_id).toBe(
+        payload.clientOrderId,
+      );
+    });
+
+    it("rejects a malformed client order ID before submitting", async () => {
+      const result = await registeredTools.get("place_order")!.handler({
+        symbol: "AAPL",
+        side: "buy",
+        quantity: 10,
+        clientOrderId: "has space",
+      });
+
+      expect(result.isError).toBe(true);
+      expect(dependencies.alpaca.placeOrder).not.toHaveBeenCalled();
+    });
+
+    it("get_order_by_client_id reconciles a submission without placing an order", async () => {
+      const result = await registeredTools.get("get_order_by_client_id")!.handler({
+        clientOrderId: "client-123",
+      });
+
+      expect(JSON.parse(ToolTextSchema.parse(result))).toMatchObject({
+        clientOrderId: "client-123",
+        status: "filled",
+      });
+      expect(dependencies.alpaca.getOrderByClientOrderId).toHaveBeenCalledExactlyOnceWith(
+        "client-123",
+      );
+      expect(dependencies.alpaca.placeOrder).not.toHaveBeenCalled();
     });
 
     it("get_order should return order details", async () => {

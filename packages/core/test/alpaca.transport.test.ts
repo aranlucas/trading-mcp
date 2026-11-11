@@ -5,8 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   cancelOrder,
   client,
+  describeOrderSubmissionFailure,
   getBars,
   getOrder,
+  getOrderByClientOrderId,
   getOrders,
   getPortfolio,
   getPositions,
@@ -33,6 +35,7 @@ const wireOrder = {
 };
 
 const orderRequest = {
+  client_order_id: "synthetic-client-order",
   symbol: "TEST",
   side: "sell" as const,
   type: "stop_limit" as const,
@@ -267,6 +270,7 @@ describe("Alpaca order request and failure contracts", () => {
 
     expect(await placeOrder(orderRequest)).toMatchObject({
       id: "synthetic-order",
+      clientOrderId: "synthetic-client-order",
       quantity: 2.5,
       filledQuantity: 1.25,
       limitPrice: 101.25,
@@ -276,6 +280,7 @@ describe("Alpaca order request and failure contracts", () => {
     expect(transport).toHaveBeenCalledTimes(1);
     const body = transport.mock.calls[0]?.[1]?.body;
     expect(JSON.parse(z.string().parse(body))).toEqual({
+      client_order_id: "synthetic-client-order",
       symbol: "TEST",
       qty: "2.5",
       side: "sell",
@@ -295,11 +300,31 @@ describe("Alpaca order request and failure contracts", () => {
     { stop_price: Number.POSITIVE_INFINITY },
     { limit_price: undefined },
     { stop_price: undefined },
+    { client_order_id: "" },
+    { client_order_id: "has space" },
+    { client_order_id: "x".repeat(129) },
   ])("rejects invalid amounts or missing prices without submitting: %j", async (invalid) => {
     await expect(placeOrder({ ...orderRequest, ...invalid })).rejects.toBeInstanceOf(
       ValidationError,
     );
     expect(transport).not.toHaveBeenCalled();
+  });
+
+  it("generates and returns a client order ID when the caller omits one", async () => {
+    transport.mockImplementation(
+      mockFetch([{ method: "POST", path: "/v2/orders", body: wireOrder }]),
+    );
+
+    const { client_order_id: _omitted, ...withoutId } = orderRequest;
+
+    const order = await placeOrder(withoutId);
+
+    const sent = z
+      .object({ client_order_id: z.uuid() })
+      .parse(JSON.parse(z.string().parse(transport.mock.calls[0]?.[1]?.body)));
+
+    expect(order.clientOrderId).toBe(sent.client_order_id);
+    expect(transport).toHaveBeenCalledTimes(1);
   });
 
   it("retains broker rejection details without resubmitting an order", async () => {
@@ -328,6 +353,98 @@ describe("Alpaca order request and failure contracts", () => {
     transport.mockRejectedValue(new TypeError("Synthetic connection reset"));
 
     await expect(placeOrder(orderRequest)).rejects.toMatchObject({ name: "FetchError" });
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["a broker 422", { status: 422, body: { code: 42210000, message: "insufficient qty" } }],
+    [
+      "a duplicate client order ID",
+      { status: 422, body: { message: "client_order_id must be unique" } },
+    ],
+    [
+      "an insufficient buying power 403",
+      { status: 403, body: { message: "insufficient buying power" } },
+    ],
+  ])("classifies %s as a definite rejection exposing the broker reason", async (_case, reply) => {
+    transport.mockImplementation(mockFetch([{ method: "POST", path: "/v2/orders", ...reply }]));
+
+    const failure = await placeOrder(orderRequest).catch(describeOrderSubmissionFailure);
+
+    expect(failure).toEqual({
+      status: "submit_rejected",
+      error: { status: reply.status, code: "ORDER_REJECTED", message: reply.body.message },
+    });
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it("classifies local validation as a rejection that never reached the broker", async () => {
+    const failure = await placeOrder({ ...orderRequest, qty: 0 }).catch(
+      describeOrderSubmissionFailure,
+    );
+
+    expect(failure).toMatchObject({ status: "submit_rejected", error: { status: 400 } });
+    expect(transport).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      "a lost connection",
+      () => transport.mockRejectedValue(new TypeError("synthetic-private-reset")),
+    ],
+    [
+      "a 503",
+      () =>
+        transport.mockResolvedValue(
+          Response.json({ message: "synthetic-private-unavailable" }, { status: 503 }),
+        ),
+    ],
+  ])("classifies %s as unconfirmed without exposing its detail", async (_case, arrange) => {
+    arrange();
+
+    const failure = await placeOrder(orderRequest).catch(describeOrderSubmissionFailure);
+
+    expect(failure).toMatchObject({ status: "submit_unconfirmed" });
+    expect(JSON.stringify(failure)).not.toContain("synthetic-private");
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it("reconciles an order by the client order ID it was submitted with", async () => {
+    transport.mockImplementation(
+      mockFetch([
+        {
+          method: "GET",
+          path: "/v2/orders:by_client_order_id",
+          body: { ...wireOrder, client_order_id: "synthetic-client-order" },
+        },
+      ]),
+    );
+
+    expect(await getOrderByClientOrderId("synthetic-client-order")).toMatchObject({
+      id: "synthetic-order",
+      clientOrderId: "synthetic-client-order",
+      status: "partially_filled",
+    });
+    const url = new URL(String(transport.mock.calls[0]?.[0]));
+    expect(url.searchParams.get("client_order_id")).toBe("synthetic-client-order");
+  });
+
+  it("reports an unknown client order ID as not found and rejects malformed IDs locally", async () => {
+    transport.mockImplementation(
+      mockFetch([
+        {
+          method: "GET",
+          path: "/v2/orders:by_client_order_id",
+          status: 404,
+          body: { message: "order not found" },
+        },
+      ]),
+    );
+
+    await expect(getOrderByClientOrderId("synthetic-missing")).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+    await expect(getOrderByClientOrderId("has space")).rejects.toBeInstanceOf(ValidationError);
     expect(transport).toHaveBeenCalledTimes(1);
   });
 
