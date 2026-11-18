@@ -121,10 +121,10 @@ once per call; it never retries.
 Failures return `isError: true` and a JSON payload containing `clientOrderId`,
 a sanitized `error`, a `message`, and one of these statuses:
 
-| `status`             | Cause                                                                     | Meaning                                                         |
-| -------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `submit_rejected`    | Local validation, or a broker 4xx (including a duplicate client order ID) | No order was created by this call; the broker reason is exposed |
-| `submit_unconfirmed` | Transport failure, timeout, 5xx, or anything unclassified                 | The order may exist; details are not exposed                    |
+| `status`             | Cause                                                                                          | Meaning                                                             |
+| -------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `submit_rejected`    | Local validation, missing Alpaca keys, or a broker 4xx (including a duplicate client order ID) | No order was created by this call; the error explains the rejection |
+| `submit_unconfirmed` | Transport failure, timeout, 5xx, or anything unclassified                                      | The order may exist; details are not exposed                        |
 
 After `submit_unconfirmed`, call `get_order_by_client_id`
 (`alpaca.getOrderByClientOrderId`) before anything else. It returns the order,

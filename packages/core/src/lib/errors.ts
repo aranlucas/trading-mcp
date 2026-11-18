@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { errors as alpacaErrors } from "@alpacahq/alpaca-trade-api";
 import { TimeoutError } from "./timeout.js";
 import { AppError } from "./app-error.js";
 
@@ -45,6 +46,24 @@ export function toPublicError(err: unknown): PublicError {
       status: toPublicStatus(err.status),
       code: err.code,
       message: err.expose ? err.message : "Internal server error",
+    };
+  }
+
+  if (err instanceof alpacaErrors.AuthError) {
+    return {
+      status: 502,
+      code: "PROVIDER_ERROR",
+      message:
+        "Alpaca rejected the configured credentials. Check ALPACA_API_KEY, ALPACA_API_SECRET, and ALPACA_PAPER, then restart the server after changing them.",
+    };
+  }
+
+  if (err instanceof alpacaErrors.PermissionError) {
+    return {
+      status: 502,
+      code: "PROVIDER_ERROR",
+      message:
+        "Alpaca denied access. Check the configured API keys and the account's permissions for this operation.",
     };
   }
 

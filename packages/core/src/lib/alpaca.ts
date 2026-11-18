@@ -18,8 +18,16 @@ type BrokerOrder = Awaited<ReturnType<Alpaca["trading"]["orders"]["submit"]>>;
 
 type TimeFrameString = ReturnType<typeof timeFrame>;
 
-// Initialize official Alpaca client lazily (v4 throws if creds missing at construction).
-// In tests and local dev without keys we still need the module to import (e.g. order schema tests).
+class MissingAlpacaCredentialsError extends ProviderError {
+  constructor() {
+    super({
+      provider: "alpaca",
+      operation: "authenticate",
+      message: "Set ALPACA_API_KEY and ALPACA_API_SECRET, then restart the server.",
+    });
+  }
+}
+
 let alpacaClient: Alpaca | null = null;
 
 function getAlpaca(): Alpaca {
@@ -27,9 +35,24 @@ function getAlpaca(): Alpaca {
     return alpacaClient;
   }
 
-  const keyId = config.alpaca.apiKey || "test-key-id";
-  const secret = config.alpaca.apiSecret || "test-secret";
-  alpacaClient = new Alpaca({ keyId, secret, paper: config.alpaca.paper });
+  const { apiKey, apiSecret, paper } = config.alpaca;
+  // The SDK requires keys at construction. Keep the module usable for keyless tools,
+  // and block Alpaca HTTP requests before the placeholder credentials can be sent.
+  alpacaClient = new Alpaca({
+    keyId: apiKey || "unconfigured",
+    secret: apiSecret || "unconfigured",
+    paper,
+    middleware:
+      apiKey && apiSecret
+        ? undefined
+        : [
+            {
+              pre() {
+                throw new MissingAlpacaCredentialsError();
+              },
+            },
+          ],
+  });
 
   return alpacaClient;
 }
@@ -265,7 +288,7 @@ const BROKER_MESSAGE_LIMIT = 300;
 // Thrown JavaScript values are untrusted; only definite refusals expose a reason.
 // oxlint-disable-next-line anti-slop/no-unknown-parameters
 export function describeOrderSubmissionFailure(error: unknown): OrderSubmissionFailure {
-  if (error instanceof ValidationError) {
+  if (error instanceof ValidationError || error instanceof MissingAlpacaCredentialsError) {
     return { status: "submit_rejected", error: toPublicError(error) };
   }
 
@@ -277,7 +300,10 @@ export function describeOrderSubmissionFailure(error: unknown): OrderSubmissionF
         new AppError({
           status: error.status,
           code: "ORDER_REJECTED",
-          message: error.message.slice(0, BROKER_MESSAGE_LIMIT),
+          message:
+            error instanceof errors.AuthError
+              ? toPublicError(error).message
+              : error.message.slice(0, BROKER_MESSAGE_LIMIT),
           expose: true,
         }),
       ),
