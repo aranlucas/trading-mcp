@@ -51,6 +51,12 @@ overridden by `PORT`).
 
 An MCP client can launch the built server with `node` and the absolute path to
 `packages/mcp/dist/index.js`, supplying credentials in the child environment.
+The stdio process uses the configured Alpaca account for broker-backed tools.
+Client bearer tokens, OAuth scopes, discovery, and account linking are outside
+this transport's contract. If Alpaca keys are missing or rejected, update the
+child environment and restart the process. Keyless tools can still run. The
+separate HTTP service exposes the screener REST API without application-level
+authentication.
 Keep stdout reserved for the MCP protocol; see the current logging limitation
 in [architecture](ARCHITECTURE.md#runtime-boundaries).
 
